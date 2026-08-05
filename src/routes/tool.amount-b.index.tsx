@@ -1,23 +1,24 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { Helmet } from 'react-helmet-async'
 import { LinkCard } from '../components/ui/link-card'
 import { ExternalLink, PlusCircle, History } from 'lucide-react'
 
 export const Route = createFileRoute('/tool/amount-b/')({
+  head: () => ({
+    meta: [
+      { title: 'Amount B - Pillar One - Osservatorio Transfer Pricing' },
+      { name: 'description', content: "Strumento di calcolo per l'Approccio Semplificato e Razionalizzato (Amount B) del Pillar One OECD." },
+      { property: 'og:title', content: 'Amount B - Pillar One - Osservatorio Transfer Pricing' },
+      { property: 'og:description', content: "Strumento di calcolo per l'Approccio Semplificato e Razionalizzato (Amount B) del Pillar One OECD." },
+      { property: 'og:type', content: 'website' },
+      { name: 'twitter:card', content: 'summary_large_image' },
+    ],
+  }),
   component: RouteComponent,
 })
 
 function RouteComponent() {
   return (
     <>
-      <Helmet>
-        <title>Amount B - Pillar One - Osservatorio Transfer Pricing</title>
-        <meta
-          name="description"
-          content="Strumento di calcolo per l'Approccio Semplificato e Razionalizzato (Amount B) del Pillar One OECD."
-        />
-      </Helmet>
-
       <div className="container mx-auto max-w-5xl px-4 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold tracking-tight">Amount B (Pillar One)</h1>
@@ -26,11 +27,11 @@ function RouteComponent() {
           </p>
         </div>
 
-        {/* Cos'è²° Amount B */}
+        {/* Cos'è Amount B */}
         <div className="mb-8 rounded-lg border bg-card p-6">
-          <h2 className="text-xl font-semibold">Cos'è²° Amount B?</h2>
+          <h2 className="text-xl font-semibold">Cos'è Amount B?</h2>
           <p className="mt-2 text-muted-foreground">
-            Amount B è20 un approccio semplificato per la determinazione del prezzo di trasferimento
+            Amount B è un approccio semplificato per la determinazione del prezzo di trasferimento
             per le attività di distribuzione di routine. Lo strumento automatizza i calcoli del
             rendimento sulle vendite secondo le linee guida OECD (Annex III of Chapter IV).
           </p>
