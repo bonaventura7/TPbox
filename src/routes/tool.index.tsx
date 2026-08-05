@@ -1,23 +1,24 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { Helmet } from 'react-helmet-async'
 import { LinkCard } from '../components/ui/link-card'
 import { ExternalLink } from 'lucide-react'
 
 export const Route = createFileRoute('/tool/')({
+  head: () => ({
+    meta: [
+      { title: 'Tool - Osservatorio Transfer Pricing' },
+      { name: 'description', content: 'Strumenti di analisi per il transfer pricing: Amount B (Pillar One), Company Finder e Portale interpelli.' },
+      { property: 'og:title', content: 'Tool - Osservatorio Transfer Pricing' },
+      { property: 'og:description', content: 'Strumenti di analisi per il transfer pricing: Amount B (Pillar One), Company Finder e Portale interpelli.' },
+      { property: 'og:type', content: 'website' },
+      { name: 'twitter:card', content: 'summary_large_image' },
+    ],
+  }),
   component: RouteComponent,
 })
 
 function RouteComponent() {
   return (
     <>
-      <Helmet>
-        <title>Tool - Osservatorio Transfer Pricing</title>
-        <meta
-          name="description"
-          content="Strumenti di analisi per il transfer pricing: Osservatorio Transfer Pricing, Amount B (Pillar One), Company Finder, Portale interpelli."
-        />
-      </Helmet>
-
       <div className="container mx-auto max-w-5xl px-4 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold tracking-tight">Tool</h1>

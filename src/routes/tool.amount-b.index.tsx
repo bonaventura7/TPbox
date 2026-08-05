@@ -1,23 +1,24 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { Helmet } from 'react-helmet-async'
 import { LinkCard } from '../components/ui/link-card'
 import { ExternalLink, PlusCircle, History } from 'lucide-react'
 
 export const Route = createFileRoute('/tool/amount-b/')({
+  head: () => ({
+    meta: [
+      { title: 'Amount B - Pillar One - Osservatorio Transfer Pricing' },
+      { name: 'description', content: "Strumento di calcolo per l'Approccio Semplificato e Razionalizzato (Amount B) del Pillar One OECD." },
+      { property: 'og:title', content: 'Amount B - Pillar One - Osservatorio Transfer Pricing' },
+      { property: 'og:description', content: "Strumento di calcolo per l'Approccio Semplificato e Razionalizzato (Amount B) del Pillar One OECD." },
+      { property: 'og:type', content: 'website' },
+      { name: 'twitter:card', content: 'summary_large_image' },
+    ],
+  }),
   component: RouteComponent,
 })
 
 function RouteComponent() {
   return (
     <>
-      <Helmet>
-        <title>Amount B - Pillar One - Osservatorio Transfer Pricing</title>
-        <meta
-          name="description"
-          content="Strumento di calcolo per l'Approccio Semplificato e Razionalizzato (Amount B) del Pillar One OECD."
-        />
-      </Helmet>
-
       <div className="container mx-auto max-w-5xl px-4 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold tracking-tight">Amount B (Pillar One)</h1>
