@@ -22,6 +22,7 @@ import { Route as NormativaUnioneEuropeaRouteImport } from './routes/normativa.u
 import { Route as ToolIndexRouteImport } from './routes/tool.index'
 import { Route as ToolBilancioFinderRouteImport } from './routes/tool.bilancio-finder'
 import { Route as ToolCompanyFinderRouteImport } from './routes/tool.company-finder'
+import { Route as ToolPortaleInterpelliRouteImport } from './routes/tool.portale-interpelli'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -89,6 +90,11 @@ const ToolCompanyFinderRoute = ToolCompanyFinderRouteImport.update({
   path: '/tool/company-finder',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ToolPortaleInterpelliRoute = ToolPortaleInterpelliRouteImport.update({
+  id: '/tool/portale-interpelli',
+  path: '/tool/portale-interpelli',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -102,6 +108,7 @@ export interface FileRoutesByFullPath {
   '/normativa/unione-europea': typeof NormativaUnioneEuropeaRoute
   '/tool/bilancio-finder': typeof ToolBilancioFinderRoute
   '/tool/company-finder': typeof ToolCompanyFinderRoute
+  '/tool/portale-interpelli': typeof ToolPortaleInterpelliRoute
   '/normativa/': typeof NormativaIndexRoute
   '/tool/': typeof ToolIndexRoute
 }
@@ -116,6 +123,7 @@ export interface FileRoutesByTo {
   '/normativa/unione-europea': typeof NormativaUnioneEuropeaRoute
   '/tool/bilancio-finder': typeof ToolBilancioFinderRoute
   '/tool/company-finder': typeof ToolCompanyFinderRoute
+  '/tool/portale-interpelli': typeof ToolPortaleInterpelliRoute
   '/normativa': typeof NormativaIndexRoute
   '/tool': typeof ToolIndexRoute
 }
@@ -132,6 +140,7 @@ export interface FileRoutesById {
   '/normativa/unione-europea': typeof NormativaUnioneEuropeaRoute
   '/tool/bilancio-finder': typeof ToolBilancioFinderRoute
   '/tool/company-finder': typeof ToolCompanyFinderRoute
+  '/tool/portale-interpelli': typeof ToolPortaleInterpelliRoute
   '/normativa/': typeof NormativaIndexRoute
   '/tool/': typeof ToolIndexRoute
 }
@@ -149,6 +158,7 @@ export interface FileRouteTypes {
     | '/normativa/unione-europea'
     | '/tool/bilancio-finder'
     | '/tool/company-finder'
+    | '/tool/portale-interpelli'
     | '/normativa/'
     | '/tool/'
   fileRoutesByTo: FileRoutesByTo
@@ -163,6 +173,7 @@ export interface FileRouteTypes {
     | '/normativa/unione-europea'
     | '/tool/bilancio-finder'
     | '/tool/company-finder'
+    | '/tool/portale-interpelli'
     | '/normativa'
     | '/tool'
   id:
@@ -178,6 +189,7 @@ export interface FileRouteTypes {
     | '/normativa/unione-europea'
     | '/tool/bilancio-finder'
     | '/tool/company-finder'
+    | '/tool/portale-interpelli'
     | '/normativa/'
     | '/tool/'
   fileRoutesById: FileRoutesById
@@ -189,6 +201,7 @@ export interface RootRouteChildren {
   NormativaRoute: typeof NormativaRouteWithChildren
   ToolBilancioFinderRoute: typeof ToolBilancioFinderRoute
   ToolCompanyFinderRoute: typeof ToolCompanyFinderRoute
+  ToolPortaleInterpelliRoute: typeof ToolPortaleInterpelliRoute
   ToolIndexRoute: typeof ToolIndexRoute
 }
 
@@ -285,6 +298,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ToolCompanyFinderRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/tool/portale-interpelli': {
+      id: '/tool/portale-interpelli'
+      path: '/tool/portale-interpelli'
+      fullPath: '/tool/portale-interpelli'
+      preLoaderRoute: typeof ToolPortaleInterpelliRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -317,18 +337,9 @@ const rootRouteChildren: RootRouteChildren = {
   NormativaRoute: NormativaRouteWithChildren,
   ToolBilancioFinderRoute: ToolBilancioFinderRoute,
   ToolCompanyFinderRoute: ToolCompanyFinderRoute,
+  ToolPortaleInterpelliRoute: ToolPortaleInterpelliRoute,
   ToolIndexRoute: ToolIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
