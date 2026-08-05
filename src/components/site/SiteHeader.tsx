@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { AuthMenu } from "@/components/site/AuthMenu";
 
 const NAV = [
   { to: "/", label: "Home" },
@@ -67,6 +68,10 @@ export function SiteHeader() {
           </ul>
         </nav>
 
+        <div className="hidden lg:col-start-3 lg:block">
+          <AuthMenu />
+        </div>
+
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger asChild>
             <Button
@@ -126,6 +131,9 @@ export function SiteHeader() {
                   </li>
                 ))}
               </ul>
+              <div className="mt-6 px-2">
+                <AuthMenu onNavigate={() => setOpen(false)} />
+              </div>
             </nav>
           </SheetContent>
         </Sheet>
