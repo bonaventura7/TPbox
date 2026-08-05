@@ -12,7 +12,10 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AttualitaRouteImport } from './routes/attualita'
 import { Route as GiurisprudenzaRouteImport } from './routes/giurisprudenza'
+import { Route as McpRouteImport } from './routes/mcp'
 import { Route as NormativaRouteImport } from './routes/normativa'
+import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
+import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as AttualitaIndexRouteImport } from './routes/attualita.index'
 import { Route as AttualitaAreaRouteImport } from './routes/attualita.$area'
 import { Route as NormativaIndexRouteImport } from './routes/normativa.index'
@@ -24,6 +27,7 @@ import { Route as NormativaUnioneEuropeaRouteImport } from './routes/normativa.u
 import { Route as ToolIndexRouteImport } from './routes/tool.index'
 import { Route as ToolBilancioFinderRouteImport } from './routes/tool.bilancio-finder'
 import { Route as ToolCompanyFinderRouteImport } from './routes/tool.company-finder'
+import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as NormativaPortaleInterpelliIndexRouteImport } from './routes/normativa.portale-interpelli.index'
 import { Route as NormativaPortaleInterpelliIdRouteImport } from './routes/normativa.portale-interpelli.$id'
 import { Route as ToolPortaleInterpelliIndexRouteImport } from './routes/tool.portale-interpelli.index'
@@ -44,11 +48,28 @@ const GiurisprudenzaRoute = GiurisprudenzaRouteImport.update({
   path: '/giurisprudenza',
   getParentRoute: () => rootRouteImport,
 } as any)
+const McpRoute = McpRouteImport.update({
+  id: '/mcp',
+  path: '/mcp',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const NormativaRoute = NormativaRouteImport.update({
   id: '/normativa',
   path: '/normativa',
   getParentRoute: () => rootRouteImport,
 } as any)
+const Char91DotmcpChar93ListToolsRoute =
+  Char91DotmcpChar93ListToolsRouteImport.update({
+    id: '/.mcp/list-tools',
+    path: '/.mcp/list-tools',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const Char91DotwellKnownChar93OauthProtectedResourceRoute =
+  Char91DotwellKnownChar93OauthProtectedResourceRouteImport.update({
+    id: '/.well-known/oauth-protected-resource',
+    path: '/.well-known/oauth-protected-resource',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AttualitaIndexRoute = AttualitaIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -105,6 +126,12 @@ const ToolCompanyFinderRoute = ToolCompanyFinderRouteImport.update({
   path: '/tool/company-finder',
   getParentRoute: () => rootRouteImport,
 } as any)
+const Char91DotmcpChar93InvokeToolToolRoute =
+  Char91DotmcpChar93InvokeToolToolRouteImport.update({
+    id: '/.mcp/invoke-tool/$tool',
+    path: '/.mcp/invoke-tool/$tool',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const NormativaPortaleInterpelliIndexRoute =
   NormativaPortaleInterpelliIndexRouteImport.update({
     id: '/portale-interpelli/',
@@ -133,7 +160,10 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/attualita': typeof AttualitaRouteWithChildren
   '/giurisprudenza': typeof GiurisprudenzaRoute
+  '/mcp': typeof McpRoute
   '/normativa': typeof NormativaRouteWithChildren
+  '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/attualita/$area': typeof AttualitaAreaRoute
   '/normativa/country-profiles': typeof NormativaCountryProfilesRoute
   '/normativa/italia': typeof NormativaItaliaRoute
@@ -145,6 +175,7 @@ export interface FileRoutesByFullPath {
   '/attualita/': typeof AttualitaIndexRoute
   '/normativa/': typeof NormativaIndexRoute
   '/tool/': typeof ToolIndexRoute
+  '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/normativa/portale-interpelli/$id': typeof NormativaPortaleInterpelliIdRoute
   '/tool/portale-interpelli/$id': typeof ToolPortaleInterpelliIdRoute
   '/normativa/portale-interpelli/': typeof NormativaPortaleInterpelliIndexRoute
@@ -153,6 +184,9 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/giurisprudenza': typeof GiurisprudenzaRoute
+  '/mcp': typeof McpRoute
+  '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/attualita/$area': typeof AttualitaAreaRoute
   '/normativa/country-profiles': typeof NormativaCountryProfilesRoute
   '/normativa/italia': typeof NormativaItaliaRoute
@@ -164,6 +198,7 @@ export interface FileRoutesByTo {
   '/attualita': typeof AttualitaIndexRoute
   '/normativa': typeof NormativaIndexRoute
   '/tool': typeof ToolIndexRoute
+  '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/normativa/portale-interpelli/$id': typeof NormativaPortaleInterpelliIdRoute
   '/tool/portale-interpelli/$id': typeof ToolPortaleInterpelliIdRoute
   '/normativa/portale-interpelli': typeof NormativaPortaleInterpelliIndexRoute
@@ -174,7 +209,10 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/attualita': typeof AttualitaRouteWithChildren
   '/giurisprudenza': typeof GiurisprudenzaRoute
+  '/mcp': typeof McpRoute
   '/normativa': typeof NormativaRouteWithChildren
+  '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/attualita/$area': typeof AttualitaAreaRoute
   '/normativa/country-profiles': typeof NormativaCountryProfilesRoute
   '/normativa/italia': typeof NormativaItaliaRoute
@@ -186,6 +224,7 @@ export interface FileRoutesById {
   '/attualita/': typeof AttualitaIndexRoute
   '/normativa/': typeof NormativaIndexRoute
   '/tool/': typeof ToolIndexRoute
+  '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/normativa/portale-interpelli/$id': typeof NormativaPortaleInterpelliIdRoute
   '/tool/portale-interpelli/$id': typeof ToolPortaleInterpelliIdRoute
   '/normativa/portale-interpelli/': typeof NormativaPortaleInterpelliIndexRoute
@@ -197,7 +236,10 @@ export interface FileRouteTypes {
     | '/'
     | '/attualita'
     | '/giurisprudenza'
+    | '/mcp'
     | '/normativa'
+    | '/.mcp/list-tools'
+    | '/.well-known/oauth-protected-resource'
     | '/attualita/$area'
     | '/normativa/country-profiles'
     | '/normativa/italia'
@@ -209,6 +251,7 @@ export interface FileRouteTypes {
     | '/attualita/'
     | '/normativa/'
     | '/tool/'
+    | '/.mcp/invoke-tool/$tool'
     | '/normativa/portale-interpelli/$id'
     | '/tool/portale-interpelli/$id'
     | '/normativa/portale-interpelli/'
@@ -217,6 +260,9 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/giurisprudenza'
+    | '/mcp'
+    | '/.mcp/list-tools'
+    | '/.well-known/oauth-protected-resource'
     | '/attualita/$area'
     | '/normativa/country-profiles'
     | '/normativa/italia'
@@ -228,6 +274,7 @@ export interface FileRouteTypes {
     | '/attualita'
     | '/normativa'
     | '/tool'
+    | '/.mcp/invoke-tool/$tool'
     | '/normativa/portale-interpelli/$id'
     | '/tool/portale-interpelli/$id'
     | '/normativa/portale-interpelli'
@@ -237,7 +284,10 @@ export interface FileRouteTypes {
     | '/'
     | '/attualita'
     | '/giurisprudenza'
+    | '/mcp'
     | '/normativa'
+    | '/.mcp/list-tools'
+    | '/.well-known/oauth-protected-resource'
     | '/attualita/$area'
     | '/normativa/country-profiles'
     | '/normativa/italia'
@@ -249,6 +299,7 @@ export interface FileRouteTypes {
     | '/attualita/'
     | '/normativa/'
     | '/tool/'
+    | '/.mcp/invoke-tool/$tool'
     | '/normativa/portale-interpelli/$id'
     | '/tool/portale-interpelli/$id'
     | '/normativa/portale-interpelli/'
@@ -259,10 +310,14 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AttualitaRoute: typeof AttualitaRouteWithChildren
   GiurisprudenzaRoute: typeof GiurisprudenzaRoute
+  McpRoute: typeof McpRoute
   NormativaRoute: typeof NormativaRouteWithChildren
+  Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
+  Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   ToolBilancioFinderRoute: typeof ToolBilancioFinderRoute
   ToolCompanyFinderRoute: typeof ToolCompanyFinderRoute
   ToolIndexRoute: typeof ToolIndexRoute
+  Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   ToolPortaleInterpelliIdRoute: typeof ToolPortaleInterpelliIdRoute
   ToolPortaleInterpelliIndexRoute: typeof ToolPortaleInterpelliIndexRoute
 }
@@ -290,11 +345,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GiurisprudenzaRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/mcp': {
+      id: '/mcp'
+      path: '/mcp'
+      fullPath: '/mcp'
+      preLoaderRoute: typeof McpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/normativa': {
       id: '/normativa'
       path: '/normativa'
       fullPath: '/normativa'
       preLoaderRoute: typeof NormativaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/.mcp/list-tools': {
+      id: '/.mcp/list-tools'
+      path: '/.mcp/list-tools'
+      fullPath: '/.mcp/list-tools'
+      preLoaderRoute: typeof Char91DotmcpChar93ListToolsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/.well-known/oauth-protected-resource': {
+      id: '/.well-known/oauth-protected-resource'
+      path: '/.well-known/oauth-protected-resource'
+      fullPath: '/.well-known/oauth-protected-resource'
+      preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/attualita/': {
@@ -374,6 +450,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ToolCompanyFinderRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/.mcp/invoke-tool/$tool': {
+      id: '/.mcp/invoke-tool/$tool'
+      path: '/.mcp/invoke-tool/$tool'
+      fullPath: '/.mcp/invoke-tool/$tool'
+      preLoaderRoute: typeof Char91DotmcpChar93InvokeToolToolRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/normativa/portale-interpelli/': {
       id: '/normativa/portale-interpelli/'
       path: '/portale-interpelli'
@@ -449,10 +532,15 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AttualitaRoute: AttualitaRouteWithChildren,
   GiurisprudenzaRoute: GiurisprudenzaRoute,
+  McpRoute: McpRoute,
   NormativaRoute: NormativaRouteWithChildren,
+  Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
+  Char91DotwellKnownChar93OauthProtectedResourceRoute:
+    Char91DotwellKnownChar93OauthProtectedResourceRoute,
   ToolBilancioFinderRoute: ToolBilancioFinderRoute,
   ToolCompanyFinderRoute: ToolCompanyFinderRoute,
   ToolIndexRoute: ToolIndexRoute,
+  Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   ToolPortaleInterpelliIdRoute: ToolPortaleInterpelliIdRoute,
   ToolPortaleInterpelliIndexRoute: ToolPortaleInterpelliIndexRoute,
 }
