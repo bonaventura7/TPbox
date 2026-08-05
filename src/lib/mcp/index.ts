@@ -12,11 +12,11 @@ export default defineMcp({
   version: "0.1.0",
   instructions:
     "Strumenti del portale Transfer Pricing TPBox. Usa search_news per gli aggiornamenti di attualità, search_interpelli e get_interpello per le risposte agli interpelli dell'Agenzia delle Entrate, search_companies per individuare una società e get_company_financials per il suo estratto economico-finanziario. Tutti i dati restituiti sono dimostrativi e vanno presentati come tali.",
-  tools: [
+  tools: ([
     searchNewsTool,
     searchInterpelliTool,
     getInterpelloTool,
     searchCompaniesTool,
     getCompanyFinancialsTool,
-  ],
+  ] as unknown) as Parameters<typeof defineMcp>[0]["tools"],
 });
