@@ -34,7 +34,7 @@ export function SiteHeader() {
       >
         Salta al contenuto
       </a>
-      <div className="mx-auto grid max-w-6xl grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-4 py-3 sm:px-6">
+      <div className="mx-auto grid max-w-6xl grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-4 py-3 sm:px-6 lg:grid-cols-[minmax(0,1fr)_auto_auto]">
         <Link to="/" className="flex min-w-0 items-center gap-3">
           <span
             aria-hidden="true"
