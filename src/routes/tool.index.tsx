@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { Helmet } from 'react-helmet-async'
 import { LinkCard } from '../components/ui/link-card'
-import { ExternalLink } from 'lucide-react'
+import { ExternalLink, Database } from 'lucide-react'
 
 export const Route = createFileRoute('/tool/')({
   component: RouteComponent,
@@ -14,7 +14,7 @@ function RouteComponent() {
         <title>Tool - Osservatorio Transfer Pricing</title>
         <meta
           name="description"
-          content="Strumenti di analisi per il transfer pricing: Osservatorio Transfer Pricing, Amount B (Pillar One), Company Finder, Portale interpelli."
+          content="Strumenti di analisi per il transfer pricing: Osservatorio Transfer Pricing, Amount B (Pillar One), BEPS MLI Database, Company Finder, Portale interpelli."
         />
       </Helmet>
 
@@ -27,7 +27,16 @@ function RouteComponent() {
         </div>
 
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {/* Amount B (Pillar One) - NUOVO */}
+          {/* BEPS MLI Database - NUOVO */}
+          <LinkCard
+            href="/tool/beps-mli"
+            title="BEPS MLI Database"
+            description="Analisi impatto Multilateral Instrument sui trattati fiscali"
+          >
+            <Database className="h-4 w-4" />
+          </LinkCard>
+
+          {/* Amount B (Pillar One) */}
           <LinkCard
             href="/tool/amount-b"
             title="Amount B (Pillar One)"
@@ -69,6 +78,14 @@ function RouteComponent() {
         <div className="mt-12">
           <h2 className="text-xl font-semibold">Strumenti di analisi</h2>
           <div className="mt-4 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <LinkCard
+              href="/tool/beps-mli"
+              title="BEPS MLI Database"
+              description="Database interattivo per analizzare l'impatto del BEPS MLI sui trattati fiscali bilaterali"
+            >
+              <Database className="h-4 w-4" />
+            </LinkCard>
+
             <LinkCard
               href="/tool/amount-b"
               title="Amount B (Pillar One)"
