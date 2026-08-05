@@ -1,21 +1,14 @@
-# Lovable Project Plan
+# Amount B Migration Plan
 
-## Stato corrente
+## Obiettivo
 
-Progetto React + TypeScript + Vite + Bun, con shadcn/ui e TanStack Router.
+Migrare la logica del workbook OECD "Pricing Automation Tool for the Simplified and Streamlined Approach (February 2026 version)" in un'applicazione web manutenibile, version-aware e testabile.
 
-## Amount B – Pillar One (OECD)
+## Fasi
 
-### Obiettivo
-
-Implementare un'applicazione web che riproduca la logica del workbook OECD "Pricing Automation Tool for the Simplified and Streamlined Approach" (February 2026 version) in modo version-aware, testabile e manutenibile.
-
-### Fasi
-
-#### Phase 1 – Discovery e revisione del piano di migrazione
+### Phase 1 – Discovery e revisione del piano di migrazione
 
 Output:
-- `docs/amount-b-migration-plan.md`
 - `docs/amount-b-workbook-inventory.md`
 - `docs/amount-b-calculation-manifest.md`
 - `docs/amount-b-unresolved-rules.md`
@@ -28,7 +21,7 @@ Attività··
 - Registro delle ambiguità··e delle regole non completamente specificate.
 - Definizione di golden test per ogni ramo decisionale.
 
-#### Phase 2 – Contratto TypeScript e dominio
+### Phase 2 – Contratto TypeScript e dominio
 
 Output:
 - `src/lib/amount-b/model.ts` (tipi, contratti, PercentageRange, ecc.)
@@ -40,13 +33,25 @@ Principi:
 - Pricing matrix e lookup tab lives nei dataset, non hardcoded nell'engine.
 - Separazione netta tra: scoping quantitativo, valutazione qualitativa, Section 5.1, 5.2, 5.3.
 
-#### Phase 3 – Engine puro, test, UI
+### Phase 3 – Engine puro, test, UI
 
 Output:
 - `src/lib/amount-b/engine/*.ts` (pure calculation functions)
 - `src/lib/amount-b/engine/*.test.ts` (golden test)
 - UI e wizard (solo dopo che engine e test sono verdi)
 
-## Altri task
+## Quality gate Phase 1
 
-- Riorganizzazione sezioni "Normativa" e "Attualità·°" nel tool esistente (vedi `.lovable/plan/riorganizzazione-sezioni-normativa-attualit%C3%A0-tool-2026-08-05.md`)
+- [ ] Inventario di tutti e sette i worksheet
+- [ ] Distinzione tra versione workbook e data table
+- [ ] Formula con riferimenti alle celle sorgente
+- [ ] Regola per blank, zero ed errori
+- [ ] Arrotondamento e precisione
+- [ ] Semantica esatta del guardrail a 90 giorni
+- [ ] De minimis multi-industry del 20%
+- [ ] OAS cap all'85%
+- [ ] Mapping rating sovrano → NRA
+- [ ] Distinzione fra scoping quantitativo e valutazione qualitativa
+- [ ] Golden test per ogni ramo decisionale
+- [ ] Checksum dei dataset estratti
+- [ ] Registro delle ambiguità··non risolte
