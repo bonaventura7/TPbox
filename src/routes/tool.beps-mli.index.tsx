@@ -1,10 +1,21 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { Helmet } from 'react-helmet-async'
 import { LinkCard } from '../components/ui/link-card'
 import { ExternalLink, Search, BarChart3, Globe } from 'lucide-react'
 import { loadJurisdictions, getMatchingOutcome, loadAggregateStats } from '../lib/beps-mli/api'
 
 export const Route = createFileRoute('/tool/beps-mli/')({
+  head: () => ({
+    meta: [
+      { title: 'BEPS MLI Database: impatto sui trattati — Osservatorio Transfer Pricing' },
+      { name: 'description', content: "Database interattivo per analizzare l'impatto del BEPS Multilateral Instrument sui trattati fiscali bilaterali." },
+      { property: 'og:title', content: 'BEPS MLI Database: impatto sui trattati — Osservatorio Transfer Pricing' },
+      { property: 'og:description', content: "Database interattivo per analizzare l'impatto del BEPS Multilateral Instrument sui trattati fiscali bilaterali." },
+      { property: 'og:type', content: 'website' },
+      { property: 'og:url', content: 'https://transfer-guide-italia.lovable.app/tool/beps-mli' },
+      { name: 'twitter:card', content: 'summary_large_image' },
+    ],
+    links: [{ rel: 'canonical', href: 'https://transfer-guide-italia.lovable.app/tool/beps-mli' }],
+  }),
   component: RouteComponent,
 })
 
@@ -15,13 +26,6 @@ function RouteComponent() {
 
   return (
     <>
-      <Helmet>
-        <title>BEPS MLI Database - Osservatorio Transfer Pricing</title>
-        <meta
-          name="description"
-          content="Database interattivo per analizzare l'impatto del BEPS Multilateral Instrument sui trattati fiscali bilaterali (demo Italia–Francia)."
-        />
-      </Helmet>
 
       <div className="container mx-auto max-w-5xl px-4 py-8">
         <div className="mb-8">

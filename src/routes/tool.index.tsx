@@ -1,22 +1,26 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { Helmet } from 'react-helmet-async'
 import { LinkCard } from '../components/ui/link-card'
 import { ExternalLink, Database, Calculator, Building } from 'lucide-react'
 
 export const Route = createFileRoute('/tool/')({
+  head: () => ({
+    meta: [
+      { title: 'Tool e strumenti Transfer Pricing — Osservatorio Transfer Pricing' },
+      { name: 'description', content: 'Strumenti di analisi per il transfer pricing: Amount B (Pillar One), BEPS MLI Database, Company Finder, Portale interpelli.' },
+      { property: 'og:title', content: 'Tool e strumenti Transfer Pricing — Osservatorio Transfer Pricing' },
+      { property: 'og:description', content: 'Strumenti di analisi per il transfer pricing: Amount B (Pillar One), BEPS MLI Database, Company Finder, Portale interpelli.' },
+      { property: 'og:type', content: 'website' },
+      { property: 'og:url', content: 'https://transfer-guide-italia.lovable.app/tool' },
+      { name: 'twitter:card', content: 'summary_large_image' },
+    ],
+    links: [{ rel: 'canonical', href: 'https://transfer-guide-italia.lovable.app/tool' }],
+  }),
   component: RouteComponent,
 })
 
 function RouteComponent() {
   return (
     <>
-      <Helmet>
-        <title>Tool - Osservatorio Transfer Pricing</title>
-        <meta
-          name="description"
-          content="Strumenti di analisi per il transfer pricing: Amount B (Pillar One), BEPS MLI Database, Company Finder, Portale interpelli."
-        />
-      </Helmet>
 
       <div className="container mx-auto max-w-5xl px-4 py-8">
         <div className="mb-8">

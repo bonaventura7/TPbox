@@ -1,22 +1,26 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { Helmet } from 'react-helmet-async'
 import { LinkCard } from '../components/ui/link-card'
 import { ExternalLink, PlusCircle, History } from 'lucide-react'
 
 export const Route = createFileRoute('/tool/amount-b/')({
+  head: () => ({
+    meta: [
+      { title: 'Amount B (Pillar One): calcolo guidato — Osservatorio Transfer Pricing' },
+      { name: 'description', content: "Strumento di calcolo per l'Approccio Semplificato e Razionalizzato (Amount B) del Pillar One OCSE, con dati dimostrativi." },
+      { property: 'og:title', content: 'Amount B (Pillar One): calcolo guidato — Osservatorio Transfer Pricing' },
+      { property: 'og:description', content: "Strumento di calcolo per l'Approccio Semplificato e Razionalizzato (Amount B) del Pillar One OCSE, con dati dimostrativi." },
+      { property: 'og:type', content: 'website' },
+      { property: 'og:url', content: 'https://transfer-guide-italia.lovable.app/tool/amount-b' },
+      { name: 'twitter:card', content: 'summary_large_image' },
+    ],
+    links: [{ rel: 'canonical', href: 'https://transfer-guide-italia.lovable.app/tool/amount-b' }],
+  }),
   component: RouteComponent,
 })
 
 function RouteComponent() {
   return (
     <>
-      <Helmet>
-        <title>Amount B - Pillar One - Osservatorio Transfer Pricing</title>
-        <meta
-          name="description"
-          content="Strumento di calcolo per l'Approccio Semplificato e Razionalizzato (Amount B) del Pillar One OECD."
-        />
-      </Helmet>
 
       <div className="container mx-auto max-w-5xl px-4 py-8">
         <div className="mb-8">
@@ -26,11 +30,11 @@ function RouteComponent() {
           </p>
         </div>
 
-        {/* Cos'è²° Amount B */}
+        {/* Cos'è Amount B */}
         <div className="mb-8 rounded-lg border bg-card p-6">
-          <h2 className="text-xl font-semibold">Cos'è²° Amount B?</h2>
+          <h2 className="text-xl font-semibold">Cos'è Amount B?</h2>
           <p className="mt-2 text-muted-foreground">
-            Amount B è20 un approccio semplificato per la determinazione del prezzo di trasferimento
+            Amount B è un approccio semplificato per la determinazione del prezzo di trasferimento
             per le attività di distribuzione di routine. Lo strumento automatizza i calcoli del
             rendimento sulle vendite secondo le linee guida OECD (Annex III of Chapter IV).
           </p>
