@@ -73,7 +73,7 @@ function GiurisprudenzaPage() {
           {CASES.map((item) => (
             <li key={item.id} className="border border-border bg-card p-5 sm:p-6">
               <p className="text-[0.7rem] tracking-wide text-muted-foreground uppercase">
-                {item.topic} · {new Date(item.date).toLocaleDateString("it-IT", { day: "2-digit", month: "long", year: "numeric" })}
+                {item.topic} · {new Date(item.date).toLocaleDateString("it-IT", { timeZone: "Europe/Rome", day: "2-digit", month: "long", year: "numeric" })}
               </p>
               <h2 className="mt-2 font-serif text-xl leading-snug">{item.heading}</h2>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">

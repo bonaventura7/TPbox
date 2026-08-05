@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/site/SectionPage";
 
 const TITLE = "Normativa e prassi";
 const DESCRIPTION =
-  "Le fonti di riferimento sui prezzi di trasferimento organizzate per ambito: OCSE, Country Profiles, Unione europea, Italia e Pillar Two.";
+  "Le fonti di riferimento sui prezzi di trasferimento: Country Profiles nazionali e ricerca delle risposte agli interpelli dell'Agenzia delle Entrate.";
 
 export const Route = createFileRoute("/normativa/")({
   head: () => ({
@@ -21,29 +21,14 @@ export const Route = createFileRoute("/normativa/")({
 
 const AREAS = [
   {
-    to: "/normativa/ocse",
-    label: "OCSE",
-    text: "Linee guida sui prezzi di trasferimento, rapporti tematici e documenti di indirizzo.",
-  },
-  {
     to: "/normativa/country-profiles",
     label: "Country Profiles",
     text: "Schede nazionali su metodi ammessi, obblighi documentali e riferimenti interni.",
   },
   {
-    to: "/normativa/unione-europea",
-    label: "Unione europea",
-    text: "Atti, orientamenti e lavori tecnici rilevanti per il mercato interno.",
-  },
-  {
-    to: "/normativa/italia",
-    label: "Italia",
-    text: "Disciplina interna, prassi amministrativa e adempimenti documentali.",
-  },
-  {
-    to: "/normativa/pillar-two",
-    label: "Pillar Two",
-    text: "Imposizione minima globale e interazione con le rettifiche di transfer pricing.",
+    to: "/normativa/portale-interpelli",
+    label: "Portale interpelli",
+    text: "Ricerca tematica delle risposte pubblicate dall'Agenzia delle Entrate, con filtri per materia, anno e numero.",
   },
 ] as const;
 

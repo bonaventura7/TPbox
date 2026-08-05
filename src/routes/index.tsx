@@ -37,24 +37,24 @@ export const Route = createFileRoute("/")({
 
 const QUICK_LINKS = [
   {
-    to: "/normativa",
-    label: "Normativa e prassi",
-    text: "Linee guida OCSE, Country Profiles, fonti dell'Unione europea, disciplina italiana e Pillar Two.",
+    to: "/attualita",
+    label: "Attualità per area",
+    text: "Feed cronologico delle fonti con viste dedicate a OCSE, Unione europea e Italia.",
   },
   {
-    to: "/giurisprudenza",
-    label: "Giurisprudenza",
-    text: "Rassegna ragionata delle pronunce rilevanti in materia di prezzi di trasferimento.",
+    to: "/normativa/country-profiles",
+    label: "Country Profiles",
+    text: "Schede nazionali su metodi ammessi, obblighi documentali e riferimenti interni.",
   },
   {
-    to: "/tool",
-    label: "Tool",
-    text: "Company Finder e Bilancio Finder per identificare società e consultarne i dati economici.",
-  },
-  {
-    to: "/tool/portale-interpelli",
+    to: "/normativa/portale-interpelli",
     label: "Portale interpelli",
     text: "Ricerca tematica delle risposte pubblicate dall'Agenzia delle Entrate.",
+  },
+  {
+    to: "/tool/company-finder",
+    label: "Company Finder",
+    text: "Identifica una società e scarica il bilancio dalla scheda della società selezionata.",
   },
 ] as const;
 

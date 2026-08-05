@@ -14,17 +14,12 @@ const NAV = [
 ] as const;
 
 const NORMATIVA = [
-  { to: "/normativa/ocse", label: "OCSE" },
   { to: "/normativa/country-profiles", label: "Country Profiles" },
-  { to: "/normativa/unione-europea", label: "Unione europea" },
-  { to: "/normativa/italia", label: "Italia" },
-  { to: "/normativa/pillar-two", label: "Pillar Two" },
+  { to: "/normativa/portale-interpelli", label: "Portale interpelli" },
 ] as const;
 
 const TOOLS = [
   { to: "/tool/company-finder", label: "Company Finder" },
-  { to: "/tool/bilancio-finder", label: "Bilancio Finder" },
-  { to: "/tool/portale-interpelli", label: "Portale interpelli" },
 ] as const;
 
 export function SiteHeader() {
