@@ -14,7 +14,7 @@ function RouteComponent() {
         <title>Tool - Osservatorio Transfer Pricing</title>
         <meta
           name="description"
-          content="Strumenti di analisi per il transfer pricing: Osservatorio Transfer Pricing, Amount B (Pillar One), BEPS MLI Database, Company Finder, Portale interpelli."
+          content="Strumenti di analisi per il transfer pricing: Amount B (Pillar One), BEPS MLI Database, Company Finder, Portale interpelli."
         />
       </Helmet>
 
@@ -43,16 +43,6 @@ function RouteComponent() {
             description="Calcolo Approccio Semplificato e Razionalizzato OECD"
           >
             <Calculator className="h-4 w-4" />
-          </LinkCard>
-
-          {/* Osservatorio Transfer Pricing */}
-          <LinkCard
-            href="https://f7dc1dde-25ee-4227-8806-f31498244695.lovableproject.com/"
-            title="Osservatorio Transfer Pricing"
-            description="Portale indipendente · fonti e strumenti per il transfer pricing"
-            external
-          >
-            <ExternalLink className="h-4 w-4" />
           </LinkCard>
 
           {/* Company Finder */}
