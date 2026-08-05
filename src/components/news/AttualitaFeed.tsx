@@ -1,5 +1,4 @@
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { AlertTriangle, Clock, Search, ShieldCheck } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -17,25 +16,8 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
-import { PageHeader } from "@/components/site/SectionPage";
 import type { NewsFilters, NewsItem } from "@/lib/domain/types";
 import { getNewsFeed } from "@/lib/portal.functions";
-
-const TITLE = "Attualità sul transfer pricing";
-const DESCRIPTION =
-  "Notizia principale, ultime notizie e archivio cronologico con ricerca, filtri per area geografica e tema e selezione delle sole fonti istituzionali.";
-
-export const Route = createFileRoute("/attualita")({
-  head: () => ({
-    meta: [
-      { title: `${TITLE} — Osservatorio Transfer Pricing` },
-      { name: "description", content: DESCRIPTION },
-      { property: "og:title", content: TITLE },
-      { property: "og:description", content: DESCRIPTION },
-    ],
-  }),
-  component: AttualitaPage,
-});
 
 const GEO_OPTIONS = ["TUTTE", "OCSE", "UE", "ITALIA", "GLOBALE"] as const;
 const TOPIC_OPTIONS = [
@@ -100,17 +82,22 @@ function ServiceNotice({
   );
 }
 
-function AttualitaPage() {
+export function AttualitaFeed({
+  fixedGeo,
+}: {
+  fixedGeo?: Exclude<NewsFilters["geo"], "TUTTE">;
+}) {
   const [query, setQuery] = useState("");
   const [submittedQuery, setSubmittedQuery] = useState("");
-  const [geo, setGeo] = useState<NewsFilters["geo"]>("TUTTE");
+  const [geo, setGeo] = useState<NewsFilters["geo"]>(fixedGeo ?? "TUTTE");
   const [topic, setTopic] = useState<NewsFilters["topic"]>("TUTTI");
   const [institutionalOnly, setInstitutionalOnly] = useState(false);
 
   const fetchFeed = useServerFn(getNewsFeed);
+  const effectiveGeo = fixedGeo ?? geo;
   const filters = useMemo(
-    () => ({ query: submittedQuery, geo, topic, institutionalOnly }),
-    [submittedQuery, geo, topic, institutionalOnly],
+    () => ({ query: submittedQuery, geo: effectiveGeo, topic, institutionalOnly }),
+    [submittedQuery, effectiveGeo, topic, institutionalOnly],
   );
 
   const { data, isPending, isError, isFetching, refetch } = useQuery({
@@ -122,8 +109,6 @@ function AttualitaPage() {
 
   return (
     <>
-      <PageHeader eyebrow="Attualità" title={TITLE} intro={DESCRIPTION} />
-
       <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
         {data ? <ServiceNotice health={data.health} lastRunAt={data.lastPipelineRunAt} /> : null}
 
@@ -132,7 +117,11 @@ function AttualitaPage() {
             Ricerca e filtri
           </h2>
           <form
-            className="mt-4 grid gap-4 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_auto]"
+            className={
+              fixedGeo
+                ? "mt-4 grid gap-4 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_auto]"
+                : "mt-4 grid gap-4 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_auto]"
+            }
             onSubmit={(event) => {
               event.preventDefault();
               setSubmittedQuery(query);
@@ -148,21 +137,23 @@ function AttualitaPage() {
                 className="mt-2 min-h-11"
               />
             </div>
-            <div className="min-w-0">
-              <Label htmlFor="news-geo">Area geografica</Label>
-              <Select value={geo} onValueChange={(value) => setGeo(value as NewsFilters["geo"])}>
-                <SelectTrigger id="news-geo" className="mt-2 min-h-11 w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {GEO_OPTIONS.map((option) => (
-                    <SelectItem key={option} value={option}>
-                      {option === "TUTTE" ? "Tutte le aree" : option}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {fixedGeo ? null : (
+              <div className="min-w-0">
+                <Label htmlFor="news-geo">Area geografica</Label>
+                <Select value={geo} onValueChange={(value) => setGeo(value as NewsFilters["geo"])}>
+                  <SelectTrigger id="news-geo" className="mt-2 min-h-11 w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {GEO_OPTIONS.map((option) => (
+                      <SelectItem key={option} value={option}>
+                        {option === "TUTTE" ? "Tutte le aree" : option}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="min-w-0">
               <Label htmlFor="news-topic">Tema</Label>
               <Select
@@ -274,7 +265,7 @@ function AttualitaPage() {
                   onClick={() => {
                     setQuery("");
                     setSubmittedQuery("");
-                    setGeo("TUTTE");
+                    setGeo(fixedGeo ?? "TUTTE");
                     setTopic("TUTTI");
                     setInstitutionalOnly(false);
                   }}
