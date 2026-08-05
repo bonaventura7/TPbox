@@ -17,7 +17,7 @@ const detailQuery = (id: string) =>
     queryFn: () => getInterpello({ data: { id } }),
   });
 
-export const Route = createFileRoute("/tool/portale-interpelli/$id")({
+export const Route = createFileRoute("/normativa/portale-interpelli/$id")({
   loader: async ({ context, params }) => {
     const record = await context.queryClient.ensureQueryData(detailQuery(params.id));
     if (!record) throw notFound();
@@ -51,7 +51,7 @@ export const Route = createFileRoute("/tool/portale-interpelli/$id")({
         La scheda richiesta non è presente nell'archivio dimostrativo.
       </p>
       <Link
-        to="/tool/portale-interpelli"
+        to="/normativa/portale-interpelli"
         className="mt-6 inline-flex min-h-11 items-center gap-2 text-sm font-medium text-petrol underline underline-offset-4"
       >
         <ArrowLeft className="h-4 w-4" aria-hidden="true" />
@@ -84,7 +84,7 @@ function InterpelloDetail() {
   return (
     <article className="mx-auto max-w-3xl px-4 py-10 sm:px-6 sm:py-14">
       <Link
-        to="/tool/portale-interpelli"
+        to="/normativa/portale-interpelli"
         className="inline-flex min-h-11 items-center gap-2 text-sm font-medium text-petrol underline underline-offset-4"
       >
         <ArrowLeft className="h-4 w-4" aria-hidden="true" />

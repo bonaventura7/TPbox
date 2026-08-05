@@ -43,7 +43,7 @@ const archiveQuery = queryOptions({
   queryFn: () => getInterpelliArchive(),
 });
 
-export const Route = createFileRoute("/tool/portale-interpelli/")({
+export const Route = createFileRoute("/normativa/portale-interpelli/")({
   head: () => ({
     meta: [
       { title: `${TITLE} — Osservatorio Transfer Pricing` },
@@ -459,7 +459,7 @@ function PortaleInterpelli() {
 
                   <h3 className="mt-3 font-serif text-xl leading-snug">
                     <Link
-                      to="/tool/portale-interpelli/$id"
+                      to="/normativa/portale-interpelli/$id"
                       params={{ id: item.id }}
                       className="underline-offset-4 hover:underline"
                     >
@@ -505,7 +505,7 @@ function PortaleInterpelli() {
                       </a>
                     </Button>
                     <Link
-                      to="/tool/portale-interpelli/$id"
+                      to="/normativa/portale-interpelli/$id"
                       params={{ id: item.id }}
                       className="inline-flex min-h-11 items-center text-sm font-medium text-petrol underline underline-offset-4"
                     >
