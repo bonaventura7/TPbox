@@ -32,6 +32,7 @@ import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as NormativaPortaleInterpelliIndexRouteImport } from './routes/normativa.portale-interpelli.index'
 import { Route as NormativaPortaleInterpelliIdRouteImport } from './routes/normativa.portale-interpelli.$id'
+import { Route as ToolAmountBIndexRouteImport } from './routes/tool.amount-b.index'
 import { Route as ToolPortaleInterpelliIndexRouteImport } from './routes/tool.portale-interpelli.index'
 import { Route as ToolPortaleInterpelliIdRouteImport } from './routes/tool.portale-interpelli.$id'
 
@@ -156,6 +157,11 @@ const NormativaPortaleInterpelliIdRoute =
     path: '/portale-interpelli/$id',
     getParentRoute: () => NormativaRoute,
   } as any)
+const ToolAmountBIndexRoute = ToolAmountBIndexRouteImport.update({
+  id: '/tool/amount-b/',
+  path: '/tool/amount-b/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ToolPortaleInterpelliIndexRoute =
   ToolPortaleInterpelliIndexRouteImport.update({
     id: '/tool/portale-interpelli/',
@@ -193,6 +199,7 @@ export interface FileRoutesByFullPath {
   '/normativa/portale-interpelli/$id': typeof NormativaPortaleInterpelliIdRoute
   '/tool/portale-interpelli/$id': typeof ToolPortaleInterpelliIdRoute
   '/normativa/portale-interpelli/': typeof NormativaPortaleInterpelliIndexRoute
+  '/tool/amount-b/': typeof ToolAmountBIndexRoute
   '/tool/portale-interpelli/': typeof ToolPortaleInterpelliIndexRoute
 }
 export interface FileRoutesByTo {
@@ -218,6 +225,7 @@ export interface FileRoutesByTo {
   '/normativa/portale-interpelli/$id': typeof NormativaPortaleInterpelliIdRoute
   '/tool/portale-interpelli/$id': typeof ToolPortaleInterpelliIdRoute
   '/normativa/portale-interpelli': typeof NormativaPortaleInterpelliIndexRoute
+  '/tool/amount-b': typeof ToolAmountBIndexRoute
   '/tool/portale-interpelli': typeof ToolPortaleInterpelliIndexRoute
 }
 export interface FileRoutesById {
@@ -246,6 +254,7 @@ export interface FileRoutesById {
   '/normativa/portale-interpelli/$id': typeof NormativaPortaleInterpelliIdRoute
   '/tool/portale-interpelli/$id': typeof ToolPortaleInterpelliIdRoute
   '/normativa/portale-interpelli/': typeof NormativaPortaleInterpelliIndexRoute
+  '/tool/amount-b/': typeof ToolAmountBIndexRoute
   '/tool/portale-interpelli/': typeof ToolPortaleInterpelliIndexRoute
 }
 export interface FileRouteTypes {
@@ -275,6 +284,7 @@ export interface FileRouteTypes {
     | '/normativa/portale-interpelli/$id'
     | '/tool/portale-interpelli/$id'
     | '/normativa/portale-interpelli/'
+    | '/tool/amount-b/'
     | '/tool/portale-interpelli/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -300,6 +310,7 @@ export interface FileRouteTypes {
     | '/normativa/portale-interpelli/$id'
     | '/tool/portale-interpelli/$id'
     | '/normativa/portale-interpelli'
+    | '/tool/amount-b'
     | '/tool/portale-interpelli'
   id:
     | '__root__'
@@ -327,6 +338,7 @@ export interface FileRouteTypes {
     | '/normativa/portale-interpelli/$id'
     | '/tool/portale-interpelli/$id'
     | '/normativa/portale-interpelli/'
+    | '/tool/amount-b/'
     | '/tool/portale-interpelli/'
   fileRoutesById: FileRoutesById
 }
@@ -345,6 +357,7 @@ export interface RootRouteChildren {
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   ToolPortaleInterpelliIdRoute: typeof ToolPortaleInterpelliIdRoute
+  ToolAmountBIndexRoute: typeof ToolAmountBIndexRoute
   ToolPortaleInterpelliIndexRoute: typeof ToolPortaleInterpelliIndexRoute
 }
 
@@ -511,6 +524,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof NormativaPortaleInterpelliIdRouteImport
       parentRoute: typeof NormativaRoute
     }
+    '/tool/amount-b/': {
+      id: '/tool/amount-b/'
+      path: '/tool/amount-b'
+      fullPath: '/tool/amount-b/'
+      preLoaderRoute: typeof ToolAmountBIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/tool/portale-interpelli/': {
       id: '/tool/portale-interpelli/'
       path: '/tool/portale-interpelli'
@@ -584,6 +604,7 @@ const rootRouteChildren: RootRouteChildren = {
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   ToolPortaleInterpelliIdRoute: ToolPortaleInterpelliIdRoute,
+  ToolAmountBIndexRoute: ToolAmountBIndexRoute,
   ToolPortaleInterpelliIndexRoute: ToolPortaleInterpelliIndexRoute,
 }
 export const routeTree = rootRouteImport
