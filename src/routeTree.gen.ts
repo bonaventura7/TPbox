@@ -32,8 +32,12 @@ import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as NormativaPortaleInterpelliIndexRouteImport } from './routes/normativa.portale-interpelli.index'
 import { Route as NormativaPortaleInterpelliIdRouteImport } from './routes/normativa.portale-interpelli.$id'
+import { Route as ToolAmountBIndexRouteImport } from './routes/tool.amount-b.index'
+import { Route as ToolBepsMliIndexRouteImport } from './routes/tool.beps-mli.index'
+import { Route as ToolBepsMliRicercaRouteImport } from './routes/tool.beps-mli.ricerca'
 import { Route as ToolPortaleInterpelliIndexRouteImport } from './routes/tool.portale-interpelli.index'
 import { Route as ToolPortaleInterpelliIdRouteImport } from './routes/tool.portale-interpelli.$id'
+import { Route as ToolBepsMliRisultatoIdRouteImport } from './routes/tool.beps-mli.risultato.$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -156,6 +160,21 @@ const NormativaPortaleInterpelliIdRoute =
     path: '/portale-interpelli/$id',
     getParentRoute: () => NormativaRoute,
   } as any)
+const ToolAmountBIndexRoute = ToolAmountBIndexRouteImport.update({
+  id: '/tool/amount-b/',
+  path: '/tool/amount-b/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ToolBepsMliIndexRoute = ToolBepsMliIndexRouteImport.update({
+  id: '/tool/beps-mli/',
+  path: '/tool/beps-mli/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ToolBepsMliRicercaRoute = ToolBepsMliRicercaRouteImport.update({
+  id: '/tool/beps-mli/ricerca',
+  path: '/tool/beps-mli/ricerca',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ToolPortaleInterpelliIndexRoute =
   ToolPortaleInterpelliIndexRouteImport.update({
     id: '/tool/portale-interpelli/',
@@ -165,6 +184,11 @@ const ToolPortaleInterpelliIndexRoute =
 const ToolPortaleInterpelliIdRoute = ToolPortaleInterpelliIdRouteImport.update({
   id: '/tool/portale-interpelli/$id',
   path: '/tool/portale-interpelli/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ToolBepsMliRisultatoIdRoute = ToolBepsMliRisultatoIdRouteImport.update({
+  id: '/tool/beps-mli/risultato/$id',
+  path: '/tool/beps-mli/risultato/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 
@@ -191,9 +215,13 @@ export interface FileRoutesByFullPath {
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/normativa/portale-interpelli/$id': typeof NormativaPortaleInterpelliIdRoute
+  '/tool/beps-mli/ricerca': typeof ToolBepsMliRicercaRoute
   '/tool/portale-interpelli/$id': typeof ToolPortaleInterpelliIdRoute
   '/normativa/portale-interpelli/': typeof NormativaPortaleInterpelliIndexRoute
+  '/tool/amount-b/': typeof ToolAmountBIndexRoute
+  '/tool/beps-mli/': typeof ToolBepsMliIndexRoute
   '/tool/portale-interpelli/': typeof ToolPortaleInterpelliIndexRoute
+  '/tool/beps-mli/risultato/$id': typeof ToolBepsMliRisultatoIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -216,9 +244,13 @@ export interface FileRoutesByTo {
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/normativa/portale-interpelli/$id': typeof NormativaPortaleInterpelliIdRoute
+  '/tool/beps-mli/ricerca': typeof ToolBepsMliRicercaRoute
   '/tool/portale-interpelli/$id': typeof ToolPortaleInterpelliIdRoute
   '/normativa/portale-interpelli': typeof NormativaPortaleInterpelliIndexRoute
+  '/tool/amount-b': typeof ToolAmountBIndexRoute
+  '/tool/beps-mli': typeof ToolBepsMliIndexRoute
   '/tool/portale-interpelli': typeof ToolPortaleInterpelliIndexRoute
+  '/tool/beps-mli/risultato/$id': typeof ToolBepsMliRisultatoIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -244,9 +276,13 @@ export interface FileRoutesById {
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/normativa/portale-interpelli/$id': typeof NormativaPortaleInterpelliIdRoute
+  '/tool/beps-mli/ricerca': typeof ToolBepsMliRicercaRoute
   '/tool/portale-interpelli/$id': typeof ToolPortaleInterpelliIdRoute
   '/normativa/portale-interpelli/': typeof NormativaPortaleInterpelliIndexRoute
+  '/tool/amount-b/': typeof ToolAmountBIndexRoute
+  '/tool/beps-mli/': typeof ToolBepsMliIndexRoute
   '/tool/portale-interpelli/': typeof ToolPortaleInterpelliIndexRoute
+  '/tool/beps-mli/risultato/$id': typeof ToolBepsMliRisultatoIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -273,9 +309,13 @@ export interface FileRouteTypes {
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/normativa/portale-interpelli/$id'
+    | '/tool/beps-mli/ricerca'
     | '/tool/portale-interpelli/$id'
     | '/normativa/portale-interpelli/'
+    | '/tool/amount-b/'
+    | '/tool/beps-mli/'
     | '/tool/portale-interpelli/'
+    | '/tool/beps-mli/risultato/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -298,9 +338,13 @@ export interface FileRouteTypes {
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/normativa/portale-interpelli/$id'
+    | '/tool/beps-mli/ricerca'
     | '/tool/portale-interpelli/$id'
     | '/normativa/portale-interpelli'
+    | '/tool/amount-b'
+    | '/tool/beps-mli'
     | '/tool/portale-interpelli'
+    | '/tool/beps-mli/risultato/$id'
   id:
     | '__root__'
     | '/'
@@ -325,9 +369,13 @@ export interface FileRouteTypes {
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/normativa/portale-interpelli/$id'
+    | '/tool/beps-mli/ricerca'
     | '/tool/portale-interpelli/$id'
     | '/normativa/portale-interpelli/'
+    | '/tool/amount-b/'
+    | '/tool/beps-mli/'
     | '/tool/portale-interpelli/'
+    | '/tool/beps-mli/risultato/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -344,8 +392,12 @@ export interface RootRouteChildren {
   ToolIndexRoute: typeof ToolIndexRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
+  ToolBepsMliRicercaRoute: typeof ToolBepsMliRicercaRoute
   ToolPortaleInterpelliIdRoute: typeof ToolPortaleInterpelliIdRoute
+  ToolAmountBIndexRoute: typeof ToolAmountBIndexRoute
+  ToolBepsMliIndexRoute: typeof ToolBepsMliIndexRoute
   ToolPortaleInterpelliIndexRoute: typeof ToolPortaleInterpelliIndexRoute
+  ToolBepsMliRisultatoIdRoute: typeof ToolBepsMliRisultatoIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -511,6 +563,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof NormativaPortaleInterpelliIdRouteImport
       parentRoute: typeof NormativaRoute
     }
+    '/tool/amount-b/': {
+      id: '/tool/amount-b/'
+      path: '/tool/amount-b'
+      fullPath: '/tool/amount-b/'
+      preLoaderRoute: typeof ToolAmountBIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tool/beps-mli/': {
+      id: '/tool/beps-mli/'
+      path: '/tool/beps-mli'
+      fullPath: '/tool/beps-mli/'
+      preLoaderRoute: typeof ToolBepsMliIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tool/beps-mli/ricerca': {
+      id: '/tool/beps-mli/ricerca'
+      path: '/tool/beps-mli/ricerca'
+      fullPath: '/tool/beps-mli/ricerca'
+      preLoaderRoute: typeof ToolBepsMliRicercaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/tool/portale-interpelli/': {
       id: '/tool/portale-interpelli/'
       path: '/tool/portale-interpelli'
@@ -523,6 +596,13 @@ declare module '@tanstack/react-router' {
       path: '/tool/portale-interpelli/$id'
       fullPath: '/tool/portale-interpelli/$id'
       preLoaderRoute: typeof ToolPortaleInterpelliIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tool/beps-mli/risultato/$id': {
+      id: '/tool/beps-mli/risultato/$id'
+      path: '/tool/beps-mli/risultato/$id'
+      fullPath: '/tool/beps-mli/risultato/$id'
+      preLoaderRoute: typeof ToolBepsMliRisultatoIdRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -583,8 +663,12 @@ const rootRouteChildren: RootRouteChildren = {
   ToolIndexRoute: ToolIndexRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
+  ToolBepsMliRicercaRoute: ToolBepsMliRicercaRoute,
   ToolPortaleInterpelliIdRoute: ToolPortaleInterpelliIdRoute,
+  ToolAmountBIndexRoute: ToolAmountBIndexRoute,
+  ToolBepsMliIndexRoute: ToolBepsMliIndexRoute,
   ToolPortaleInterpelliIndexRoute: ToolPortaleInterpelliIndexRoute,
+  ToolBepsMliRisultatoIdRoute: ToolBepsMliRisultatoIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
