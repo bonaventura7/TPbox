@@ -39,6 +39,20 @@ Progetto React + TypeScript + Vite + Bun, con shadcn/ui e TanStack Router.
 
 ### Altri tool
 
+### Ravvedimento spontaneo
+
+**Route:** `/tool/ravvedimento`
+
+**Stato:** Phase 2 implementata (engine + dataset versionati + UI).
+
+**Decisioni fissate:**
+- Convenzione giorni: giorno iniziale escluso, giorno di versamento incluso.
+- Divisore: giorni effettivi dell'anno civile (365/366).
+- Aritmetica in centesimi, arrotondamento per segmento e sul totale.
+- Copertura dataset tassi legali 1997–2025: fuori intervallo il calcolo è bloccato.
+- Nessuna maggiorazione 0,5% automatica; ruleset sanzionatorio versionato e marcato `unverified`.
+- Cause ostative → calcolo bloccato.
+
 - **Osservatorio Transfer Pricing:** https://f7dc1dde-25ee-4227-8806-f31498244695.lovableproject.com/
 - **Company Finder:** `/tool/company-finder`
 - **Portale interpelli:** `/normativa/portale-interpelli`

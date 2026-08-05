@@ -28,6 +28,7 @@ import { Route as NormativaUnioneEuropeaRouteImport } from './routes/normativa.u
 import { Route as ToolIndexRouteImport } from './routes/tool.index'
 import { Route as ToolBilancioFinderRouteImport } from './routes/tool.bilancio-finder'
 import { Route as ToolCompanyFinderRouteImport } from './routes/tool.company-finder'
+import { Route as ToolRavvedimentoRouteImport } from './routes/tool.ravvedimento'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as NormativaPortaleInterpelliIndexRouteImport } from './routes/normativa.portale-interpelli.index'
@@ -137,6 +138,11 @@ const ToolCompanyFinderRoute = ToolCompanyFinderRouteImport.update({
   path: '/tool/company-finder',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ToolRavvedimentoRoute = ToolRavvedimentoRouteImport.update({
+  id: '/tool/ravvedimento',
+  path: '/tool/ravvedimento',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
   id: '/.lovable/oauth/consent',
   path: '/.lovable/oauth/consent',
@@ -209,6 +215,7 @@ export interface FileRoutesByFullPath {
   '/normativa/unione-europea': typeof NormativaUnioneEuropeaRoute
   '/tool/bilancio-finder': typeof ToolBilancioFinderRoute
   '/tool/company-finder': typeof ToolCompanyFinderRoute
+  '/tool/ravvedimento': typeof ToolRavvedimentoRoute
   '/attualita/': typeof AttualitaIndexRoute
   '/normativa/': typeof NormativaIndexRoute
   '/tool/': typeof ToolIndexRoute
@@ -238,6 +245,7 @@ export interface FileRoutesByTo {
   '/normativa/unione-europea': typeof NormativaUnioneEuropeaRoute
   '/tool/bilancio-finder': typeof ToolBilancioFinderRoute
   '/tool/company-finder': typeof ToolCompanyFinderRoute
+  '/tool/ravvedimento': typeof ToolRavvedimentoRoute
   '/attualita': typeof AttualitaIndexRoute
   '/normativa': typeof NormativaIndexRoute
   '/tool': typeof ToolIndexRoute
@@ -270,6 +278,7 @@ export interface FileRoutesById {
   '/normativa/unione-europea': typeof NormativaUnioneEuropeaRoute
   '/tool/bilancio-finder': typeof ToolBilancioFinderRoute
   '/tool/company-finder': typeof ToolCompanyFinderRoute
+  '/tool/ravvedimento': typeof ToolRavvedimentoRoute
   '/attualita/': typeof AttualitaIndexRoute
   '/normativa/': typeof NormativaIndexRoute
   '/tool/': typeof ToolIndexRoute
@@ -303,6 +312,7 @@ export interface FileRouteTypes {
     | '/normativa/unione-europea'
     | '/tool/bilancio-finder'
     | '/tool/company-finder'
+    | '/tool/ravvedimento'
     | '/attualita/'
     | '/normativa/'
     | '/tool/'
@@ -332,6 +342,7 @@ export interface FileRouteTypes {
     | '/normativa/unione-europea'
     | '/tool/bilancio-finder'
     | '/tool/company-finder'
+    | '/tool/ravvedimento'
     | '/attualita'
     | '/normativa'
     | '/tool'
@@ -363,6 +374,7 @@ export interface FileRouteTypes {
     | '/normativa/unione-europea'
     | '/tool/bilancio-finder'
     | '/tool/company-finder'
+    | '/tool/ravvedimento'
     | '/attualita/'
     | '/normativa/'
     | '/tool/'
@@ -389,6 +401,7 @@ export interface RootRouteChildren {
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   ToolBilancioFinderRoute: typeof ToolBilancioFinderRoute
   ToolCompanyFinderRoute: typeof ToolCompanyFinderRoute
+  ToolRavvedimentoRoute: typeof ToolRavvedimentoRoute
   ToolIndexRoute: typeof ToolIndexRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -535,6 +548,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ToolCompanyFinderRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/tool/ravvedimento': {
+      id: '/tool/ravvedimento'
+      path: '/tool/ravvedimento'
+      fullPath: '/tool/ravvedimento'
+      preLoaderRoute: typeof ToolRavvedimentoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/.lovable/oauth/consent': {
       id: '/.lovable/oauth/consent'
       path: '/.lovable/oauth/consent'
@@ -660,6 +680,7 @@ const rootRouteChildren: RootRouteChildren = {
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
   ToolBilancioFinderRoute: ToolBilancioFinderRoute,
   ToolCompanyFinderRoute: ToolCompanyFinderRoute,
+  ToolRavvedimentoRoute: ToolRavvedimentoRoute,
   ToolIndexRoute: ToolIndexRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
