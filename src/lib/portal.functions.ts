@@ -69,3 +69,35 @@ export const getBilancio = createServerFn({ method: "POST" })
       simulate: data.simulate === "NOT_AUTHORIZED" ? "OK" : data.simulate,
     });
   });
+
+const materia = z.enum([
+  "Transfer pricing",
+  "Fiscalità internazionale",
+  "Reddito d'impresa e IRES",
+  "IVA e operazioni con l'estero",
+  "Operazioni straordinarie",
+  "Agevolazioni fiscali",
+  "Lavoro dipendente e mobilità internazionale",
+  "Riscossione, accertamento e sanzioni",
+  "Altre materie",
+]);
+
+export const searchInterpelli = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) =>
+    z
+      .object({
+        query: z.string().max(160).default(""),
+        materie: z.array(materia).max(9).default([]),
+        year: z.number().int().min(1990).max(2100).nullable().default(null),
+        sort: z.enum(["RECENT_FIRST", "OLDEST_FIRST"]).default("RECENT_FIRST"),
+        page: z.number().int().min(1).max(500).default(1),
+        pageSize: z.number().int().min(1).max(50).default(6),
+      })
+      .parse(data ?? {}),
+  )
+  .handler(async ({ data }) => {
+    const { searchInterpelli: run } = await import(
+      "./repositories/agenzia-interpelli.repository.server"
+    );
+    return run(data);
+  });
