@@ -13,3 +13,8 @@ export type FeatureFlag = keyof typeof FEATURE_FLAGS;
 export function isEnabled(flag: FeatureFlag): boolean {
   return FEATURE_FLAGS[flag];
 }
+/** Portale interpelli: acquisizione disattivata, fallback su import manuale. */
+export const INTERPELLI_FLAGS = {
+  acquisitionMode: "MANUAL_IMPORT" as "HTML_WATCH" | "MANUAL_IMPORT" | "DISABLED",
+  showTransferPricingFilter: true,
+} as const;
