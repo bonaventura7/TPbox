@@ -56,8 +56,8 @@ function ToolIndex() {
           <li className="border border-border bg-card p-6">
             <h2 className="font-serif text-2xl">Portale interpelli</h2>
             <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-              Ricerca testuale, filtri per materia e per anno sulle risposte agli
-              interpelli, con collegamento alla fonte ufficiale.
+              Ricerca tematica delle risposte pubblicate dall'Agenzia delle Entrate, con
+              filtri per materia e per anno e collegamento alla fonte ufficiale.
             </p>
             <Link
               to="/tool/portale-interpelli"
