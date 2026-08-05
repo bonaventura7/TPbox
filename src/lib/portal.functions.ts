@@ -1,0 +1,71 @@
+import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
+
+const geo = z.enum(["TUTTE", "OCSE", "UE", "ITALIA", "GLOBALE"]);
+const topic = z.enum([
+  "TUTTI",
+  "Metodi e comparabili",
+  "Intangibili",
+  "Servizi infragruppo",
+  "Pillar Two",
+  "APA e MAP",
+  "Documentazione",
+  "Contenzioso",
+]);
+
+const newsFiltersSchema = z.object({
+  query: z.string().max(120).default(""),
+  geo: geo.default("TUTTE"),
+  topic: topic.default("TUTTI"),
+  institutionalOnly: z.boolean().default(false),
+});
+
+export const getNewsFeed = createServerFn({ method: "GET" })
+  .inputValidator((data: unknown) => newsFiltersSchema.parse(data ?? {}))
+  .handler(async ({ data }) => {
+    const { listNewsFeed } = await import("./repositories/news.repository.server");
+    return listNewsFeed(data);
+  });
+
+export const getSources = createServerFn({ method: "GET" }).handler(async () => {
+  const { listSources } = await import("./repositories/news.repository.server");
+  return listSources();
+});
+
+export const searchCompanies = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) =>
+    z
+      .object({ query: z.string().max(160), country: z.string().max(2).default("") })
+      .parse(data),
+  )
+  .handler(async ({ data }) => {
+    const { searchCompanies: run } = await import("./repositories/tools.repository.server");
+    return run(data);
+  });
+
+export const getBilancio = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) =>
+    z
+      .object({
+        companyId: z.string().min(3).max(64),
+        simulate: z
+          .enum([
+            "OK",
+            "NOT_AUTHORIZED",
+            "PROVIDER_UNAVAILABLE",
+            "RATE_LIMITED",
+            "DEGRADED",
+          ])
+          .default("OK"),
+      })
+      .parse(data),
+  )
+  .handler(async ({ data }) => {
+    const { fetchBilancio } = await import("./repositories/tools.repository.server");
+    // Il ruolo effettivo sarà letto dalla sessione autenticata (USER/EDITOR/ADMIN/PRO).
+    return fetchBilancio({
+      companyId: data.companyId,
+      role: data.simulate === "NOT_AUTHORIZED" ? "USER" : "PRO",
+      simulate: data.simulate === "NOT_AUTHORIZED" ? "OK" : data.simulate,
+    });
+  });

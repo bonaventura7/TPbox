@@ -10,33 +10,186 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AttualitaRouteImport } from './routes/attualita'
+import { Route as GiurisprudenzaRouteImport } from './routes/giurisprudenza'
+import { Route as NormativaRouteImport } from './routes/normativa'
+import { Route as NormativaIndexRouteImport } from './routes/normativa.index'
+import { Route as NormativaCountryProfilesRouteImport } from './routes/normativa.country-profiles'
+import { Route as NormativaItaliaRouteImport } from './routes/normativa.italia'
+import { Route as NormativaOcseRouteImport } from './routes/normativa.ocse'
+import { Route as NormativaPillarTwoRouteImport } from './routes/normativa.pillar-two'
+import { Route as NormativaUnioneEuropeaRouteImport } from './routes/normativa.unione-europea'
+import { Route as ToolIndexRouteImport } from './routes/tool.index'
+import { Route as ToolBilancioFinderRouteImport } from './routes/tool.bilancio-finder'
+import { Route as ToolCompanyFinderRouteImport } from './routes/tool.company-finder'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AttualitaRoute = AttualitaRouteImport.update({
+  id: '/attualita',
+  path: '/attualita',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GiurisprudenzaRoute = GiurisprudenzaRouteImport.update({
+  id: '/giurisprudenza',
+  path: '/giurisprudenza',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NormativaRoute = NormativaRouteImport.update({
+  id: '/normativa',
+  path: '/normativa',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NormativaIndexRoute = NormativaIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => NormativaRoute,
+} as any)
+const NormativaCountryProfilesRoute =
+  NormativaCountryProfilesRouteImport.update({
+    id: '/country-profiles',
+    path: '/country-profiles',
+    getParentRoute: () => NormativaRoute,
+  } as any)
+const NormativaItaliaRoute = NormativaItaliaRouteImport.update({
+  id: '/italia',
+  path: '/italia',
+  getParentRoute: () => NormativaRoute,
+} as any)
+const NormativaOcseRoute = NormativaOcseRouteImport.update({
+  id: '/ocse',
+  path: '/ocse',
+  getParentRoute: () => NormativaRoute,
+} as any)
+const NormativaPillarTwoRoute = NormativaPillarTwoRouteImport.update({
+  id: '/pillar-two',
+  path: '/pillar-two',
+  getParentRoute: () => NormativaRoute,
+} as any)
+const NormativaUnioneEuropeaRoute = NormativaUnioneEuropeaRouteImport.update({
+  id: '/unione-europea',
+  path: '/unione-europea',
+  getParentRoute: () => NormativaRoute,
+} as any)
+const ToolIndexRoute = ToolIndexRouteImport.update({
+  id: '/tool/',
+  path: '/tool/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ToolBilancioFinderRoute = ToolBilancioFinderRouteImport.update({
+  id: '/tool/bilancio-finder',
+  path: '/tool/bilancio-finder',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ToolCompanyFinderRoute = ToolCompanyFinderRouteImport.update({
+  id: '/tool/company-finder',
+  path: '/tool/company-finder',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/attualita': typeof AttualitaRoute
+  '/giurisprudenza': typeof GiurisprudenzaRoute
+  '/normativa': typeof NormativaRouteWithChildren
+  '/normativa/country-profiles': typeof NormativaCountryProfilesRoute
+  '/normativa/italia': typeof NormativaItaliaRoute
+  '/normativa/ocse': typeof NormativaOcseRoute
+  '/normativa/pillar-two': typeof NormativaPillarTwoRoute
+  '/normativa/unione-europea': typeof NormativaUnioneEuropeaRoute
+  '/tool/bilancio-finder': typeof ToolBilancioFinderRoute
+  '/tool/company-finder': typeof ToolCompanyFinderRoute
+  '/normativa/': typeof NormativaIndexRoute
+  '/tool/': typeof ToolIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/attualita': typeof AttualitaRoute
+  '/giurisprudenza': typeof GiurisprudenzaRoute
+  '/normativa/country-profiles': typeof NormativaCountryProfilesRoute
+  '/normativa/italia': typeof NormativaItaliaRoute
+  '/normativa/ocse': typeof NormativaOcseRoute
+  '/normativa/pillar-two': typeof NormativaPillarTwoRoute
+  '/normativa/unione-europea': typeof NormativaUnioneEuropeaRoute
+  '/tool/bilancio-finder': typeof ToolBilancioFinderRoute
+  '/tool/company-finder': typeof ToolCompanyFinderRoute
+  '/normativa': typeof NormativaIndexRoute
+  '/tool': typeof ToolIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/attualita': typeof AttualitaRoute
+  '/giurisprudenza': typeof GiurisprudenzaRoute
+  '/normativa': typeof NormativaRouteWithChildren
+  '/normativa/country-profiles': typeof NormativaCountryProfilesRoute
+  '/normativa/italia': typeof NormativaItaliaRoute
+  '/normativa/ocse': typeof NormativaOcseRoute
+  '/normativa/pillar-two': typeof NormativaPillarTwoRoute
+  '/normativa/unione-europea': typeof NormativaUnioneEuropeaRoute
+  '/tool/bilancio-finder': typeof ToolBilancioFinderRoute
+  '/tool/company-finder': typeof ToolCompanyFinderRoute
+  '/normativa/': typeof NormativaIndexRoute
+  '/tool/': typeof ToolIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/attualita'
+    | '/giurisprudenza'
+    | '/normativa'
+    | '/normativa/country-profiles'
+    | '/normativa/italia'
+    | '/normativa/ocse'
+    | '/normativa/pillar-two'
+    | '/normativa/unione-europea'
+    | '/tool/bilancio-finder'
+    | '/tool/company-finder'
+    | '/normativa/'
+    | '/tool/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/attualita'
+    | '/giurisprudenza'
+    | '/normativa/country-profiles'
+    | '/normativa/italia'
+    | '/normativa/ocse'
+    | '/normativa/pillar-two'
+    | '/normativa/unione-europea'
+    | '/tool/bilancio-finder'
+    | '/tool/company-finder'
+    | '/normativa'
+    | '/tool'
+  id:
+    | '__root__'
+    | '/'
+    | '/attualita'
+    | '/giurisprudenza'
+    | '/normativa'
+    | '/normativa/country-profiles'
+    | '/normativa/italia'
+    | '/normativa/ocse'
+    | '/normativa/pillar-two'
+    | '/normativa/unione-europea'
+    | '/tool/bilancio-finder'
+    | '/tool/company-finder'
+    | '/normativa/'
+    | '/tool/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AttualitaRoute: typeof AttualitaRoute
+  GiurisprudenzaRoute: typeof GiurisprudenzaRoute
+  NormativaRoute: typeof NormativaRouteWithChildren
+  ToolBilancioFinderRoute: typeof ToolBilancioFinderRoute
+  ToolCompanyFinderRoute: typeof ToolCompanyFinderRoute
+  ToolIndexRoute: typeof ToolIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,22 +201,124 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/attualita': {
+      id: '/attualita'
+      path: '/attualita'
+      fullPath: '/attualita'
+      preLoaderRoute: typeof AttualitaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/giurisprudenza': {
+      id: '/giurisprudenza'
+      path: '/giurisprudenza'
+      fullPath: '/giurisprudenza'
+      preLoaderRoute: typeof GiurisprudenzaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/normativa': {
+      id: '/normativa'
+      path: '/normativa'
+      fullPath: '/normativa'
+      preLoaderRoute: typeof NormativaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/normativa/': {
+      id: '/normativa/'
+      path: '/'
+      fullPath: '/normativa/'
+      preLoaderRoute: typeof NormativaIndexRouteImport
+      parentRoute: typeof NormativaRoute
+    }
+    '/normativa/country-profiles': {
+      id: '/normativa/country-profiles'
+      path: '/country-profiles'
+      fullPath: '/normativa/country-profiles'
+      preLoaderRoute: typeof NormativaCountryProfilesRouteImport
+      parentRoute: typeof NormativaRoute
+    }
+    '/normativa/italia': {
+      id: '/normativa/italia'
+      path: '/italia'
+      fullPath: '/normativa/italia'
+      preLoaderRoute: typeof NormativaItaliaRouteImport
+      parentRoute: typeof NormativaRoute
+    }
+    '/normativa/ocse': {
+      id: '/normativa/ocse'
+      path: '/ocse'
+      fullPath: '/normativa/ocse'
+      preLoaderRoute: typeof NormativaOcseRouteImport
+      parentRoute: typeof NormativaRoute
+    }
+    '/normativa/pillar-two': {
+      id: '/normativa/pillar-two'
+      path: '/pillar-two'
+      fullPath: '/normativa/pillar-two'
+      preLoaderRoute: typeof NormativaPillarTwoRouteImport
+      parentRoute: typeof NormativaRoute
+    }
+    '/normativa/unione-europea': {
+      id: '/normativa/unione-europea'
+      path: '/unione-europea'
+      fullPath: '/normativa/unione-europea'
+      preLoaderRoute: typeof NormativaUnioneEuropeaRouteImport
+      parentRoute: typeof NormativaRoute
+    }
+    '/tool/': {
+      id: '/tool/'
+      path: '/tool'
+      fullPath: '/tool/'
+      preLoaderRoute: typeof ToolIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tool/bilancio-finder': {
+      id: '/tool/bilancio-finder'
+      path: '/tool/bilancio-finder'
+      fullPath: '/tool/bilancio-finder'
+      preLoaderRoute: typeof ToolBilancioFinderRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tool/company-finder': {
+      id: '/tool/company-finder'
+      path: '/tool/company-finder'
+      fullPath: '/tool/company-finder'
+      preLoaderRoute: typeof ToolCompanyFinderRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
+interface NormativaRouteChildren {
+  NormativaCountryProfilesRoute: typeof NormativaCountryProfilesRoute
+  NormativaItaliaRoute: typeof NormativaItaliaRoute
+  NormativaOcseRoute: typeof NormativaOcseRoute
+  NormativaPillarTwoRoute: typeof NormativaPillarTwoRoute
+  NormativaUnioneEuropeaRoute: typeof NormativaUnioneEuropeaRoute
+  NormativaIndexRoute: typeof NormativaIndexRoute
+}
+
+const NormativaRouteChildren: NormativaRouteChildren = {
+  NormativaCountryProfilesRoute: NormativaCountryProfilesRoute,
+  NormativaItaliaRoute: NormativaItaliaRoute,
+  NormativaOcseRoute: NormativaOcseRoute,
+  NormativaPillarTwoRoute: NormativaPillarTwoRoute,
+  NormativaUnioneEuropeaRoute: NormativaUnioneEuropeaRoute,
+  NormativaIndexRoute: NormativaIndexRoute,
+}
+
+const NormativaRouteWithChildren = NormativaRoute._addFileChildren(
+  NormativaRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AttualitaRoute: AttualitaRoute,
+  GiurisprudenzaRoute: GiurisprudenzaRoute,
+  NormativaRoute: NormativaRouteWithChildren,
+  ToolBilancioFinderRoute: ToolBilancioFinderRoute,
+  ToolCompanyFinderRoute: ToolCompanyFinderRoute,
+  ToolIndexRoute: ToolIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
