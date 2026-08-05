@@ -12,6 +12,9 @@ Integrare il **BEPS MLI Matching Database** OECD nel portale in modo che:
 
 - **BEPS MLI Matching Database:** https://www.oecd.org/en/data/tools/beps-mli-matching-database.html
 - **BEPS MLI Overview:** https://www.oecd.org/en/topics/beps-multilateral-instrument.html
+- **MLI Positions (Signatories and Parties):** https://www.oecd.org/content/dam/oecd/en/topics/policy-sub-issues/beps-mli/beps-mli-signatories-and-parties.pdf
+- **Posizione Italia:** https://www.oecd.org/content/dam/oecd/en/topics/policy-sub-issues/beps-mli/beps-mli-position-italy.pdf
+- **Posizione Germania:** https://www.oecd.org/content/dam/oecd/en/topics/policy-sub-issues/beps-mli/beps-mli-position-germany.pdf
 
 ## Strategia di integrazione
 
@@ -25,9 +28,9 @@ Creare un layer di astrazione che:
 
 **Vantaggi:**
 - Controllo totale su UI/UX
-- Possibilità²° di caching e ottimizzazione
+- Possibilità di caching e ottimizzazione
 - Indipendenza da cambiamenti OECD (se il layer è ben progettato)
-- Possibilità²° di arricchire i dati con spiegazioni in italiano
+- Possibilità di arricchire i dati con spiegazioni in italiano
 
 **Svantaggi:**
 - Richiede sviluppo backend
@@ -71,9 +74,9 @@ Creare una pagina wrapper che:
 ### Route
 
 ```
-/tool/beps-mli                    indice: cos'è²°, avvia ricerca, statistiche
+/tool/beps-mli                    indice: cos'è, avvia ricerca, statistiche
 /tool/beps-mli/ricerca            interfaccia di ricerca con filtri
-/tool/beps-mli/risultato          matching outcomes tra due paesi
+/tool/beps-mli/risultato/$id      matching outcomes tra due paesi
 /tool/beps-mli/paese/$id          dettaglio paese (reservations, choices)
 /tool/beps-mli/statistiche        dashboard aggregate statistics
 ```
@@ -99,34 +102,52 @@ Creare una pagina wrapper che:
 
 ```ts
 interface MliJurisdiction {
-  id: string; // es. "ITA"
-  name: string; // es. "Italy"
-  nameIt: string; // es. "Italia"
+  code: string; // es. "ITA"
+  nameEn: string;
+  nameIt: string;
+  isSignatory: boolean;
+  isParty: boolean;
   signatureDate?: string;
   entryIntoForceDate?: string;
-  coveredTaxAgreements: CoveredTaxAgreement[];
-  reservations: Reservation[];
-  choices: Choice[];
 }
 
-interface MatchingOutcome {
+interface CoveredTaxAgreement {
+  id: string;
   jurisdiction1: string;
   jurisdiction2: string;
-  mliProvisions: MliProvision[];
-  lastUpdated: string;
+  title: string;
+  statusAsOf: string;
 }
 
 interface MliProvision {
-  article: string; // es. "Article 6"
-  provisionType: string; // es. "Minimum Standard"
-  outcome: string; // es. "Applies"
-  explanation: string; // spiegazione in italiano
+  article: string;
+  provisionType: string;
+  minimumStandard: boolean;
+  outcome: 'APPLIES' | 'DOES_NOT_APPLY' | 'PARTIAL' | 'PENDING';
+  explanationIt: string;
+}
+
+interface MatchingOutcome {
+  agreementId: string;
+  jurisdiction1: string;
+  jurisdiction2: string;
+  statusAsOf: string;
+  provisions: MliProvision[];
+}
+
+interface AggregateStats {
+  statusAsOf: string;
+  totalJurisdictions: number;
+  totalCoveredAgreements: number;
+  matchedAgreements: number;
+  oneWayAgreements: number;
+  waitingAgreements: number;
 }
 ```
 
-### UI/UX migliorata
+## UI/UX migliorata
 
-**Rispetto a OECD:**
+Rispetto a OECD:
 
 1. **Search più intelligente:**
    - Autocomplete per paesi
@@ -153,56 +174,122 @@ interface MliProvision {
    - Filtri per regione, data, provision
    - Trend temporali
 
-## Integrazione con OECD
+## ETL Pipeline (MLI Positions → Dataset interno)
 
-### Approccio tecnico
+### Obiettivo
 
-1. **Backend proxy** (consigliato):
-   - Funzione server che fa fetch da OECD
-   - Normalizza i dati
-   - Serve con caching (Redis o in-memory)
-   - Gestisce errori e fallback
+Convertire le MLI Positions OECD (PDF) in dataset interni JSON/TS, in modo semi-automatico, per alimentare il BEPS MLI Database del portale.
 
-2. **Dataset statici** (alternativa):
-   - Script per scaricare dati OECD periodicamente
-   - Salvare in `public/data/beps-mli/`
-   - Frontend fetch da file statici
-   - Aggiornare con GitHub Actions o manualmente
+### Fonti
 
-3. **Iframe nascosto** (workaround rapido):
-   - Pagina OECD in iframe nascosto
-   - Overlay con UI custom
-   - Comunicazione postMessage per estrarre dati
-   - Limitato e fragile
+- **MLI Signatories and Parties (tabella riepilogo):** lista giurisdizioni, stato, linkage alle posizioni dettagliate. [beps-mli-signatories-and-parties.pdf]
+- **Posizione Italia (beps-mli-position-italy.pdf):** elenco trattati notificati (Covered Tax Agreements) e reservations/notifiche.
+- **Posizione Germania (beps-mli-position-germany.pdf):** idem per Germania.
+- Altri paesi: file posizione analoghi.
 
-### Compliance
+### Passi ETL (concept)
 
-- **Attribuzione:** "Fonte dati: OECD BEPS MLI Database" in piccolo
-- **Disclaimer:** chiarire che i dati ufficiali sono su OECD
-- **Termini d'uso:** rispettare licenza OECD
-- **Link a OECD:** solo per approfondimenti, non come destinazione principale
+1. **Extract (offline / script):**
+   - Script Python (es. in una cartella `/etl`) che:
+     - Legge PDF MLI Positions (Italia, Germania, etc.)
+     - Estrae tabelle di trattati notificati (CTA) e informazioni chiave.
+   - Output: CSV/JSON grezzi con:
+     - `jurisdiction`, `code`, `isSignatory`, `isParty`
+     - `coveredAgreements` (lista di trattati, controparti, titoli)
+     - `reservations` e `notifications` per articoli chiave.
+
+2. **Transform:**
+   - Convertire CSV/JSON grezzi nei tipi TypeScript (`MliJurisdiction`, `CoveredTaxAgreement`, `MliProvision`, `MatchingOutcome`).
+   - Normalizzare codici paese (ISO-3166, es. ITA, FRA, DEU, ESP).
+   - Mappare articoli MLI e tipi di provision (6, 7, 9, 13, etc.).
+
+3. **Load:**
+   - Salvare dataset finali in:
+     - `public/data/beps-mli/jurisdictions-YYYY-MM-DD.json`
+     - `public/data/beps-mli/agreements-YYYY-MM-DD.json`
+     - `public/data/beps-mli/matching-outcomes-YYYY-MM-DD.json`
+   - Versionare per "Status as of" (data snapshot).
+
+4. **Serve:**
+   - `src/lib/beps-mli/api.ts` carica i JSON statici e li espone alla UI.
+   - In futuro: backend HTTP che serve gli stessi dati con caching.
+
+### HA e manutenibilità
+
+- **Versioning per snapshot:** ogni dataset è legato a una data "Status as of" (es. 2023-06-30). Questo evita confusioni quando le posizioni MLI cambiano.
+- **Idempotenza ETL:** lo script ETL può essere rieseguito per generare snapshot aggiornati senza rompere la UI.
+- **Rollback:** se un aggiornamento dataset crea problemi, si può tornare al JSON della snapshot precedente.
+
+## Test Plan (Golden Tests)
+
+### Golden test 1 — Italia–Francia
+
+**Input:**
+- Paese A: ITA
+- Paese B: FRA
+- Status as of: 2023-06-30
+
+**Expected:**
+- MatchingOutcome esiste per `ITA-FRA`.
+- Provisions includono:
+  - Article 6 — outcome APPLIES, minimumStandard = true.
+  - Article 7 — outcome APPLIES, minimumStandard = true.
+- Spiegazioni in italiano coerenti con manuale MLI (purpose e PPT).
+
+### Golden test 2 — Italia–Spagna
+
+**Input:**
+- Paese A: ITA
+- Paese B: ESP
+- Status as of: 2023-06-30
+
+**Expected:**
+- MatchingOutcome esiste per `ITA-ESP`.
+- Provisions includono:
+  - Article 6 — outcome APPLIES.
+  - Article 7 — outcome APPLIES.
+- Titolo trattato: "Convention between Italy and Spain for the Avoidance of Double Taxation...".
+
+### Golden test 3 — Paese senza outcome demo
+
+**Input:**
+- Paese A: DEU
+- Paese B: ESP
+- Status as of: 2023-06-30
+
+**Expected:**
+- Nessun MatchingOutcome nel dataset demo.
+- UI mostra messaggio chiaro: "Il dataset interno contiene solo demo per alcune coppie (Italia–Francia, Italia–Spagna).".
+
+### Test UI
+
+- Ricerca standard:
+  - Paese A bloccato su Italia, Paese B = Francia → navigazione corretta verso risultato demo ITA–FRA.
+  - Paese B = Spagna → navigazione corretta verso risultato demo ITA–ESP.
+- Modalità avanzata:
+  - Paese A selezionabile, swap funzionante.
+  - Coppia senza outcome (es. DEU–ESP) produce messaggio fallback.
 
 ## Roadmap
 
-### Phase 1 — Discovery e design (1-2 giorni)
-- Analizzare struttura dati OECD
-- Definire tipi TypeScript
-- Progettare UI/UX
-- Creare documentazione
+### Phase 1 — Discovery e design (completata)
+- Analisi struttura dati OECD
+- Definizione tipi TypeScript
+- Progettazione UI/UX
+- Documentazione
 
-### Phase 2 — Backend e dati (2-3 giorni)
-- Implementare API layer o dataset statici
-- Normalizzare dati
-- Testare fetching e caching
+### Phase 2 — Backend e dati (in corso)
+- Implementazione API layer demo (Italia–Francia, Italia–Spagna)
+- Estensione dataset demo (Germania, Spagna)
+- Documentazione ETL pipeline
 
-### Phase 3 — Frontend UI (3-4 giorni)
-- Componenti CountrySelector, MatchingTable, ecc.
-- Pagine ricerca, risultato, dettaglio
-- Dashboard statistiche
+### Phase 3 — Frontend UI (prossimo)
+- Componenti CountrySelector, MatchingTable, StatisticsDashboard
+- Pagine ricerca avanzata, risultato completo, dettaglio paese
 
-### Phase 4 — Rifiniture (1-2 giorni)
-- Spiegazioni in italiano
-- Tooltip e help
+### Phase 4 — Rifiniture (futuro)
+- Spiegazioni in italiano per tutti gli articoli
+- Tooltip e help contestuale
 - Export e salvataggio
 - Test e ottimizzazione
 
@@ -210,4 +297,6 @@ interface MliProvision {
 
 - OECD BEPS MLI Matching Database: https://www.oecd.org/en/data/tools/beps-mli-matching-database.html
 - OECD BEPS MLI Overview: https://www.oecd.org/en/topics/beps-multilateral-instrument.html
-- OECD MLI Toolkit: https://www.oecd.org/en/topics/beps-multilateral-instrument.html#toolkit
+- OECD MLI Toolkit: https://www.oecd.org/en/topics/sub-issues/beps-multilateral-instrument/beps-mli-toolkit.html
+- MLI Positions Italia: beps-mli-position-italy.pdf
+- MLI Positions Germania: beps-mli-position-germany.pdf
