@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { Helmet } from 'react-helmet-async'
 import { LinkCard } from '../components/ui/link-card'
-import { ExternalLink, Database } from 'lucide-react'
+import { ExternalLink, Database, Calculator, Building } from 'lucide-react'
 
 export const Route = createFileRoute('/tool/')({
   component: RouteComponent,
@@ -27,7 +27,7 @@ function RouteComponent() {
         </div>
 
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {/* BEPS MLI Database - NUOVO */}
+          {/* BEPS MLI Database */}
           <LinkCard
             href="/tool/beps-mli"
             title="BEPS MLI Database"
@@ -42,7 +42,7 @@ function RouteComponent() {
             title="Amount B (Pillar One)"
             description="Calcolo Approccio Semplificato e Razionalizzato OECD"
           >
-            <ExternalLink className="h-4 w-4" />
+            <Calculator className="h-4 w-4" />
           </LinkCard>
 
           {/* Osservatorio Transfer Pricing */}
@@ -61,7 +61,7 @@ function RouteComponent() {
             title="Company Finder"
             description="Identifica una società e scarica il bilancio in forma dimostrativa"
           >
-            <ExternalLink className="h-4 w-4" />
+            <Building className="h-4 w-4" />
           </LinkCard>
 
           {/* Portale interpelli */}
@@ -91,7 +91,7 @@ function RouteComponent() {
               title="Amount B (Pillar One)"
               description="Procedura guidata 7 passi per il calcolo del rendimento sulle vendite secondo Amount B OECD"
             >
-              <ExternalLink className="h-4 w-4" />
+              <Calculator className="h-4 w-4" />
             </LinkCard>
 
             <LinkCard
@@ -99,7 +99,7 @@ function RouteComponent() {
               title="Company Finder"
               description="Ricerca per ragione sociale o numero di partita IVA, selezione esplicita della società e download del bilancio dalla stessa scheda"
             >
-              <ExternalLink className="h-4 w-4" />
+              <Building className="h-4 w-4" />
             </LinkCard>
 
             <LinkCard
