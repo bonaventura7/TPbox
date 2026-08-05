@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AttualitaRouteImport } from './routes/attualita'
+import { Route as AuthRouteImport } from './routes/auth'
 import { Route as GiurisprudenzaRouteImport } from './routes/giurisprudenza'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as NormativaRouteImport } from './routes/normativa'
@@ -27,6 +28,7 @@ import { Route as NormativaUnioneEuropeaRouteImport } from './routes/normativa.u
 import { Route as ToolIndexRouteImport } from './routes/tool.index'
 import { Route as ToolBilancioFinderRouteImport } from './routes/tool.bilancio-finder'
 import { Route as ToolCompanyFinderRouteImport } from './routes/tool.company-finder'
+import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as NormativaPortaleInterpelliIndexRouteImport } from './routes/normativa.portale-interpelli.index'
 import { Route as NormativaPortaleInterpelliIdRouteImport } from './routes/normativa.portale-interpelli.$id'
@@ -41,6 +43,11 @@ const IndexRoute = IndexRouteImport.update({
 const AttualitaRoute = AttualitaRouteImport.update({
   id: '/attualita',
   path: '/attualita',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GiurisprudenzaRoute = GiurisprudenzaRouteImport.update({
@@ -126,6 +133,11 @@ const ToolCompanyFinderRoute = ToolCompanyFinderRouteImport.update({
   path: '/tool/company-finder',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
+  id: '/.lovable/oauth/consent',
+  path: '/.lovable/oauth/consent',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const Char91DotmcpChar93InvokeToolToolRoute =
   Char91DotmcpChar93InvokeToolToolRouteImport.update({
     id: '/.mcp/invoke-tool/$tool',
@@ -159,6 +171,7 @@ const ToolPortaleInterpelliIdRoute = ToolPortaleInterpelliIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/attualita': typeof AttualitaRouteWithChildren
+  '/auth': typeof AuthRoute
   '/giurisprudenza': typeof GiurisprudenzaRoute
   '/mcp': typeof McpRoute
   '/normativa': typeof NormativaRouteWithChildren
@@ -175,6 +188,7 @@ export interface FileRoutesByFullPath {
   '/attualita/': typeof AttualitaIndexRoute
   '/normativa/': typeof NormativaIndexRoute
   '/tool/': typeof ToolIndexRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/normativa/portale-interpelli/$id': typeof NormativaPortaleInterpelliIdRoute
   '/tool/portale-interpelli/$id': typeof ToolPortaleInterpelliIdRoute
@@ -183,6 +197,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
   '/giurisprudenza': typeof GiurisprudenzaRoute
   '/mcp': typeof McpRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
@@ -198,6 +213,7 @@ export interface FileRoutesByTo {
   '/attualita': typeof AttualitaIndexRoute
   '/normativa': typeof NormativaIndexRoute
   '/tool': typeof ToolIndexRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/normativa/portale-interpelli/$id': typeof NormativaPortaleInterpelliIdRoute
   '/tool/portale-interpelli/$id': typeof ToolPortaleInterpelliIdRoute
@@ -208,6 +224,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/attualita': typeof AttualitaRouteWithChildren
+  '/auth': typeof AuthRoute
   '/giurisprudenza': typeof GiurisprudenzaRoute
   '/mcp': typeof McpRoute
   '/normativa': typeof NormativaRouteWithChildren
@@ -224,6 +241,7 @@ export interface FileRoutesById {
   '/attualita/': typeof AttualitaIndexRoute
   '/normativa/': typeof NormativaIndexRoute
   '/tool/': typeof ToolIndexRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/normativa/portale-interpelli/$id': typeof NormativaPortaleInterpelliIdRoute
   '/tool/portale-interpelli/$id': typeof ToolPortaleInterpelliIdRoute
@@ -235,6 +253,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/attualita'
+    | '/auth'
     | '/giurisprudenza'
     | '/mcp'
     | '/normativa'
@@ -251,6 +270,7 @@ export interface FileRouteTypes {
     | '/attualita/'
     | '/normativa/'
     | '/tool/'
+    | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/normativa/portale-interpelli/$id'
     | '/tool/portale-interpelli/$id'
@@ -259,6 +279,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/auth'
     | '/giurisprudenza'
     | '/mcp'
     | '/.mcp/list-tools'
@@ -274,6 +295,7 @@ export interface FileRouteTypes {
     | '/attualita'
     | '/normativa'
     | '/tool'
+    | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/normativa/portale-interpelli/$id'
     | '/tool/portale-interpelli/$id'
@@ -283,6 +305,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/attualita'
+    | '/auth'
     | '/giurisprudenza'
     | '/mcp'
     | '/normativa'
@@ -299,6 +322,7 @@ export interface FileRouteTypes {
     | '/attualita/'
     | '/normativa/'
     | '/tool/'
+    | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/normativa/portale-interpelli/$id'
     | '/tool/portale-interpelli/$id'
@@ -309,6 +333,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AttualitaRoute: typeof AttualitaRouteWithChildren
+  AuthRoute: typeof AuthRoute
   GiurisprudenzaRoute: typeof GiurisprudenzaRoute
   McpRoute: typeof McpRoute
   NormativaRoute: typeof NormativaRouteWithChildren
@@ -317,6 +342,7 @@ export interface RootRouteChildren {
   ToolBilancioFinderRoute: typeof ToolBilancioFinderRoute
   ToolCompanyFinderRoute: typeof ToolCompanyFinderRoute
   ToolIndexRoute: typeof ToolIndexRoute
+  DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   ToolPortaleInterpelliIdRoute: typeof ToolPortaleInterpelliIdRoute
   ToolPortaleInterpelliIndexRoute: typeof ToolPortaleInterpelliIndexRoute
@@ -336,6 +362,13 @@ declare module '@tanstack/react-router' {
       path: '/attualita'
       fullPath: '/attualita'
       preLoaderRoute: typeof AttualitaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/giurisprudenza': {
@@ -450,6 +483,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ToolCompanyFinderRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/.lovable/oauth/consent': {
+      id: '/.lovable/oauth/consent'
+      path: '/.lovable/oauth/consent'
+      fullPath: '/.lovable/oauth/consent'
+      preLoaderRoute: typeof DotlovableOauthConsentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/.mcp/invoke-tool/$tool': {
       id: '/.mcp/invoke-tool/$tool'
       path: '/.mcp/invoke-tool/$tool'
@@ -531,6 +571,7 @@ const NormativaRouteWithChildren = NormativaRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AttualitaRoute: AttualitaRouteWithChildren,
+  AuthRoute: AuthRoute,
   GiurisprudenzaRoute: GiurisprudenzaRoute,
   McpRoute: McpRoute,
   NormativaRoute: NormativaRouteWithChildren,
@@ -540,6 +581,7 @@ const rootRouteChildren: RootRouteChildren = {
   ToolBilancioFinderRoute: ToolBilancioFinderRoute,
   ToolCompanyFinderRoute: ToolCompanyFinderRoute,
   ToolIndexRoute: ToolIndexRoute,
+  DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   ToolPortaleInterpelliIdRoute: ToolPortaleInterpelliIdRoute,
   ToolPortaleInterpelliIndexRoute: ToolPortaleInterpelliIndexRoute,
