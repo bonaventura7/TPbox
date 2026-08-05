@@ -19,8 +19,8 @@ export const Route = createFileRoute('/tool/beps-mli/risultato/$id')({
 })
 
 function parseId(id: string): { j1: JurisdictionCode; j2: JurisdictionCode; statusAsOf: string } {
-  const [pair, statusAsOf] = id.split('@')
-  const [c1, c2] = pair.split('-') as [JurisdictionCode, JurisdictionCode]
+  const [pair = '', statusAsOf = ''] = id.split('@')
+  const [c1 = 'ITA', c2 = 'FRA'] = pair.split('-') as JurisdictionCode[]
   return { j1: c1, j2: c2, statusAsOf }
 }
 
