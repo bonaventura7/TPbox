@@ -1,10 +1,21 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { Helmet } from 'react-helmet-async'
 import { loadJurisdictions } from '../lib/beps-mli/api'
 import { useState } from 'react'
 import { Search, ArrowRightLeft, CalendarDays } from 'lucide-react'
 
 export const Route = createFileRoute('/tool/beps-mli/ricerca')({
+  head: () => ({
+    meta: [
+      { title: 'Ricerca BEPS MLI tra due giurisdizioni — Osservatorio Transfer Pricing' },
+      { name: 'description', content: 'Analizza come il BEPS MLI modifica un trattato fiscale tra due paesi, con focus su Italia e controparti.' },
+      { property: 'og:title', content: 'Ricerca BEPS MLI tra due giurisdizioni — Osservatorio Transfer Pricing' },
+      { property: 'og:description', content: 'Analizza come il BEPS MLI modifica un trattato fiscale tra due paesi, con focus su Italia e controparti.' },
+      { property: 'og:type', content: 'website' },
+      { property: 'og:url', content: 'https://transfer-guide-italia.lovable.app/tool/beps-mli/ricerca' },
+      { name: 'twitter:card', content: 'summary_large_image' },
+    ],
+    links: [{ rel: 'canonical', href: 'https://transfer-guide-italia.lovable.app/tool/beps-mli/ricerca' }],
+  }),
   component: RouteComponent,
 })
 
@@ -37,13 +48,6 @@ function RouteComponent() {
 
   return (
     <>
-      <Helmet>
-        <title>Ricerca BEPS MLI - Osservatorio Transfer Pricing</title>
-        <meta
-          name="description"
-          content="Analizza come il BEPS MLI modifica un trattato fiscale tra due paesi, con focus su Italia e controparti."
-        />
-      </Helmet>
 
       <div className="container mx-auto max-w-4xl px-4 py-8">
         <div className="mb-6">

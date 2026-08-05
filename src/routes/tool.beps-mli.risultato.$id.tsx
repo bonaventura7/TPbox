@@ -1,15 +1,26 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { Helmet } from 'react-helmet-async'
 import { getMatchingOutcome, loadJurisdictions } from '../lib/beps-mli/api'
 import type { JurisdictionCode } from '../lib/beps-mli/types'
 
 export const Route = createFileRoute('/tool/beps-mli/risultato/$id')({
+  head: () => ({
+    meta: [
+      { title: 'Risultato analisi BEPS MLI — Osservatorio Transfer Pricing' },
+      { name: 'description', content: 'Matching outcome BEPS MLI per un trattato bilaterale a una data di riferimento, con dati dimostrativi.' },
+      { property: 'og:title', content: 'Risultato analisi BEPS MLI — Osservatorio Transfer Pricing' },
+      { property: 'og:description', content: 'Matching outcome BEPS MLI per un trattato bilaterale a una data di riferimento, con dati dimostrativi.' },
+      { property: 'og:type', content: 'website' },
+      { property: 'og:url', content: 'https://transfer-guide-italia.lovable.app/tool/beps-mli/risultato' },
+      { name: 'twitter:card', content: 'summary_large_image' },
+    ],
+    links: [{ rel: 'canonical', href: 'https://transfer-guide-italia.lovable.app/tool/beps-mli/risultato' }],
+  }),
   component: RouteComponent,
 })
 
 function parseId(id: string): { j1: JurisdictionCode; j2: JurisdictionCode; statusAsOf: string } {
-  const [pair, statusAsOf] = id.split('@')
-  const [c1, c2] = pair.split('-') as [JurisdictionCode, JurisdictionCode]
+  const [pair = '', statusAsOf = ''] = id.split('@')
+  const [c1 = 'ITA', c2 = 'FRA'] = pair.split('-') as JurisdictionCode[]
   return { j1: c1, j2: c2, statusAsOf }
 }
 
@@ -25,13 +36,6 @@ function RouteComponent() {
 
   return (
     <>
-      <Helmet>
-        <title>Risultato BEPS MLI - {j1Data?.nameIt ?? j1} / {j2Data?.nameIt ?? j2}</title>
-        <meta
-          name="description"
-          content={`Matching outcome BEPS MLI per il trattato tra ${j1Data?.nameIt ?? j1} e ${j2Data?.nameIt ?? j2} alla data ${statusAsOf}.`}
-        />
-      </Helmet>
 
       <div className="container mx-auto max-w-5xl px-4 py-8">
         <div className="mb-6">
