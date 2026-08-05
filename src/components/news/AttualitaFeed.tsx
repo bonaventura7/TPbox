@@ -34,7 +34,7 @@ const TOPIC_OPTIONS = [
 function groupByMonth(items: NewsItem[]): { label: string; items: NewsItem[] }[] {
   const groups = new Map<string, NewsItem[]>();
   for (const item of items) {
-    const label = new Date(item.originalDate).toLocaleDateString("it-IT", {
+    const label = new Date(item.originalDate).toLocaleDateString("it-IT", { timeZone: "Europe/Rome", timeZone: "Europe/Rome",
       month: "long",
       year: "numeric",
     });
@@ -69,7 +69,7 @@ function ServiceNotice({
           ? "Servizio in modalità ridotta: alcune fonti non sono attualmente monitorate. I contenuti mostrati restano consultabili ma potrebbero non essere completi."
           : "Contenuti non recenti: l'ultimo aggiornamento della pipeline redazionale risale a un intervallo superiore alle 36 ore."}{" "}
         Ultimo aggiornamento riuscito:{" "}
-        {new Date(lastRunAt).toLocaleString("it-IT", {
+        {new Date(lastRunAt).toLocaleString("it-IT", { timeZone: "Europe/Rome", timeZone: "Europe/Rome",
           day: "2-digit",
           month: "2-digit",
           year: "numeric",

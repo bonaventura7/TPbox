@@ -11,7 +11,7 @@ const LANG_LABEL: Record<NewsItem["language"], string> = {
 };
 
 function formatDate(value: string): string {
-  return new Date(value).toLocaleDateString("it-IT", {
+  return new Date(value).toLocaleDateString("it-IT", { timeZone: "Europe/Rome", timeZone: "Europe/Rome",
     day: "2-digit",
     month: "long",
     year: "numeric",
@@ -19,7 +19,7 @@ function formatDate(value: string): string {
 }
 
 function formatDateTime(value: string): string {
-  return new Date(value).toLocaleString("it-IT", {
+  return new Date(value).toLocaleString("it-IT", { timeZone: "Europe/Rome", timeZone: "Europe/Rome",
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
