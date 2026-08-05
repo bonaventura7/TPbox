@@ -1,9 +1,18 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { Helmet } from 'react-helmet-async'
 import { LinkCard } from '../components/ui/link-card'
-import { ExternalLink, Database, Calculator, Building } from 'lucide-react'
+import { Database, Calculator, Building, Search } from 'lucide-react'
 
 export const Route = createFileRoute('/tool/')({
+  head: () => ({
+    meta: [
+      { title: 'Tool - Osservatorio Transfer Pricing' },
+      {
+        name: 'description',
+        content:
+          'Strumenti di analisi per il transfer pricing: Amount B (Pillar One), BEPS MLI Database, Company Finder, Patent & IP Explorer.',
+      },
+    ],
+  }),
   component: RouteComponent,
 })
 
