@@ -1,11 +1,12 @@
 import { useMutation } from "@tanstack/react-query";
-import { Link, createFileRoute } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { Search } from "lucide-react";
 import { useState } from "react";
 
 import { DemoBadge } from "@/components/site/DemoBadge";
 import { PageHeader } from "@/components/site/SectionPage";
+import { BilancioPanel } from "@/components/tools/BilancioPanel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,7 +23,7 @@ import { searchCompanies } from "@/lib/portal.functions";
 
 const TITLE = "Company Finder";
 const DESCRIPTION =
-  "Identifica una società a partire dalla ragione sociale o dal numero di partita IVA e ottieni un identificativo interno da usare in Bilancio Finder.";
+  "Identifica una società a partire dalla ragione sociale o dal numero di partita IVA e scarica il bilancio direttamente dalla scheda della società selezionata.";
 
 export const Route = createFileRoute("/tool/company-finder")({
   head: () => ({
@@ -243,12 +244,15 @@ function CompanyFinderPage() {
                 <dd className="font-mono text-xs">{selected.companyId}</dd>
               </div>
             </dl>
-            <Button asChild className="mt-5 min-h-11">
-              <Link to="/tool/bilancio-finder" search={{ companyId: selected.companyId }}>
-                Richiedi bilancio
-              </Link>
-            </Button>
+            <p className="mt-4 text-sm text-muted-foreground">
+              Il bilancio è disponibile qui sotto: la richiesta usa esclusivamente
+              l'identificativo interno della società selezionata.
+            </p>
           </section>
+        ) : null}
+
+        {selected ? (
+          <BilancioPanel companyId={selected.companyId} legalName={selected.legalName} />
         ) : null}
       </div>
     </>
