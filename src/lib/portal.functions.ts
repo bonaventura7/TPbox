@@ -88,3 +88,40 @@ export const getInterpello = createServerFn({ method: "GET" })
     );
     return getInterpelloById(data.id);
   });
+
+/**
+ * Patent & IP: la ricerca resta interna al portale. L'eventuale acquisizione
+ * dal provider avviene solo lato server, con allowlist e revisione.
+ */
+const patentQuerySchema = z.object({
+  query: z.string().max(160).default(""),
+  applicant: z.string().max(120).default(""),
+  ipc: z.string().max(40).default(""),
+  jurisdiction: z.string().max(4).default(""),
+  technologyArea: z.string().max(80).default(""),
+  yearFrom: z.number().int().min(1980).max(2100).nullable().default(null),
+  yearTo: z.number().int().min(1980).max(2100).nullable().default(null),
+  sort: z
+    .enum(["RELEVANZA", "DATA_DESC", "DATA_ASC", "FAMIGLIA_DESC"])
+    .default("RELEVANZA"),
+  page: z.number().int().min(1).max(200).default(1),
+  pageSize: z.number().int().min(5).max(50).default(10),
+});
+
+export const searchPatents = createServerFn({ method: "GET" })
+  .inputValidator((data: unknown) => patentQuerySchema.parse(data ?? {}))
+  .handler(async ({ data }) => {
+    const { searchPatents: run } = await import(
+      "./repositories/patents.repository.server"
+    );
+    return run(data);
+  });
+
+export const getPatent = createServerFn({ method: "GET" })
+  .inputValidator((data: unknown) =>
+    z.object({ id: z.string().min(3).max(64) }).parse(data),
+  )
+  .handler(async ({ data }) => {
+    const { getPatentById } = await import("./repositories/patents.repository.server");
+    return getPatentById(data.id);
+  });
