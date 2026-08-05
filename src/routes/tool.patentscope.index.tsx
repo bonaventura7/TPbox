@@ -1,24 +1,24 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { Helmet } from 'react-helmet-async'
 import { LinkCard } from '../components/ui/link-card'
 import { Search, Globe, Lightbulb } from 'lucide-react'
 
 export const Route = createFileRoute('/tool/patentscope/')({
+  head: () => ({
+    meta: [
+      { title: 'Patent & IP Explorer - Osservatorio Transfer Pricing' },
+      {
+        name: 'description',
+        content:
+          'Interfaccia guidata per cercare brevetti e asset intangibili con PATENTSCOPE (WIPO), pensata per il transfer pricing e la fiscalità internazionale.',
+      },
+    ],
+  }),
   component: RouteComponent,
 })
 
 function RouteComponent() {
   return (
-    <>
-      <Helmet>
-        <title>Patent & IP Explorer - Osservatorio Transfer Pricing</title>
-        <meta
-          name="description"
-          content="Interfaccia guidata per cercare brevetti e asset intangibili con PATENTSCOPE (WIPO), pensata per il transfer pricing e la fiscalità internazionale."
-        />
-      </Helmet>
-
-      <div className="container mx-auto max-w-5xl px-4 py-8">
+    <div className="container mx-auto max-w-5xl px-4 py-8">
         {/* Intro semplice e chiara */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold tracking-tight">Patent & IP Explorer</h1>
@@ -127,6 +127,5 @@ function RouteComponent() {
           </p>
         </div>
       </div>
-    </>
   )
 }

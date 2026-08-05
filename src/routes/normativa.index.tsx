@@ -1,24 +1,24 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { Helmet } from 'react-helmet-async'
 import { LinkCard } from '../components/ui/link-card'
 import { BookMarked, Scale, FileText } from 'lucide-react'
 
 export const Route = createFileRoute('/normativa/')({
+  head: () => ({
+    meta: [
+      { title: 'Normativa e prassi - Osservatorio Transfer Pricing' },
+      {
+        name: 'description',
+        content:
+          'Fonti normative, prassi e giurisprudenza per il transfer pricing e la fiscalità internazionale.',
+      },
+    ],
+  }),
   component: RouteComponent,
 })
 
 function RouteComponent() {
   return (
-    <>
-      <Helmet>
-        <title>Normativa e prassi - Osservatorio Transfer Pricing</title>
-        <meta
-          name="description"
-          content="Fonti normative, prassi e giurisprudenza per il transfer pricing e la fiscalità internazionale."
-        />
-      </Helmet>
-
-      <div className="container mx-auto max-w-5xl px-4 py-8">
+    <div className="container mx-auto max-w-5xl px-4 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold tracking-tight">Normativa e prassi</h1>
           <p className="mt-2 text-muted-foreground">
@@ -69,6 +69,5 @@ function RouteComponent() {
           </p>
         </div>
       </div>
-    </>
   )
 }
