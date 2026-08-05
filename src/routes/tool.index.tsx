@@ -18,16 +18,7 @@ export const Route = createFileRoute('/tool/')({
 
 function RouteComponent() {
   return (
-    <>
-      <Helmet>
-        <title>Tool - Osservatorio Transfer Pricing</title>
-        <meta
-          name="description"
-          content="Strumenti di analisi per il transfer pricing: Amount B (Pillar One), BEPS MLI Database, Company Finder."
-        />
-      </Helmet>
-
-      <div className="container mx-auto max-w-5xl px-4 py-8">
+    <div className="container mx-auto max-w-5xl px-4 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold tracking-tight">Tool</h1>
           <p className="mt-2 text-muted-foreground">
