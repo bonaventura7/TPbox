@@ -36,7 +36,7 @@ export const Route = createFileRoute("/.lovable/oauth/consent")({
   ssr: false,
   validateSearch: (search: Record<string, unknown>) => ({
     authorization_id:
-      typeof search.authorization_id === "string" ? search.authorization_id : "",
+      typeof search['authorization_id'] === "string" ? (search['authorization_id'] as string) : "",
   }),
   beforeLoad: async ({ search, location }) => {
     if (!search.authorization_id) throw new Error("authorization_id mancante");
@@ -127,7 +127,7 @@ function Consent() {
 
         {scopes.length > 0 ? (
           <ul className="mt-4 space-y-1 text-sm">
-            {scopes.map((scope) => (
+            {scopes.map((scope: string) => (
               <li key={scope}>· {SCOPE_LABELS[scope] ?? `Permesso aggiuntivo: ${scope}`}</li>
             ))}
           </ul>
