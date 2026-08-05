@@ -27,11 +27,11 @@ function RouteComponent() {
           </p>
         </div>
 
-        {/* Cos'è²° Amount B */}
+        {/* Cos'è Amount B */}
         <div className="mb-8 rounded-lg border bg-card p-6">
-          <h2 className="text-xl font-semibold">Cos'è²° Amount B?</h2>
+          <h2 className="text-xl font-semibold">Cos'è Amount B?</h2>
           <p className="mt-2 text-muted-foreground">
-            Amount B è20 un approccio semplificato per la determinazione del prezzo di trasferimento
+            Amount B è un approccio semplificato per la determinazione del prezzo di trasferimento
             per le attività di distribuzione di routine. Lo strumento automatizza i calcoli del
             rendimento sulle vendite secondo le linee guida OECD (Annex III of Chapter IV).
           </p>
