@@ -2,7 +2,6 @@
 export const FEATURE_FLAGS = {
   attualitaArchive: true,
   companyFinder: true,
-  bilancioFinder: true,
   /** Area PRO simulata: l'accesso reale sarà valutato lato server tramite ruoli. */
   bilancioProAccess: true,
   giurisprudenzaFullText: false,
