@@ -54,7 +54,7 @@ const QUICK_LINKS = [
   {
     to: "/tool/portale-interpelli",
     label: "Portale interpelli",
-    text: "Ricerca e filtri sulle risposte agli interpelli pubblicate dall'Agenzia delle Entrate.",
+    text: "Ricerca tematica delle risposte pubblicate dall'Agenzia delle Entrate.",
   },
 ] as const;
 
