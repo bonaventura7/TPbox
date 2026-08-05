@@ -49,9 +49,16 @@ function RouteComponent() {
           <LinkCard
             href="/tool/company-finder"
             title="Company Finder"
-            description="Identifica una società e scarica il bilancio in forma dimostrativa.
-"          >
+            description="Identifica una società e scarica il bilancio in forma dimostrativa.">
             <Building className="h-4 w-4" />
+          </LinkCard>
+
+          {/* Patent & IP Explorer */}
+          <LinkCard
+            href="/tool/patentscope"
+            title="Patent & IP Explorer"
+            description="Interfaccia guidata per cercare brevetti e intangibili con PATENTSCOPE (WIPO), utile per analisi TP e IP.">
+            <Search className="h-4 w-4" />
           </LinkCard>
         </div>
 
@@ -63,6 +70,5 @@ function RouteComponent() {
           </p>
         </div>
       </div>
-    </>
   )
 }
