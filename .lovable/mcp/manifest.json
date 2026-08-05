@@ -1,0 +1,188 @@
+{
+  "version": 1,
+  "sdk_version": "0.26.1",
+  "path": "/mcp",
+  "auth": {
+    "type": "none"
+  },
+  "mcp": {
+    "server": {
+      "name": "tpbox",
+      "version": "0.1.0",
+      "title": "TPBox"
+    },
+    "tools": [
+      {
+        "name": "search_news",
+        "title": "Cerca aggiornamenti Transfer Pricing",
+        "description": "Cerca fra gli aggiornamenti pubblicati nella sezione Attualità del portale, con filtri per area geografica, tema e sole fonti istituzionali. I contenuti sono dimostrativi.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "query": {
+              "description": "Parola chiave libera.",
+              "type": "string",
+              "maxLength": 120
+            },
+            "geo": {
+              "description": "Area geografica; per impostazione predefinita tutte.",
+              "type": "string",
+              "enum": [
+                "TUTTE",
+                "OCSE",
+                "UE",
+                "ITALIA",
+                "GLOBALE"
+              ]
+            },
+            "topic": {
+              "description": "Tema editoriale.",
+              "type": "string",
+              "enum": [
+                "TUTTI",
+                "Metodi e comparabili",
+                "Intangibili",
+                "Servizi infragruppo",
+                "Pillar Two",
+                "APA e MAP",
+                "Documentazione",
+                "Contenzioso"
+              ]
+            },
+            "institutionalOnly": {
+              "description": "Se vero, restituisce solo fonti istituzionali.",
+              "type": "boolean"
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "search_interpelli",
+        "title": "Cerca risposte a interpello",
+        "description": "Cerca fra le risposte agli interpelli dell'Agenzia delle Entrate presenti nel portale, per parola chiave, materia, anno e pertinenza al Transfer Pricing. I contenuti sono dimostrativi.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "query": {
+              "description": "Parola chiave, numero della risposta o argomento.",
+              "type": "string",
+              "maxLength": 160
+            },
+            "year": {
+              "description": "Anno di pubblicazione.",
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
+            "transferPricingOnly": {
+              "description": "Se vero, restituisce solo le risposte in materia di Transfer Pricing.",
+              "type": "boolean"
+            },
+            "limit": {
+              "description": "Numero massimo di risultati (max 50).",
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_interpello",
+        "title": "Dettaglio risposta a interpello",
+        "description": "Restituisce la scheda completa di una risposta a interpello a partire dal suo identificativo, come pubblicata nel portale. Contenuti dimostrativi.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 64,
+              "description": "Identificativo della risposta."
+            }
+          },
+          "required": [
+            "id"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "search_companies",
+        "title": "Cerca società",
+        "description": "Cerca una società per ragione sociale o numero di partita IVA e restituisce i candidati con il relativo identificativo interno, da usare con get_company_financials. Dati dimostrativi.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string",
+              "maxLength": 160,
+              "description": "Ragione sociale o numero di partita IVA."
+            },
+            "country": {
+              "description": "Codice paese a due lettere, facoltativo.",
+              "type": "string",
+              "maxLength": 2
+            }
+          },
+          "required": [
+            "query"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_company_financials",
+        "title": "Estratto economico-finanziario",
+        "description": "Restituisce l'estratto dei dati economico-finanziari e gli indici di una società già individuata con search_companies. Dati dimostrativi.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "companyId": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 64,
+              "description": "Identificativo interno restituito da search_companies."
+            }
+          },
+          "required": [
+            "companyId"
+          ]
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
