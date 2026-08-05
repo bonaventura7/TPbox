@@ -13,6 +13,8 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AttualitaRouteImport } from './routes/attualita'
 import { Route as GiurisprudenzaRouteImport } from './routes/giurisprudenza'
 import { Route as NormativaRouteImport } from './routes/normativa'
+import { Route as AttualitaIndexRouteImport } from './routes/attualita.index'
+import { Route as AttualitaAreaRouteImport } from './routes/attualita.$area'
 import { Route as NormativaIndexRouteImport } from './routes/normativa.index'
 import { Route as NormativaCountryProfilesRouteImport } from './routes/normativa.country-profiles'
 import { Route as NormativaItaliaRouteImport } from './routes/normativa.italia'
@@ -44,6 +46,16 @@ const NormativaRoute = NormativaRouteImport.update({
   id: '/normativa',
   path: '/normativa',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AttualitaIndexRoute = AttualitaIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AttualitaRoute,
+} as any)
+const AttualitaAreaRoute = AttualitaAreaRouteImport.update({
+  id: '/$area',
+  path: '/$area',
+  getParentRoute: () => AttualitaRoute,
 } as any)
 const NormativaIndexRoute = NormativaIndexRouteImport.update({
   id: '/',
@@ -106,9 +118,10 @@ const NormativaPortaleInterpelliIdRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/attualita': typeof AttualitaRoute
+  '/attualita': typeof AttualitaRouteWithChildren
   '/giurisprudenza': typeof GiurisprudenzaRoute
   '/normativa': typeof NormativaRouteWithChildren
+  '/attualita/$area': typeof AttualitaAreaRoute
   '/normativa/country-profiles': typeof NormativaCountryProfilesRoute
   '/normativa/italia': typeof NormativaItaliaRoute
   '/normativa/ocse': typeof NormativaOcseRoute
@@ -116,6 +129,7 @@ export interface FileRoutesByFullPath {
   '/normativa/unione-europea': typeof NormativaUnioneEuropeaRoute
   '/tool/bilancio-finder': typeof ToolBilancioFinderRoute
   '/tool/company-finder': typeof ToolCompanyFinderRoute
+  '/attualita/': typeof AttualitaIndexRoute
   '/normativa/': typeof NormativaIndexRoute
   '/tool/': typeof ToolIndexRoute
   '/normativa/portale-interpelli/$id': typeof NormativaPortaleInterpelliIdRoute
@@ -123,8 +137,8 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/attualita': typeof AttualitaRoute
   '/giurisprudenza': typeof GiurisprudenzaRoute
+  '/attualita/$area': typeof AttualitaAreaRoute
   '/normativa/country-profiles': typeof NormativaCountryProfilesRoute
   '/normativa/italia': typeof NormativaItaliaRoute
   '/normativa/ocse': typeof NormativaOcseRoute
@@ -132,6 +146,7 @@ export interface FileRoutesByTo {
   '/normativa/unione-europea': typeof NormativaUnioneEuropeaRoute
   '/tool/bilancio-finder': typeof ToolBilancioFinderRoute
   '/tool/company-finder': typeof ToolCompanyFinderRoute
+  '/attualita': typeof AttualitaIndexRoute
   '/normativa': typeof NormativaIndexRoute
   '/tool': typeof ToolIndexRoute
   '/normativa/portale-interpelli/$id': typeof NormativaPortaleInterpelliIdRoute
@@ -140,9 +155,10 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/attualita': typeof AttualitaRoute
+  '/attualita': typeof AttualitaRouteWithChildren
   '/giurisprudenza': typeof GiurisprudenzaRoute
   '/normativa': typeof NormativaRouteWithChildren
+  '/attualita/$area': typeof AttualitaAreaRoute
   '/normativa/country-profiles': typeof NormativaCountryProfilesRoute
   '/normativa/italia': typeof NormativaItaliaRoute
   '/normativa/ocse': typeof NormativaOcseRoute
@@ -150,6 +166,7 @@ export interface FileRoutesById {
   '/normativa/unione-europea': typeof NormativaUnioneEuropeaRoute
   '/tool/bilancio-finder': typeof ToolBilancioFinderRoute
   '/tool/company-finder': typeof ToolCompanyFinderRoute
+  '/attualita/': typeof AttualitaIndexRoute
   '/normativa/': typeof NormativaIndexRoute
   '/tool/': typeof ToolIndexRoute
   '/normativa/portale-interpelli/$id': typeof NormativaPortaleInterpelliIdRoute
@@ -162,6 +179,7 @@ export interface FileRouteTypes {
     | '/attualita'
     | '/giurisprudenza'
     | '/normativa'
+    | '/attualita/$area'
     | '/normativa/country-profiles'
     | '/normativa/italia'
     | '/normativa/ocse'
@@ -169,6 +187,7 @@ export interface FileRouteTypes {
     | '/normativa/unione-europea'
     | '/tool/bilancio-finder'
     | '/tool/company-finder'
+    | '/attualita/'
     | '/normativa/'
     | '/tool/'
     | '/normativa/portale-interpelli/$id'
@@ -176,8 +195,8 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/attualita'
     | '/giurisprudenza'
+    | '/attualita/$area'
     | '/normativa/country-profiles'
     | '/normativa/italia'
     | '/normativa/ocse'
@@ -185,6 +204,7 @@ export interface FileRouteTypes {
     | '/normativa/unione-europea'
     | '/tool/bilancio-finder'
     | '/tool/company-finder'
+    | '/attualita'
     | '/normativa'
     | '/tool'
     | '/normativa/portale-interpelli/$id'
@@ -195,6 +215,7 @@ export interface FileRouteTypes {
     | '/attualita'
     | '/giurisprudenza'
     | '/normativa'
+    | '/attualita/$area'
     | '/normativa/country-profiles'
     | '/normativa/italia'
     | '/normativa/ocse'
@@ -202,6 +223,7 @@ export interface FileRouteTypes {
     | '/normativa/unione-europea'
     | '/tool/bilancio-finder'
     | '/tool/company-finder'
+    | '/attualita/'
     | '/normativa/'
     | '/tool/'
     | '/normativa/portale-interpelli/$id'
@@ -210,7 +232,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AttualitaRoute: typeof AttualitaRoute
+  AttualitaRoute: typeof AttualitaRouteWithChildren
   GiurisprudenzaRoute: typeof GiurisprudenzaRoute
   NormativaRoute: typeof NormativaRouteWithChildren
   ToolBilancioFinderRoute: typeof ToolBilancioFinderRoute
@@ -247,6 +269,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/normativa'
       preLoaderRoute: typeof NormativaRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/attualita/': {
+      id: '/attualita/'
+      path: '/'
+      fullPath: '/attualita/'
+      preLoaderRoute: typeof AttualitaIndexRouteImport
+      parentRoute: typeof AttualitaRoute
+    }
+    '/attualita/$area': {
+      id: '/attualita/$area'
+      path: '/$area'
+      fullPath: '/attualita/$area'
+      preLoaderRoute: typeof AttualitaAreaRouteImport
+      parentRoute: typeof AttualitaRoute
     }
     '/normativa/': {
       id: '/normativa/'
@@ -328,6 +364,20 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AttualitaRouteChildren {
+  AttualitaAreaRoute: typeof AttualitaAreaRoute
+  AttualitaIndexRoute: typeof AttualitaIndexRoute
+}
+
+const AttualitaRouteChildren: AttualitaRouteChildren = {
+  AttualitaAreaRoute: AttualitaAreaRoute,
+  AttualitaIndexRoute: AttualitaIndexRoute,
+}
+
+const AttualitaRouteWithChildren = AttualitaRoute._addFileChildren(
+  AttualitaRouteChildren,
+)
+
 interface NormativaRouteChildren {
   NormativaCountryProfilesRoute: typeof NormativaCountryProfilesRoute
   NormativaItaliaRoute: typeof NormativaItaliaRoute
@@ -356,7 +406,7 @@ const NormativaRouteWithChildren = NormativaRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AttualitaRoute: AttualitaRoute,
+  AttualitaRoute: AttualitaRouteWithChildren,
   GiurisprudenzaRoute: GiurisprudenzaRoute,
   NormativaRoute: NormativaRouteWithChildren,
   ToolBilancioFinderRoute: ToolBilancioFinderRoute,
