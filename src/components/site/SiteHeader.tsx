@@ -24,6 +24,7 @@ const NORMATIVA = [
 const TOOLS = [
   { to: "/tool/company-finder", label: "Company Finder" },
   { to: "/tool/bilancio-finder", label: "Bilancio Finder" },
+  { to: "/tool/portale-interpelli", label: "Portale interpelli" },
 ] as const;
 
 export function SiteHeader() {

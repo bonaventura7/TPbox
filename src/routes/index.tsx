@@ -51,6 +51,11 @@ const QUICK_LINKS = [
     label: "Tool",
     text: "Company Finder e Bilancio Finder per identificare società e consultarne i dati economici.",
   },
+  {
+    to: "/tool/portale-interpelli",
+    label: "Portale interpelli",
+    text: "Ricerca e filtri sulle risposte agli interpelli pubblicate dall'Agenzia delle Entrate.",
+  },
 ] as const;
 
 function Index() {
@@ -127,7 +132,7 @@ function Index() {
           >
             Accessi rapidi
           </h2>
-          <ul className="mt-4 grid gap-4 md:grid-cols-3">
+          <ul className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {QUICK_LINKS.map((link) => (
               <li key={link.to} className="border border-border bg-card p-6">
                 <h3 className="font-serif text-xl">{link.label}</h3>

@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/site/SectionPage";
 
 const TITLE = "Strumenti di analisi";
 const DESCRIPTION =
-  "Due strumenti operativi: Company Finder per identificare in modo univoco una società e Bilancio Finder per consultarne i dati economico-finanziari.";
+  "Tre strumenti operativi: Company Finder per identificare in modo univoco una società, Bilancio Finder per consultarne i dati economico-finanziari e Portale interpelli per la ricerca delle risposte pubblicate dall'Agenzia delle Entrate.";
 
 export const Route = createFileRoute("/tool/")({
   head: () => ({
@@ -50,6 +50,20 @@ function ToolIndex() {
               className="mt-4 inline-flex min-h-11 items-center gap-2 text-sm font-medium text-petrol underline underline-offset-4"
             >
               Apri Bilancio Finder
+              <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </Link>
+          </li>
+          <li className="border border-border bg-card p-6">
+            <h2 className="font-serif text-2xl">Portale interpelli</h2>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              Ricerca testuale, filtri per materia e per anno sulle risposte agli
+              interpelli, con collegamento alla fonte ufficiale.
+            </p>
+            <Link
+              to="/tool/portale-interpelli"
+              className="mt-4 inline-flex min-h-11 items-center gap-2 text-sm font-medium text-petrol underline underline-offset-4"
+            >
+              Apri Portale interpelli
               <ArrowRight className="h-4 w-4" aria-hidden="true" />
             </Link>
           </li>
