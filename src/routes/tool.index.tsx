@@ -14,7 +14,7 @@ function RouteComponent() {
         <title>Tool - Osservatorio Transfer Pricing</title>
         <meta
           name="description"
-          content="Strumenti di analisi per il transfer pricing: Osservatorio Transfer Pricing, Company Finder, Portale interpelli."
+          content="Strumenti di analisi per il transfer pricing: Osservatorio Transfer Pricing, Amount B (Pillar One), Company Finder, Portale interpelli."
         />
       </Helmet>
 
@@ -27,7 +27,16 @@ function RouteComponent() {
         </div>
 
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {/* Osservatorio Transfer Pricing - NUOVO */}
+          {/* Amount B (Pillar One) - NUOVO */}
+          <LinkCard
+            href="/tool/amount-b"
+            title="Amount B (Pillar One)"
+            description="Calcolo Approccio Semplificato e Razionalizzato OECD"
+          >
+            <ExternalLink className="h-4 w-4" />
+          </LinkCard>
+
+          {/* Osservatorio Transfer Pricing */}
           <LinkCard
             href="https://f7dc1dde-25ee-4227-8806-f31498244695.lovableproject.com/"
             title="Osservatorio Transfer Pricing"
@@ -60,6 +69,14 @@ function RouteComponent() {
         <div className="mt-12">
           <h2 className="text-xl font-semibold">Strumenti di analisi</h2>
           <div className="mt-4 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <LinkCard
+              href="/tool/amount-b"
+              title="Amount B (Pillar One)"
+              description="Procedura guidata 7 passi per il calcolo del rendimento sulle vendite secondo Amount B OECD"
+            >
+              <ExternalLink className="h-4 w-4" />
+            </LinkCard>
+
             <LinkCard
               href="/tool/company-finder"
               title="Company Finder"
