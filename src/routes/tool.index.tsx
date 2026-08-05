@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { LinkCard } from '../components/ui/link-card'
-import { ExternalLink, Database, Calculator, Building } from 'lucide-react'
+import { ExternalLink, Database, Calculator, Building, Receipt } from 'lucide-react'
 
 export const Route = createFileRoute('/tool/')({
   head: () => ({
@@ -66,6 +66,15 @@ function RouteComponent() {
           >
             <ExternalLink className="h-4 w-4" />
           </LinkCard>
+
+          {/* Ravvedimento */}
+          <LinkCard
+            href="/tool/ravvedimento"
+            title="Ravvedimento spontaneo"
+            description="Interessi legali per anno e sanzione ridotta per versamenti omessi, insufficienti o tardivi"
+          >
+            <Receipt className="h-4 w-4" />
+          </LinkCard>
         </div>
 
         {/* Sezione strumenti di analisi */}
@@ -102,6 +111,14 @@ function RouteComponent() {
               description="Ricerca tematica delle risposte pubblicate dall'Agenzia delle Entrate, ora nella sezione Normativa e prassi"
             >
               <ExternalLink className="h-4 w-4" />
+            </LinkCard>
+
+            <LinkCard
+              href="/tool/ravvedimento"
+              title="Ravvedimento spontaneo"
+              description="Calcolo con dataset dei tassi legali versionato, convenzione giorni documentata e blocco fuori copertura"
+            >
+              <Receipt className="h-4 w-4" />
             </LinkCard>
           </div>
         </div>
