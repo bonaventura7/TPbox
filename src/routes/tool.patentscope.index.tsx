@@ -3,7 +3,7 @@ import { Helmet } from 'react-helmet-async'
 import { LinkCard } from '../components/ui/link-card'
 import { Search, Globe, Lightbulb } from 'lucide-react'
 
-export const Route = createFileRoute('/tool/patentscope')({
+export const Route = createFileRoute('/tool/patentscope/')({
   component: RouteComponent,
 })
 
