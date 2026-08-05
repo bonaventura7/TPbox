@@ -6,7 +6,7 @@ import type {
   MatchingOutcome,
   AggregateStats,
   JurisdictionCode,
-} from './types';
+} from './types'
 
 // Nota: in una implementazione reale questi dati saranno caricati da
 // file JSON in public/data/beps-mli/*.json o da un backend.
@@ -31,7 +31,25 @@ const JURISDICTIONS_DEMO: MliJurisdiction[] = [
     signatureDate: '2017-06-07',
     entryIntoForceDate: '2019-01-01',
   },
-];
+  {
+    code: 'DEU',
+    nameEn: 'Germany',
+    nameIt: 'Germania',
+    isSignatory: true,
+    isParty: true,
+    signatureDate: '2017-06-07',
+    entryIntoForceDate: '2021-01-01', // demo
+  },
+  {
+    code: 'ESP',
+    nameEn: 'Spain',
+    nameIt: 'Spagna',
+    isSignatory: true,
+    isParty: true,
+    signatureDate: '2017-06-07',
+    entryIntoForceDate: '2021-01-01', // demo
+  },
+]
 
 const AGREEMENTS_DEMO: CoveredTaxAgreement[] = [
   {
@@ -41,7 +59,14 @@ const AGREEMENTS_DEMO: CoveredTaxAgreement[] = [
     title: 'Convention between Italy and France for the avoidance of double taxation',
     statusAsOf: '2023-06-30',
   },
-];
+  {
+    id: 'ITA-ESP',
+    jurisdiction1: 'ITA',
+    jurisdiction2: 'ESP',
+    title: 'Convention between Italy and Spain for the Avoidance of Double Taxation with respect to Taxes on Income and for the Prevention of Fiscal Evasion', // vedi posizione Italia
+    statusAsOf: '2023-06-30',
+  },
+]
 
 const MATCHING_OUTCOMES_DEMO: MatchingOutcome[] = [
   {
@@ -68,35 +93,59 @@ const MATCHING_OUTCOMES_DEMO: MatchingOutcome[] = [
       },
     ],
   },
-];
+  {
+    agreementId: 'ITA-ESP',
+    jurisdiction1: 'ITA',
+    jurisdiction2: 'ESP',
+    statusAsOf: '2023-06-30',
+    provisions: [
+      {
+        article: 'Article 6',
+        provisionType: 'Purpose of a Covered Tax Agreement',
+        minimumStandard: true,
+        outcome: 'APPLIES',
+        explanationIt:
+          "Per la convenzione Italia–Spagna, l'articolo 6 conferma che l'obiettivo è evitare la doppia imposizione senza creare schemi di pianificazione aggressiva.",
+      },
+      {
+        article: 'Article 7',
+        provisionType: 'Prevent treaty abuse (Principal Purpose Test)',
+        minimumStandard: true,
+        outcome: 'APPLIES',
+        explanationIt:
+          "Italia e Spagna hanno adottato il Principal Purpose Test per contrastare l'abuso delle convenzioni attraverso strutture prive di sostanza economica.",
+      },
+    ],
+  },
+]
 
 const STATS_DEMO: AggregateStats = {
   statusAsOf: '2023-06-30',
-  totalJurisdictions: 2,
-  totalCoveredAgreements: 1,
-  matchedAgreements: 1,
+  totalJurisdictions: JURISDICTIONS_DEMO.length,
+  totalCoveredAgreements: AGREEMENTS_DEMO.length,
+  matchedAgreements: MATCHING_OUTCOMES_DEMO.length,
   oneWayAgreements: 0,
   waitingAgreements: 0,
-};
+}
 
 export function loadJurisdictions(): MliJurisdiction[] {
-  return JURISDICTIONS_DEMO;
+  return JURISDICTIONS_DEMO
 }
 
 export function loadCoveredAgreements(): CoveredTaxAgreement[] {
-  return AGREEMENTS_DEMO;
+  return AGREEMENTS_DEMO
 }
 
 export function loadMatchingOutcomes(): MatchingOutcome[] {
-  return MATCHING_OUTCOMES_DEMO;
+  return MATCHING_OUTCOMES_DEMO
 }
 
 export function loadAggregateStats(): AggregateStats {
-  return STATS_DEMO;
+  return STATS_DEMO
 }
 
 export function getJurisdiction(code: JurisdictionCode): MliJurisdiction | undefined {
-  return JURISDICTIONS_DEMO.find((j) => j.code === code);
+  return JURISDICTIONS_DEMO.find((j) => j.code === code)
 }
 
 export function getMatchingOutcome(
@@ -104,6 +153,6 @@ export function getMatchingOutcome(
   j2: JurisdictionCode,
 ): MatchingOutcome | undefined {
   // Normalizziamo l'ordine dei codici per l'id
-  const id = [j1, j2].sort().join('-');
-  return MATCHING_OUTCOMES_DEMO.find((m) => m.agreementId === id);
+  const id = [j1, j2].sort().join('-')
+  return MATCHING_OUTCOMES_DEMO.find((m) => m.agreementId === id)
 }

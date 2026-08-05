@@ -15,8 +15,10 @@ function RouteComponent() {
   const [paeseA, setPaeseA] = useState('ITA')
   const [paeseB, setPaeseB] = useState('FRA')
   const [statusAsOf, setStatusAsOf] = useState('2023-06-30')
+  const [advancedMode, setAdvancedMode] = useState(false)
 
   const handleSwap = () => {
+    if (!advancedMode) return
     setPaeseA(paeseB)
     setPaeseB(paeseA)
   }
@@ -26,6 +28,11 @@ function RouteComponent() {
     // Per ora usiamo uno schema semplice per l'id: j1-j2-status
     const id = `${[paeseA, paeseB].sort().join('-')}@${statusAsOf}`
     navigate({ to: '/tool/beps-mli/risultato/$id', params: { id } })
+  }
+
+  const handlePaeseAChange = (value: string) => {
+    if (!advancedMode) return
+    setPaeseA(value)
   }
 
   return (
@@ -48,14 +55,35 @@ function RouteComponent() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6 rounded-lg border bg-card p-6">
+          {/* Modalità avanzata */}
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <span className="text-sm font-medium">Modalità avanzata</span>
+              <p className="mt-1 text-xs text-muted-foreground">
+                In modalità standard, il Paese A è fissato su Italia. In modalità avanzata puoi scegliere
+                qualsiasi combinazione disponibile nel dataset.
+              </p>
+            </div>
+            <label className="inline-flex cursor-pointer items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded border"
+                checked={advancedMode}
+                onChange={(e) => setAdvancedMode(e.target.checked)}
+              />
+              <span>Abilita</span>
+            </label>
+          </div>
+
           {/* Paese A / Paese B */}
           <div className="grid gap-4 sm:grid-cols-[1fr,auto,1fr] items-end">
             <div>
               <label className="text-sm font-medium">Paese A</label>
               <select
-                className="mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm"
+                className="mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm disabled:opacity-60"
                 value={paeseA}
-                onChange={(e) => setPaeseA(e.target.value)}
+                onChange={(e) => handlePaeseAChange(e.target.value)}
+                disabled={!advancedMode}
               >
                 {jurisdictions.map((j) => (
                   <option key={j.code} value={j.code}>
@@ -64,15 +92,16 @@ function RouteComponent() {
                 ))}
               </select>
               <p className="mt-1 text-xs text-muted-foreground">
-                Paese di riferimento (default: Italia).
+                Paese di riferimento (default: Italia). In modalità standard è fisso.
               </p>
             </div>
 
             <button
               type="button"
               onClick={handleSwap}
-              className="inline-flex items-center justify-center rounded-full border bg-background p-2 text-sm hover:bg-muted"
+              className="inline-flex items-center justify-center rounded-full border bg-background p-2 text-sm hover:bg-muted disabled:opacity-60"
               aria-label="Inverti paesi"
+              disabled={!advancedMode}
             >
               <ArrowRightLeft className="h-4 w-4" />
             </button>
@@ -126,8 +155,8 @@ function RouteComponent() {
 
         <div className="mt-6 rounded-lg border bg-muted p-4 text-xs text-muted-foreground">
           <p>
-            <strong>Nota demo:</strong> al momento il dataset interno contiene solo la coppia Italia–Francia al
-            2023-06-30. Altre coppie potranno essere aggiunte in fasi successive.
+            <strong>Nota demo:</strong> al momento il dataset interno contiene demo per le coppie Italia–Francia e
+            Italia–Spagna al 2023-06-30. Altre coppie potranno essere aggiunte in fasi successive.
           </p>
         </div>
       </div>
