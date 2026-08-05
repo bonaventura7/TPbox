@@ -26,6 +26,8 @@ import { Route as ToolBilancioFinderRouteImport } from './routes/tool.bilancio-f
 import { Route as ToolCompanyFinderRouteImport } from './routes/tool.company-finder'
 import { Route as NormativaPortaleInterpelliIndexRouteImport } from './routes/normativa.portale-interpelli.index'
 import { Route as NormativaPortaleInterpelliIdRouteImport } from './routes/normativa.portale-interpelli.$id'
+import { Route as ToolPortaleInterpelliIndexRouteImport } from './routes/tool.portale-interpelli.index'
+import { Route as ToolPortaleInterpelliIdRouteImport } from './routes/tool.portale-interpelli.$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -115,6 +117,17 @@ const NormativaPortaleInterpelliIdRoute =
     path: '/portale-interpelli/$id',
     getParentRoute: () => NormativaRoute,
   } as any)
+const ToolPortaleInterpelliIndexRoute =
+  ToolPortaleInterpelliIndexRouteImport.update({
+    id: '/tool/portale-interpelli/',
+    path: '/tool/portale-interpelli/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ToolPortaleInterpelliIdRoute = ToolPortaleInterpelliIdRouteImport.update({
+  id: '/tool/portale-interpelli/$id',
+  path: '/tool/portale-interpelli/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -133,7 +146,9 @@ export interface FileRoutesByFullPath {
   '/normativa/': typeof NormativaIndexRoute
   '/tool/': typeof ToolIndexRoute
   '/normativa/portale-interpelli/$id': typeof NormativaPortaleInterpelliIdRoute
+  '/tool/portale-interpelli/$id': typeof ToolPortaleInterpelliIdRoute
   '/normativa/portale-interpelli/': typeof NormativaPortaleInterpelliIndexRoute
+  '/tool/portale-interpelli/': typeof ToolPortaleInterpelliIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -150,7 +165,9 @@ export interface FileRoutesByTo {
   '/normativa': typeof NormativaIndexRoute
   '/tool': typeof ToolIndexRoute
   '/normativa/portale-interpelli/$id': typeof NormativaPortaleInterpelliIdRoute
+  '/tool/portale-interpelli/$id': typeof ToolPortaleInterpelliIdRoute
   '/normativa/portale-interpelli': typeof NormativaPortaleInterpelliIndexRoute
+  '/tool/portale-interpelli': typeof ToolPortaleInterpelliIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -170,7 +187,9 @@ export interface FileRoutesById {
   '/normativa/': typeof NormativaIndexRoute
   '/tool/': typeof ToolIndexRoute
   '/normativa/portale-interpelli/$id': typeof NormativaPortaleInterpelliIdRoute
+  '/tool/portale-interpelli/$id': typeof ToolPortaleInterpelliIdRoute
   '/normativa/portale-interpelli/': typeof NormativaPortaleInterpelliIndexRoute
+  '/tool/portale-interpelli/': typeof ToolPortaleInterpelliIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -191,7 +210,9 @@ export interface FileRouteTypes {
     | '/normativa/'
     | '/tool/'
     | '/normativa/portale-interpelli/$id'
+    | '/tool/portale-interpelli/$id'
     | '/normativa/portale-interpelli/'
+    | '/tool/portale-interpelli/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -208,7 +229,9 @@ export interface FileRouteTypes {
     | '/normativa'
     | '/tool'
     | '/normativa/portale-interpelli/$id'
+    | '/tool/portale-interpelli/$id'
     | '/normativa/portale-interpelli'
+    | '/tool/portale-interpelli'
   id:
     | '__root__'
     | '/'
@@ -227,7 +250,9 @@ export interface FileRouteTypes {
     | '/normativa/'
     | '/tool/'
     | '/normativa/portale-interpelli/$id'
+    | '/tool/portale-interpelli/$id'
     | '/normativa/portale-interpelli/'
+    | '/tool/portale-interpelli/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -238,6 +263,8 @@ export interface RootRouteChildren {
   ToolBilancioFinderRoute: typeof ToolBilancioFinderRoute
   ToolCompanyFinderRoute: typeof ToolCompanyFinderRoute
   ToolIndexRoute: typeof ToolIndexRoute
+  ToolPortaleInterpelliIdRoute: typeof ToolPortaleInterpelliIdRoute
+  ToolPortaleInterpelliIndexRoute: typeof ToolPortaleInterpelliIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -361,6 +388,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof NormativaPortaleInterpelliIdRouteImport
       parentRoute: typeof NormativaRoute
     }
+    '/tool/portale-interpelli/': {
+      id: '/tool/portale-interpelli/'
+      path: '/tool/portale-interpelli'
+      fullPath: '/tool/portale-interpelli/'
+      preLoaderRoute: typeof ToolPortaleInterpelliIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tool/portale-interpelli/$id': {
+      id: '/tool/portale-interpelli/$id'
+      path: '/tool/portale-interpelli/$id'
+      fullPath: '/tool/portale-interpelli/$id'
+      preLoaderRoute: typeof ToolPortaleInterpelliIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -412,6 +453,8 @@ const rootRouteChildren: RootRouteChildren = {
   ToolBilancioFinderRoute: ToolBilancioFinderRoute,
   ToolCompanyFinderRoute: ToolCompanyFinderRoute,
   ToolIndexRoute: ToolIndexRoute,
+  ToolPortaleInterpelliIdRoute: ToolPortaleInterpelliIdRoute,
+  ToolPortaleInterpelliIndexRoute: ToolPortaleInterpelliIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
