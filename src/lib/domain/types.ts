@@ -34,6 +34,18 @@ export type Topic =
   | "Contenzioso";
 export type Language = "it" | "en" | "fr";
 
+/**
+ * Macro-categoria editoriale per la sezione Attualità.
+ * Affianca (non sostituisce) il campo `topic` più granulare.
+ */
+export const NEWS_CATEGORIES = [
+  "Transfer Pricing",
+  "VAT",
+  "Pillar Two",
+  "Anti-Avoidance",
+] as const;
+export type NewsCategory = (typeof NEWS_CATEGORIES)[number];
+
 export interface NewsSource {
   id: string;
   name: string;
@@ -63,6 +75,12 @@ export interface NewsItem {
   originalUrl: string;
   workflowState: WorkflowState;
   isDemo: true;
+  /** Macro-categoria editoriale (Transfer Pricing, VAT, Pillar Two, Anti-Avoidance). */
+  category?: NewsCategory;
+  /** Paese specifico a cui si riferisce la notizia (es. "India", "Germany"). */
+  country?: string;
+  /** URL diretto al documento PDF ufficiale scaricabile (se disponibile). */
+  pdfUrl?: string;
 }
 
 export interface NewsFilters {
@@ -70,6 +88,10 @@ export interface NewsFilters {
   geo: GeoArea | "TUTTE";
   topic: Topic | "TUTTI";
   institutionalOnly: boolean;
+  /** Filtro per macro-categoria editoriale. */
+  category: NewsCategory | "TUTTE";
+  /** Filtro per paese specifico. Stringa vuota = tutti i paesi. */
+  country: string;
 }
 
 export type ServiceHealth = "OK" | "STALE" | "DEGRADED";
