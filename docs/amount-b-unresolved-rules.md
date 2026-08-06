@@ -1,89 +1,117 @@
-# Amount B Unresolved Rules & Ambiguities
+# Amount B – Regole risolte e questioni ancora aperte
 
-## Scopo
+Registro delle ambiguità rilevate in fase di discovery, con l'esito della verifica
+condotta sul workbook OCSE (February 2026) durante l'implementazione del motore.
 
-Registrare tutte le regole, comportamenti e dettagli che non sono completamente specificati nel workbook o che richiedono interpretazione.
+Stato al 6 agosto 2026.
 
-## 1. Scoping qualitativo (par. 13.a e 14)
+## Risolte sul workbook
 
-- Il workbook dichiara esplicitamente che non automatizza gli elementi qualitativi.
-- **Domanda:** come deve essere comunicato l'output all'utente?
-  - Opzione raccomandata:
-    - `Quantitative scoping criteria met`
-    - `Quantitative scoping criteria not met`
-    - `Qualitative assessment required`
-  - Evitare un generico "Eligible" che potrebbe essere interpretato come conclusione normativa completa.
+### 1. Media dei saldi patrimoniali
 
-## 2. Gestione blank/zero/error nelle formule
+La discovery non aveva rilevato che le voci patrimoniali non entrano nel calcolo come
+saldo puntuale. Le righe 21, 30, 31 e 39 del foglio "3 Automated Calculations" usano
+la media tra saldo di apertura e saldo di chiusura, con una condizione di ripiego: il
+saldo puntuale sostituisce la media solo quando tutti gli esercizi precedenti sono a
+zero, per le società con storico patrimoniale più breve di quattro esercizi. Da qui la
+richiesta di quattro esercizi di stato patrimoniale a fronte di tre di conto
+economico. Implementato in `averageBalances`.
 
-- Per molte formule (OES, OAS, working capital, ecc.) non è esplicitato:
-  - Cosa succede se un anno ha net revenues o COGS = 0?
-  - Cosa succede se un campo è blank?
-- **Da chiarire:**
-  - Trattare zero come valore valido o come errore?
-  - Escludere l'anno dal weighted average se alcuni dati sono mancanti?
+### 2. Guardrail sui debiti commerciali, comportamento a 90 giorni esatti
 
-## 3. Arrotondamento e precisione
+La cella D25 usa `IFS(giorni > 90, "NO", giorni <= 90, "YES")`. Novanta giorni esatti
+rispettano quindi la soglia e non producono rettifica. I giorni si calcolano sui
+debiti medi, non sul saldo puntuale, e i debiti rettificati valgono `COGS / 365 * 90`.
 
-- Il workbook mostra percentuali con 2 decimali (es. 2,50%), ma non specifica sempre:
-  - Quando arrotondare
-  - Con quale precisione interna operare
-- **Decisione provvisoria:**
-  - Usare `Decimal` o stringhe decimali per tutti i calcoli
-  - Arrotondare solo in fase di visualizzazione
+### 3. Scala rating sovrano e net risk adjustment
 
-## 4. Accounts payable guardrail
+Estratta dall'intervallo S8:T22 delle data table. Fino a BBB incluso la rettifica è
+nulla; da BBB- si sale progressivamente fino all'8,6% per CCC- o inferiore; le
+giurisdizioni senza rating prendono il 4,1%, valore intermedio tra B e B-. La scala è
+identica nelle data table di marzo 2024, dicembre 2024 e gennaio 2026.
 
-- Il workbook mostra:
-  - "Meet 90-day threshold: YES"
-  - "Guardrail triggered: NO"
-- **Semantica:**
-  - `exceedsAccountsPayableGuardrail = accountsPayableDays > 90`
-  - Se `false` → no adjustment
-- **Da verificare:**
-  - Comportamento con valori esattamente = 90
-  - Eventuali eccezioni per giurisdizioni specifiche
+### 4. Cap della Section 5.2
 
-## 5. De minimis multi-industry (20%)
+La discovery indicava un cap unico dello 0,6 con un'alternativa per alcune
+giurisdizioni. È inesatto: il cap dipende dalla fascia di factor intensity e dal
+regime applicabile alla giurisdizione. Alta OAS (A) 70% o 80%; media OAS (B e C) 60% o
+70%; bassa OES (D ed E) 40% o 45%. Il regime deriva dalla categoria: Category 1 usa i
+cap standard, Category 2 quelli alternativi. Il collar è unico al 10%.
 
-- Il workbook menziona una soglia de minimis per multi-industry, ma non in tutte le formule è chiarissimo come si applica.
-- **Regola attesa:**
-  - Se una seconda/terza industry grouping < 20% dei net revenues, il return è determinato solo dalla industry grouping principale.
-  - Se > 20%, si usa weighted average.
+### 5. De minimis multi-industry
 
-## 6. OAS cap 85%
+La soglia del 20% si valuta sulla somma delle quote della seconda e della terza
+categoria, non su ciascuna separatamente (cella D63). Se non è superata, il return è
+quello della prima categoria; se è superata, si calcola la media ponderata delle celle
+della matrice per le quote di ricavi.
 
-- Il workbook specifica un cap OAS all'85%, ma non sempre è chiaro:
-  - Se il cap si applica prima o dopo altri adjustment
-  - Come interagisce con altri limiti
+Il workbook non verifica che la prima categoria sia effettivamente quella con la quota
+maggiore, pur descrivendola così nelle note. L'implementazione emette un avvertimento
+quando l'ordine non è coerente.
 
-## 7. Sovereign credit rating → NRA
+### 6. Cap dell'OAS all'85% nella Section 5.3
 
-- I data table mostrano:
-  - Rating da Moody's, S&P, Fitch
-  - "Credit rating used"
-  - "NRA"
-- **Da chiarire:**
-  - Mapping esatto rating → NRA
-  - Come gestire rating diversi tra le agenzie per la stessa giurisdizione
+Il cap si applica all'OAS prima della moltiplicazione per il net risk adjustment
+(cella E107). La rettifica risultante si somma al return della Section 5.1 o 5.2, non
+lo sostituisce.
 
-## 8. Versioning dei dataset
+### 7. Base della Section 5.3
 
-- Non è esplicitato nel workbook come un'implementazione debba gestire:
-  - Aggiornamenti futuri delle data table
-  - Compatibilità··tra versioni diverse
-- **Decisione architetturale:**
-  - Ogni data table diventa un dataset versionato (2024-03, 2024-12, 2026-01, ecc.)
-  - Ogni run registra la versione usata
+La cella E111 mostra che la base della rettifica è il return della Section 5.2 se
+questa ha prodotto un aggiustamento, altrimenti quello della Section 5.1.
 
-## 9. Export e audit trail
+### 8. Riferimento fisso alla data table di dicembre 2024
 
-- Il workbook non specifica:
-  - Come esportare i risultati
-  - Quali metadati registrare per audit
-- **Decisione provvisoria:**
-  - Salvare in ogni run:
-    - input completi
-    - versioni dataset
-    - output intermedi (OES, OAS, factor intensity, ecc.)
-    - output finale
+Le celle E85 ed E109 cercano la classificazione OAS e la scala rating-NRA nel foglio
+"Data Table as of December 2024" anche nella versione February 2026 del workbook,
+mentre i dati di giurisdizione vengono letti dalla data table di gennaio 2026.
+Verificato che i due intervalli coincidono nelle tre data table, quindi oggi non ci
+sono differenze di calcolo. L'implementazione non replica il riferimento fisso: lega
+entrambe le tabelle alla versione selezionata.
+
+## Scelte di implementazione
+
+### 9. Elementi qualitativi dello scoping
+
+Il workbook dichiara di non automatizzare i paragrafi 13.a e 14. L'esito esposto
+distingue "criterio quantitativo soddisfatto" da una conclusione sull'applicabilità
+dell'approccio, che resta una valutazione professionale. Nessuna etichetta di sintesi
+del tipo "ammissibile".
+
+### 10. Valori assenti e divisioni per zero
+
+Il workbook propaga un trattino. L'implementazione usa `null` e lo propaga fino alla
+presentazione, dove diventa un trattino. La coppia debiti e costo del venduto entrambi
+a zero è trattata come dato assente, non come zero.
+
+### 11. Precisione e arrotondamento
+
+Calcolo interamente in virgola mobile a doppia precisione, senza arrotondamenti
+intermedi; l'arrotondamento a due decimali avviene solo alla presentazione. I golden
+test confrontano con tolleranza a dieci cifre sui valori derivati da frazioni esatte.
+
+### 12. Scoping non soddisfatto
+
+Il calcolo prosegue e i valori intermedi restano visibili, con un avviso in evidenza
+che l'approccio semplificato non è utilizzabile. Nascondere i numeri impedirebbe di
+capire da quale voce dipende l'esito.
+
+## Ancora aperte
+
+### 13. Limite superiore dell'OES per giurisdizione
+
+La guidance fissa un intervallo tra il 20% e il 30% ma il valore concreto lo stabilisce
+ciascuna giurisdizione, e il workbook lo lascia come input libero. Non esiste nel
+workbook una tabella giurisdizione-limite. Al momento è un campo compilato
+dall'utente, con avvertimento se esce dall'intervallo. Servirebbe una rilevazione
+autonoma dei limiti adottati, da mantenere aggiornata.
+
+### 14. Persistenza e riesecuzione delle run
+
+Non ancora implementata. Ogni run produce già i metadati necessari a essere
+ricostruita, versioni e checksum dei dataset, ma non c'è salvataggio né esportazione.
+
+### 15. Esportazione
+
+Da valutare un'esportazione della catena di calcolo in formato allegabile a un Local
+File.

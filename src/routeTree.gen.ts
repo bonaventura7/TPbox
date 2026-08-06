@@ -34,6 +34,7 @@ import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[
 import { Route as NormativaPortaleInterpelliIndexRouteImport } from './routes/normativa.portale-interpelli.index'
 import { Route as NormativaPortaleInterpelliIdRouteImport } from './routes/normativa.portale-interpelli.$id'
 import { Route as ToolAmountBIndexRouteImport } from './routes/tool.amount-b.index'
+import { Route as ToolAmountBNuovoRouteImport } from './routes/tool.amount-b.nuovo'
 import { Route as ToolBepsMliIndexRouteImport } from './routes/tool.beps-mli.index'
 import { Route as ToolBepsMliRicercaRouteImport } from './routes/tool.beps-mli.ricerca'
 import { Route as ToolPatentscopeIndexRouteImport } from './routes/tool.patentscope.index'
@@ -173,6 +174,11 @@ const ToolAmountBIndexRoute = ToolAmountBIndexRouteImport.update({
   path: '/tool/amount-b/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ToolAmountBNuovoRoute = ToolAmountBNuovoRouteImport.update({
+  id: '/tool/amount-b/nuovo',
+  path: '/tool/amount-b/nuovo',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ToolBepsMliIndexRoute = ToolBepsMliIndexRouteImport.update({
   id: '/tool/beps-mli/',
   path: '/tool/beps-mli/',
@@ -234,6 +240,7 @@ export interface FileRoutesByFullPath {
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/normativa/portale-interpelli/$id': typeof NormativaPortaleInterpelliIdRoute
+  '/tool/amount-b/nuovo': typeof ToolAmountBNuovoRoute
   '/tool/beps-mli/ricerca': typeof ToolBepsMliRicercaRoute
   '/tool/patentscope/$id': typeof ToolPatentscopeIdRoute
   '/tool/portale-interpelli/$id': typeof ToolPortaleInterpelliIdRoute
@@ -266,6 +273,7 @@ export interface FileRoutesByTo {
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/normativa/portale-interpelli/$id': typeof NormativaPortaleInterpelliIdRoute
+  '/tool/amount-b/nuovo': typeof ToolAmountBNuovoRoute
   '/tool/beps-mli/ricerca': typeof ToolBepsMliRicercaRoute
   '/tool/patentscope/$id': typeof ToolPatentscopeIdRoute
   '/tool/portale-interpelli/$id': typeof ToolPortaleInterpelliIdRoute
@@ -301,6 +309,7 @@ export interface FileRoutesById {
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/normativa/portale-interpelli/$id': typeof NormativaPortaleInterpelliIdRoute
+  '/tool/amount-b/nuovo': typeof ToolAmountBNuovoRoute
   '/tool/beps-mli/ricerca': typeof ToolBepsMliRicercaRoute
   '/tool/patentscope/$id': typeof ToolPatentscopeIdRoute
   '/tool/portale-interpelli/$id': typeof ToolPortaleInterpelliIdRoute
@@ -337,6 +346,7 @@ export interface FileRouteTypes {
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/normativa/portale-interpelli/$id'
+    | '/tool/amount-b/nuovo'
     | '/tool/beps-mli/ricerca'
     | '/tool/patentscope/$id'
     | '/tool/portale-interpelli/$id'
@@ -369,6 +379,7 @@ export interface FileRouteTypes {
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/normativa/portale-interpelli/$id'
+    | '/tool/amount-b/nuovo'
     | '/tool/beps-mli/ricerca'
     | '/tool/patentscope/$id'
     | '/tool/portale-interpelli/$id'
@@ -403,6 +414,7 @@ export interface FileRouteTypes {
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/normativa/portale-interpelli/$id'
+    | '/tool/amount-b/nuovo'
     | '/tool/beps-mli/ricerca'
     | '/tool/patentscope/$id'
     | '/tool/portale-interpelli/$id'
@@ -429,6 +441,7 @@ export interface RootRouteChildren {
   ToolIndexRoute: typeof ToolIndexRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
+  ToolAmountBNuovoRoute: typeof ToolAmountBNuovoRoute
   ToolBepsMliRicercaRoute: typeof ToolBepsMliRicercaRoute
   ToolPatentscopeIdRoute: typeof ToolPatentscopeIdRoute
   ToolPortaleInterpelliIdRoute: typeof ToolPortaleInterpelliIdRoute
@@ -616,6 +629,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ToolAmountBIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/tool/amount-b/nuovo': {
+      id: '/tool/amount-b/nuovo'
+      path: '/tool/amount-b/nuovo'
+      fullPath: '/tool/amount-b/nuovo'
+      preLoaderRoute: typeof ToolAmountBNuovoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/tool/beps-mli/': {
       id: '/tool/beps-mli/'
       path: '/tool/beps-mli'
@@ -724,6 +744,7 @@ const rootRouteChildren: RootRouteChildren = {
   ToolIndexRoute: ToolIndexRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
+  ToolAmountBNuovoRoute: ToolAmountBNuovoRoute,
   ToolBepsMliRicercaRoute: ToolBepsMliRicercaRoute,
   ToolPatentscopeIdRoute: ToolPatentscopeIdRoute,
   ToolPortaleInterpelliIdRoute: ToolPortaleInterpelliIdRoute,

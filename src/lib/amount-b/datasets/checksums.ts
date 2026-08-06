@@ -1,34 +1,40 @@
 /**
- * Amount B – Dataset Checksums
+ * Amount B – Checksum dei dataset
  *
- * Placeholder per i checksum dei dataset versionati.
- * In una implementazione reale, questi checksum saranno calcolati
- * sui file JSON/TS dei dataset e usati per audit e versioning.
+ * SHA-256 troncato a 16 caratteri esadecimali, calcolato sul contenuto dei
+ * file di dataset generati dall'estrazione del workbook OCSE. Serve a
+ * riconoscere se una run è stata prodotta con dati diversi da quelli
+ * attualmente in repository.
+ *
+ * Rigenerare con `scripts/amount-b-checksums.mjs` dopo ogni modifica ai
+ * dataset.
  */
+
+import type { DatasetVersion } from "./registry";
 
 export interface DatasetChecksums {
-  jurisdictions: string;
-  creditRatings: string;
-  products: string;
+  /** Checksum del file delle giurisdizioni della versione selezionata. */
+  readonly jurisdictions: string;
+  /** Checksum delle tabelle condivise: scala rating-NRA, prodotti, fasce OECC. */
+  readonly referenceTables: string;
+  /** Checksum della matrice di pricing e delle soglie del workbook. */
+  readonly pricingMatrix: string;
 }
 
-/**
- * Checksum per versione dataset.
- */
-export const DATASET_CHECKSUMS: Record<'2024-03' | '2024-12' | '2026-01', DatasetChecksums> = {
-  '2024-03': {
-    jurisdictions: 'TODO',
-    creditRatings: 'TODO',
-    products: 'TODO',
-  },
-  '2024-12': {
-    jurisdictions: 'TODO',
-    creditRatings: 'TODO',
-    products: 'TODO',
-  },
-  '2026-01': {
-    jurisdictions: 'TODO',
-    creditRatings: 'TODO',
-    products: 'TODO',
-  },
+const REFERENCE_TABLES = "e069e3d2471266b1";
+const PRICING_MATRIX = "ae6c2d23d5e4bfff";
+
+const JURISDICTION_CHECKSUMS: Readonly<Record<DatasetVersion, string>> = {
+  "2024-03": "ed3b8a6f5f05645a",
+  "2024-12": "d59c3334342354bf",
+  "2026-01": "b2b243714d6bad2f",
 };
+
+/** Checksum dei dataset effettivamente usati da una run. */
+export function getDatasetChecksums(version: DatasetVersion): DatasetChecksums {
+  return {
+    jurisdictions: JURISDICTION_CHECKSUMS[version],
+    referenceTables: REFERENCE_TABLES,
+    pricingMatrix: PRICING_MATRIX,
+  };
+}

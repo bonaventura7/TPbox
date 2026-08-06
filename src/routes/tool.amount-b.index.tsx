@@ -1,125 +1,171 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { LinkCard } from '../components/ui/link-card'
-import { ExternalLink, PlusCircle, History } from 'lucide-react'
+/**
+ * Amount B – Scheda dello strumento.
+ *
+ * Pagina di ingresso: che cosa fa lo strumento, che cosa non fa, e avvio del
+ * calcolo guidato.
+ */
 
-export const Route = createFileRoute('/tool/amount-b/')({
+import { Link, createFileRoute } from "@tanstack/react-router";
+import { ArrowRight, ExternalLink } from "lucide-react";
+
+import {
+  WORKBOOK_VERSION,
+  DATASET_LABELS,
+  DEFAULT_DATASET_VERSION,
+  getJurisdictions,
+} from "../lib/amount-b/datasets/registry";
+
+const TITLE = "Amount B (Pillar One): calcolo guidato — Osservatorio Transfer Pricing";
+const DESCRIPTION =
+  "Calcolo dell'Approccio Semplificato e Razionalizzato del Pillar One OCSE: criterio quantitativo di scoping, matrice di pricing, cross-check sui costi operativi e data availability mechanism.";
+const CANONICAL = "https://transfer-guide-italia.lovable.app/tool/amount-b";
+
+export const Route = createFileRoute("/tool/amount-b/")({
   head: () => ({
     meta: [
-      { title: 'Amount B (Pillar One): calcolo guidato — Osservatorio Transfer Pricing' },
-      { name: 'description', content: "Strumento di calcolo per l'Approccio Semplificato e Razionalizzato (Amount B) del Pillar One OCSE, con dati dimostrativi." },
-      { property: 'og:title', content: 'Amount B (Pillar One): calcolo guidato — Osservatorio Transfer Pricing' },
-      { property: 'og:description', content: "Strumento di calcolo per l'Approccio Semplificato e Razionalizzato (Amount B) del Pillar One OCSE, con dati dimostrativi." },
-      { property: 'og:type', content: 'website' },
-      { property: 'og:url', content: 'https://transfer-guide-italia.lovable.app/tool/amount-b' },
-      { name: 'twitter:card', content: 'summary_large_image' },
+      { title: TITLE },
+      { name: "description", content: DESCRIPTION },
+      { property: "og:title", content: TITLE },
+      { property: "og:description", content: DESCRIPTION },
+      { property: "og:type", content: "website" },
+      { property: "og:url", content: CANONICAL },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
-    links: [{ rel: 'canonical', href: 'https://transfer-guide-italia.lovable.app/tool/amount-b' }],
+    links: [{ rel: "canonical", href: CANONICAL }],
   }),
-  component: RouteComponent,
-})
+  component: AmountBIndex,
+});
 
-function RouteComponent() {
+const PHASES = [
+  {
+    title: "Scoping",
+    body: "Verifica del criterio quantitativo del paragrafo 13.b: i costi operativi medi del triennio devono stare tra il 3% e il limite superiore fissato dalla giurisdizione.",
+  },
+  {
+    title: "Matrice di pricing",
+    body: "Classificazione di factor intensity dalle attività operative nette e dai costi operativi, poi lettura della cella della matrice per industry grouping.",
+  },
+  {
+    title: "Rettifiche",
+    body: "Cross-check sui costi operativi con cap e collar, e rettifica di rischio sovrano per le giurisdizioni ammesse al data availability mechanism.",
+  },
+] as const;
+
+function AmountBIndex() {
+  const jurisdictionCount = getJurisdictions(DEFAULT_DATASET_VERSION).length;
+
   return (
-    <>
+    <div className="container mx-auto max-w-5xl px-4 py-8">
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        Tool · Pillar One
+      </p>
+      <h1 className="mt-1 font-serif text-4xl tracking-tight">Amount B</h1>
+      <p className="mt-3 max-w-2xl text-lg text-muted-foreground">
+        Determinazione del return on sales per le attività di distribuzione di routine secondo
+        l&apos;Approccio Semplificato e Razionalizzato, riprodotto dal workbook OCSE.
+      </p>
 
-      <div className="container mx-auto max-w-5xl px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight">Amount B (Pillar One)</h1>
-          <p className="mt-2 text-muted-foreground">
-            Strumento di calcolo per l'Approccio Semplificato e Razionalizzato dell'OECD
-          </p>
-        </div>
-
-        {/* Cos'è Amount B */}
-        <div className="mb-8 rounded-lg border bg-card p-6">
-          <h2 className="text-xl font-semibold">Cos'è Amount B?</h2>
-          <p className="mt-2 text-muted-foreground">
-            Amount B è un approccio semplificato per la determinazione del prezzo di trasferimento
-            per le attività di distribuzione di routine. Lo strumento automatizza i calcoli del
-            rendimento sulle vendite secondo le linee guida OECD (Annex III of Chapter IV).
-          </p>
-          <p className="mt-2 text-muted-foreground">
-            <strong>Nota:</strong> questo strumento automatizza i criteri quantitativi. La valutazione
-            qualitativa (paragrafi 13.a e 14 delle linee guida OECD) deve essere effettuata separatamente.
-          </p>
-        </div>
-
-        {/* Azioni principali */}
-        <div className="grid gap-6 sm:grid-cols-2">
-          <LinkCard
-            href="/tool/amount-b/nuovo"
-            title="Nuovo calcolo"
-            description="Avvia una nuova procedura guidata di calcolo Amount B"
-          >
-            <PlusCircle className="h-4 w-4" />
-          </LinkCard>
-
-          <LinkCard
-            href="/tool/amount-b/storico"
-            title="Storico calcoli"
-            description="Visualizza e riprendi i calcoli salvati"
-          >
-            <History className="h-4 w-4" />
-          </LinkCard>
-        </div>
-
-        {/* Documentazione */}
-        <div className="mt-12">
-          <h2 className="text-xl font-semibold">Documentazione</h2>
-          <div className="mt-4 space-y-4">
-            <div className="rounded-lg border bg-card p-4">
-              <h3 className="font-medium">Architecture Overview</h3>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Architettura UX completa, wizard 7 passi, cruscotto esito, motore di calcolo separato.
-              </p>
-              <a
-                href="https://github.com/bonaventura7/transfer-guide-italia/blob/main/docs/amount-b-ux-architecture.md"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-2 inline-flex items-center text-sm text-primary hover:underline"
-              >
-                Leggi di più <ExternalLink className="ml-1 h-3 w-3" />
-              </a>
-            </div>
-
-            <div className="rounded-lg border bg-card p-4">
-              <h3 className="font-medium">OECD Pricing Automation Tool</h3>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Workbook ufficiale OECD "Pricing Automation Tool for the Simplified and Streamlined Approach" (February 2026 version).
-              </p>
-              <a
-                href="https://www.oecd.org/en/topics/sub-issues/transfer-pricing/pillar-one-amount-b.html"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-2 inline-flex items-center text-sm text-primary hover:underline"
-              >
-                OECD Pillar One Amount B <ExternalLink className="ml-1 h-3 w-3" />
-              </a>
-            </div>
-          </div>
-        </div>
-
-        {/* Stato implementazione */}
-        <div className="mt-12">
-          <h2 className="text-xl font-semibold">Stato implementazione</h2>
-          <div className="mt-4 rounded-lg border bg-card p-4">
-            <ul className="space-y-2 text-sm">
-              <li className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-yellow-500"></span>
-                <strong>Phase 1:</strong> Discovery e documentazione (in corso)
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-gray-300"></span>
-                <strong>Phase 2:</strong> Contratto TypeScript e dominio (da iniziare)
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-gray-300"></span>
-                <strong>Phase 3:</strong> Engine, test e UI (da iniziare)
-              </li>
-            </ul>
-          </div>
-        </div>
+      <div className="mt-6 flex flex-wrap gap-2 text-xs">
+        <span className="rounded-full border border-border px-2.5 py-1 font-medium">
+          Workbook OCSE {WORKBOOK_VERSION}
+        </span>
+        <span className="rounded-full border border-border px-2.5 py-1 text-muted-foreground">
+          {DATASET_LABELS[DEFAULT_DATASET_VERSION]}
+        </span>
+        <span className="rounded-full border border-border px-2.5 py-1 text-muted-foreground">
+          {jurisdictionCount} giurisdizioni
+        </span>
       </div>
-    </>
-  )
+
+      <div className="mt-8">
+        <Link
+          to="/tool/amount-b/nuovo"
+          className="inline-flex items-center gap-2 rounded-md bg-primary px-5 py-3 text-sm font-medium text-primary-foreground hover:opacity-90"
+        >
+          Avvia il calcolo guidato
+          <ArrowRight className="h-4 w-4" aria-hidden="true" />
+        </Link>
+        <p className="mt-2 text-sm text-muted-foreground">
+          I campi partono precompilati con il campione del workbook OCSE: si può premere avanti e
+          vedere subito un risultato completo.
+        </p>
+      </div>
+
+      {/* Come funziona */}
+      <section aria-labelledby="fasi" className="mt-14">
+        <h2 id="fasi" className="font-serif text-2xl">
+          Che cosa calcola
+        </h2>
+        <ol className="mt-6 grid gap-6 sm:grid-cols-3">
+          {PHASES.map((phase, i) => (
+            <li key={phase.title} className="border-t-2 border-petrol/30 pt-4">
+              <span className="text-xs tabular-nums text-petrol">
+                {String(i + 1).padStart(2, "0")}
+              </span>
+              <h3 className="mt-1 font-serif text-lg">{phase.title}</h3>
+              <p className="mt-2 text-sm text-muted-foreground">{phase.body}</p>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      {/* Limiti */}
+      <section
+        aria-labelledby="limiti"
+        className="mt-14 rounded-lg border border-rule bg-surface p-6"
+      >
+        <h2 id="limiti" className="font-serif text-2xl">
+          Che cosa non calcola
+        </h2>
+        <p className="mt-3 max-w-3xl text-sm">
+          Gli elementi qualitativi dello scoping, ai paragrafi 13.a e 14 della guidance, non sono
+          automatizzabili e restano una valutazione professionale. Lo strumento riporta l&apos;esito
+          del solo criterio quantitativo e non conclude sull&apos;applicabilità dell&apos;approccio.
+        </p>
+        <p className="mt-3 max-w-3xl text-sm">
+          La presenza di una giurisdizione nella tabella OCSE non significa che essa abbia adottato
+          o adotterà l&apos;approccio semplificato. I risultati vanno approvati da un professionista
+          prima di essere usati su posizioni reali.
+        </p>
+      </section>
+
+      {/* Fonti */}
+      <section aria-labelledby="fonti" className="mt-14">
+        <h2 id="fonti" className="font-serif text-2xl">
+          Fonti
+        </h2>
+        <ul className="mt-4 space-y-3 text-sm">
+          <li>
+            <a
+              href="https://www.oecd.org/en/topics/sub-issues/transfer-pricing/pillar-one-amount-b.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-petrol hover:underline"
+            >
+              OCSE, Pillar One Amount B e Pricing Automation Tool
+              <ExternalLink className="h-3 w-3" aria-hidden="true" />
+            </a>
+            <p className="text-muted-foreground">
+              Matrice di pricing, fasce cap e collar, scala rating-NRA e tabelle delle giurisdizioni
+              provengono dalla versione February 2026 del workbook.
+            </p>
+          </li>
+          <li>
+            <a
+              href="https://github.com/bonaventura7/transfer-guide-italia/blob/main/docs/amount-b-calculation-manifest.md"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-petrol hover:underline"
+            >
+              Manifest delle regole di calcolo
+              <ExternalLink className="h-3 w-3" aria-hidden="true" />
+            </a>
+            <p className="text-muted-foreground">
+              Corrispondenza tra le formule del workbook e le funzioni dell&apos;implementazione.
+            </p>
+          </li>
+        </ul>
+      </section>
+    </div>
+  );
 }

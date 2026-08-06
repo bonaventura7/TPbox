@@ -4,6 +4,15 @@
 
 Descrivere, per ogni regola di calcolo rilevante nel workbook, la semantica esatta, le dipendenze e il comportamento atteso in TypeScript.
 
+> **Rettifiche del 6 agosto 2026.** L'estrazione del workbook ha corretto due punti di
+> questo documento, redatto in fase di discovery. Primo: le voci patrimoniali entrano
+> nel calcolo come media tra saldo di apertura e saldo di chiusura, non come saldo
+> puntuale, e servono quindi quattro esercizi di stato patrimoniale (§3 e §2 qui
+> sotto). Secondo: il cap della Section 5.2 non è un valore unico dello 0,6 ma dipende
+> dalla fascia di factor intensity e dalla categoria della giurisdizione (§6).
+> L'implementazione di riferimento è `src/lib/amount-b/engine.ts`; le regole verificate
+> sono elencate in `amount-b-unresolved-rules.md`.
+
 ## Convenzioni
 
 - `Sheet`: nome del worksheet nel workbook
@@ -60,9 +69,11 @@ function computeOES(years: YearData[]): Decimal {
 ### a) Accounts payable days
 
 - **Formula:**
-  - `creditors / COGS × 365`
+  - `mediaCreditors / COGS × 365`, dove `mediaCreditors` è la media tra saldo di
+    apertura e saldo di chiusura dell'esercizio (riga 21), non il saldo puntuale
 - **Esempio (Japan sample):** ~83,07 / 87,39 / 85,32 giorni
-- **Soglia:** 90 giorni
+- **Soglia:** 90 giorni. Esattamente 90 giorni rispettano la soglia: la cella D25 usa
+  `IFS(giorni > 90, "NO", giorni <= 90, "YES")`
 - **Guardrail:**
   - `exceedsAccountsPayableGuardrail = accountsPayableDays > 90`
 - **Effetto:**
@@ -87,17 +98,30 @@ function exceedsAccountsPayableGuardrail(days: Decimal): boolean {
 
 **Sheet:** `3 Automated Calculations`
 
-### a) Working Capital
+### a) Media dei saldi patrimoniali
+
+Tutte le voci patrimoniali (stock, debtors, creditors, fixed assets) sono prima
+mediate tra apertura e chiusura, sui quattro esercizi da x-4 a x-1 forniti in input:
+
+- `media(x-3) = IF(x-4 = 0, x-3, (x-4 + x-3) / 2)`
+- `media(x-2) = IF(AND(x-4 = 0, x-3 = 0), x-2, (x-3 + x-2) / 2)`
+- `media(x-1) = IF(AND(x-4 = 0, x-3 = 0, x-2 = 0), x-1, (x-2 + x-1) / 2)`
+
+Il saldo puntuale sostituisce la media solo quando tutti gli esercizi precedenti sono
+a zero, caso delle società con storico più breve.
+
+### b) Working Capital
 
 - **Formula:**
-  - `Working Capital = Stock + Debtors - Creditors` (o adjusted creditors se guardrail triggerato)
+  - `Working Capital = mediaStock + mediaDebtors - creditorsUsed`, dove `creditorsUsed`
+    è la media dei debiti se il guardrail non è attivato, i debiti rettificati se lo è
 
-### b) Net Operating Assets
+### c) Net Operating Assets
 
 - **Formula:**
-  - `NOA = Fixed Assets + Working Capital`
+  - `NOA = mediaFixedAssets + Working Capital`
 
-### c) OAS (Net Operating Assets to Sales)
+### d) OAS (Net Operating Assets to Sales)
 
 - **Formula:**
   - `OAS = weighted average(NOAs) / weighted average(net revenues)`
@@ -162,9 +186,17 @@ type PercentageRange = {
 
 **Sheet:** `3 Automated Calculations` – sezione "2.2. Calculation for pricing under Section 5.2"
 
-- **Cap & Collar:**
-  - Cap: 0.6 (default) o alternativo per alcune giurisdizioni
-  - Collar: 0.1
+- **Cap & Collar** (foglio "3 Automated Calculations", I82:N87). Il cap dipende dalla
+  fascia di factor intensity e dal regime della giurisdizione, che deriva dalla
+  categoria: Category 1 usa i cap standard, Category 2 quelli alternativi.
+
+  | Fascia | Factor intensity | Cap standard | Cap alternativo |
+  | --- | --- | --- | --- |
+  | High OAS | A | 70% | 80% |
+  | Medium OAS | B, C | 60% | 70% |
+  | Low OES | D, E | 40% | 45% |
+
+  - Collar: 10%, unico per tutte le fasce
 - **Equivalent return on OPEX:**
   - `EBIT / OpEx`
 - **Trigger:**

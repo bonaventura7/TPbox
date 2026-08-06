@@ -10,9 +10,24 @@ Progetto React + TypeScript + Vite + Bun, con shadcn/ui e TanStack Router.
 
 **Route:** `/tool/amount-b`
 
-**Stato:** Phase 1 (Discovery e documentazione) completata.
+**Stato:** completato e operativo. Motore di calcolo, dataset versionati, golden test e
+interfaccia guidata.
+
+- Dataset estratti dal workbook: 214 giurisdizioni per ciascuna data table (marzo 2024,
+  dicembre 2024, gennaio 2026), scala rating-NRA, matrice di pricing 5x3, fasce cap e
+  collar, 34 prodotti con relativo industry grouping. Ogni run registra versioni e
+  checksum.
+- Motore in `src/lib/amount-b/engine.ts`, funzioni pure, con i riferimenti alle celle
+  del workbook nei commenti.
+- 26 golden test: il campione Japan del workbook torna su tutti i valori intermedi.
+- Interfaccia: scheda dello strumento su `/tool/amount-b`, procedura guidata in cinque
+  passi su `/tool/amount-b/nuovo`, precompilata con il campione OCSE.
+- Corretti due errori della discovery: mancava la media dei saldi patrimoniali e il cap
+  della Section 5.2 era indicato come valore unico. Dettaglio in
+  `docs/amount-b-unresolved-rules.md`.
 
 **Documentazione:**
+- `src/lib/amount-b/README.md`
 - `docs/amount-b-ux-architecture.md`
 - `docs/amount-b-migration-plan.md`
 - `docs/amount-b-workbook-inventory.md`
