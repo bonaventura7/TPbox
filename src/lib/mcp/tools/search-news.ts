@@ -40,6 +40,8 @@ export default defineTool({
       geo: input.geo ?? "TUTTE",
       topic: input.topic ?? "TUTTI",
       institutionalOnly: input.institutionalOnly ?? false,
+      category: "TUTTE",
+      country: "",
     });
     const items = [
       ...(feed.featured ? [feed.featured] : []),

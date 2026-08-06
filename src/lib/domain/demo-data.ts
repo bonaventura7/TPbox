@@ -3,7 +3,12 @@
  * Articoli reali da fonti istituzionali — marcati isDemo: true.
  * Regola d'oro: ogni articolo riporta originalUrl (fonte) e pdfUrl (documento ufficiale) quando disponibile.
  */
-import type { NewsItem } from "@/lib/domain/types";
+import type {
+  CompanyCandidate,
+  FinancialYear,
+  NewsItem,
+  NewsSource,
+} from "@/lib/domain/types";
 
 export const DEMO_NEWS_ITEMS: NewsItem[] = [
   {
