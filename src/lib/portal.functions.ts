@@ -18,6 +18,10 @@ const newsFiltersSchema = z.object({
   geo: geo.default("TUTTE"),
   topic: topic.default("TUTTI"),
   institutionalOnly: z.boolean().default(false),
+  category: z
+    .enum(["TUTTE", "Transfer Pricing", "VAT", "Pillar Two", "Anti-Avoidance"])
+    .default("TUTTE"),
+  country: z.string().max(60).default(""),
 });
 
 export const getNewsFeed = createServerFn({ method: "GET" })

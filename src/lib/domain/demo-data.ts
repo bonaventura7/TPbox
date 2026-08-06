@@ -3,7 +3,12 @@
  * Articoli reali da fonti istituzionali — marcati isDemo: true.
  * Regola d'oro: ogni articolo riporta originalUrl (fonte) e pdfUrl (documento ufficiale) quando disponibile.
  */
-import type { NewsItem } from "@/lib/domain/types";
+import type {
+  CompanyCandidate,
+  FinancialYear,
+  NewsItem,
+  NewsSource,
+} from "@/lib/domain/types";
 
 export const DEMO_NEWS_ITEMS: NewsItem[] = [
   {
@@ -179,3 +184,124 @@ export function getAvailableCountries(items: NewsItem[]): string[] {
   }
   return [...set].sort((a, b) => a.localeCompare(b, "it"));
 }
+
+/** Alias stabile usato dai repository server-side. */
+export const DEMO_NEWS: NewsItem[] = DEMO_NEWS_ITEMS;
+
+/** Bozze in attesa di revisione redazionale (nessuna pubblicazione automatica). */
+export const DEMO_DRAFTS_PENDING = 4;
+
+/** Configurazione fonti demo: nessun feed RSS non verificato. */
+export const DEMO_SOURCES: NewsSource[] = [
+  {
+    id: "src-oecd-tp",
+    name: "OECD Transfer Pricing",
+    acquisitionMode: "HTML_WATCH",
+    tier: "PRIMARY",
+    kind: "ISTITUZIONALE",
+    feedUrl: null,
+    siteUrl: "https://www.oecd.org/tax/transfer-pricing/",
+    geo: "OCSE",
+    note: "Nessun feed verificato disponibile: monitoraggio pagina lato server.",
+  },
+  {
+    id: "src-ec-taxud",
+    name: "European Commission — Taxation and Customs News",
+    acquisitionMode: "HTML_WATCH",
+    tier: "PRIMARY",
+    kind: "ISTITUZIONALE",
+    feedUrl: null,
+    siteUrl: "https://taxation-customs.ec.europa.eu/news_en",
+    geo: "UE",
+    note: "Monitoraggio pagina lato server; ingresso obbligatorio come bozza.",
+  },
+  {
+    id: "src-mnetax",
+    name: "MNE Tax — Transfer Pricing",
+    acquisitionMode: "HTML_WATCH",
+    tier: "SECONDARY",
+    kind: "PROFESSIONALE",
+    feedUrl: null,
+    siteUrl: "https://mnetax.com/category/transfer-pricing",
+    geo: "GLOBALE",
+    note: "Fonte secondaria: utilizzata solo a supporto di fonti primarie.",
+  },
+  {
+    id: "src-kluwer",
+    name: "Kluwer International Tax Blog",
+    acquisitionMode: "HTML_WATCH",
+    tier: "SECONDARY",
+    kind: "PROFESSIONALE",
+    feedUrl: null,
+    siteUrl: "https://kluwertaxblog.com/",
+    geo: "GLOBALE",
+    note: "Fonte secondaria: contributi dottrinali, sempre in revisione.",
+  },
+  {
+    id: "src-wu-learn",
+    name: "WU LEARN — general news",
+    acquisitionMode: "DISABLED",
+    tier: "SECONDARY",
+    kind: "ACCADEMICA",
+    feedUrl: null,
+    siteUrl: "https://www.wu.ac.at/en/taxlaw",
+    geo: "GLOBALE",
+    note: "Fonte disattivata: si utilizzano soltanto metadati sintetici.",
+  },
+];
+
+/** Società dimostrative risolte da Company Finder. */
+export const DEMO_COMPANIES: CompanyCandidate[] = [
+  {
+    companyId: "cmp-001",
+    legalName: "Alpina Components S.p.A.",
+    country: "IT",
+    city: "Milano",
+    legalForm: "Società per azioni",
+    activity: "Componentistica industriale",
+    lastFilingYear: 2024,
+    isDemo: true,
+  },
+  {
+    companyId: "cmp-002",
+    legalName: "Alpina Services S.r.l.",
+    country: "IT",
+    city: "Torino",
+    legalForm: "Società a responsabilità limitata",
+    activity: "Servizi infragruppo",
+    lastFilingYear: 2024,
+    isDemo: true,
+  },
+  {
+    companyId: "cmp-003",
+    legalName: "Meridiana Distribution GmbH",
+    country: "DE",
+    city: "Monaco di Baviera",
+    legalForm: "GmbH",
+    activity: "Distribuzione all'ingrosso",
+    lastFilingYear: 2023,
+    isDemo: true,
+  },
+];
+
+/** Serie economico-finanziarie dimostrative per companyId. */
+export const DEMO_FINANCIALS: Record<string, FinancialYear[]> = {
+  "cmp-001": [
+    { year: 2024, revenue: 184_500_000, ebit: 12_900_000, netResult: 8_400_000, totalAssets: 142_000_000, equity: 61_000_000, employees: 612 },
+    { year: 2023, revenue: 171_200_000, ebit: 10_400_000, netResult: 6_900_000, totalAssets: 136_500_000, equity: 55_300_000, employees: 589 },
+    { year: 2022, revenue: 158_900_000, ebit: 9_100_000, netResult: 5_600_000, totalAssets: 129_800_000, equity: 50_100_000, employees: 564 },
+  ],
+  "cmp-002": [
+    { year: 2024, revenue: 42_300_000, ebit: 2_100_000, netResult: 1_350_000, totalAssets: 28_400_000, equity: 11_800_000, employees: 148 },
+    { year: 2023, revenue: 39_800_000, ebit: 1_780_000, netResult: 1_020_000, totalAssets: 26_900_000, equity: 10_600_000, employees: 141 },
+  ],
+  "cmp-003": [
+    { year: 2023, revenue: 96_700_000, ebit: 4_800_000, netResult: 3_050_000, totalAssets: 71_200_000, equity: 24_900_000, employees: 233 },
+    { year: 2022, revenue: 91_100_000, ebit: 4_150_000, netResult: 2_480_000, totalAssets: 68_400_000, equity: 22_600_000, employees: 226 },
+  ],
+};
+
+/** Serie di riserva usata quando il provider non copre la società richiesta. */
+export const DEMO_FINANCIALS_FALLBACK: FinancialYear[] = [
+  { year: 2024, revenue: 25_000_000, ebit: 1_250_000, netResult: 780_000, totalAssets: 18_500_000, equity: 7_400_000, employees: 96 },
+];
