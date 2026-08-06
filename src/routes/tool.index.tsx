@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { LinkCard } from '../components/ui/link-card'
-import { Database, Calculator, Building, Search } from 'lucide-react'
+import { Database, Calculator, Building, Search, Scale } from 'lucide-react'
 
 export const Route = createFileRoute('/tool/')({
   head: () => ({
@@ -57,6 +57,14 @@ function RouteComponent() {
           title="Patent & IP Explorer"
           description="Interfaccia guidata per cercare brevetti e intangibili con PATENTSCOPE (WIPO), utile per analisi TP e IP.">
           <Search className="h-4 w-4" />
+        </LinkCard>
+
+        {/* Ravvedimento spontaneo */}
+        <LinkCard
+          href="/tool/ravvedimento"
+          title="Ravvedimento spontaneo"
+          description="Calcolo interessi legali (dataset 1997-2025 versionato) e sanzione ridotta, con regimi pre/post D.Lgs. 87/2024.">
+          <Scale className="h-4 w-4" />
         </LinkCard>
       </div>
 
