@@ -1,4 +1,9 @@
-import { DEMO_DRAFTS_PENDING, DEMO_NEWS, DEMO_SOURCES } from "../domain/demo-data";
+import {
+  DEMO_DRAFTS_PENDING,
+  DEMO_NEWS,
+  DEMO_SOURCES,
+  getAvailableCountries,
+} from "../domain/demo-data";
 import type {
   NewsFeedResult,
   NewsFilters,
@@ -47,6 +52,8 @@ function matches(item: NewsItem, filters: NewsFilters): boolean {
   }
   if (filters.geo !== "TUTTE" && item.geo !== filters.geo) return false;
   if (filters.topic !== "TUTTI" && item.topic !== filters.topic) return false;
+  if (filters.category !== "TUTTE" && item.category !== filters.category) return false;
+  if (filters.country.trim().length > 0 && item.country !== filters.country) return false;
   if (filters.institutionalOnly && item.sourceKind !== "ISTITUZIONALE") return false;
   return true;
 }
@@ -70,6 +77,8 @@ export async function listNewsFeed(filters: NewsFilters): Promise<NewsFeedResult
     filters.query.trim().length > 0 ||
     filters.geo !== "TUTTE" ||
     filters.topic !== "TUTTI" ||
+    filters.category !== "TUTTE" ||
+    filters.country.trim().length > 0 ||
     filters.institutionalOnly;
 
   audit({
@@ -91,6 +100,7 @@ export async function listNewsFeed(filters: NewsFilters): Promise<NewsFeedResult
     archive: filtered,
     totalPublished: items.length,
     draftsPending: DEMO_DRAFTS_PENDING,
+    availableCountries: getAvailableCountries(items),
   };
 }
 
