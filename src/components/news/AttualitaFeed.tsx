@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
-import type { NewsFilters, NewsItem } from "@/lib/domain/types";
+import { NEWS_CATEGORIES, type NewsFilters, type NewsItem } from "@/lib/domain/types";
 import { getNewsFeed } from "@/lib/portal.functions";
 
 const GEO_OPTIONS = ["TUTTE", "OCSE", "UE", "ITALIA", "GLOBALE"] as const;
@@ -34,7 +34,8 @@ const TOPIC_OPTIONS = [
 function groupByMonth(items: NewsItem[]): { label: string; items: NewsItem[] }[] {
   const groups = new Map<string, NewsItem[]>();
   for (const item of items) {
-    const label = new Date(item.originalDate).toLocaleDateString("it-IT", { timeZone: "Europe/Rome",
+    const label = new Date(item.originalDate).toLocaleDateString("it-IT", {
+      timeZone: "Europe/Rome",
       month: "long",
       year: "numeric",
     });
@@ -69,7 +70,8 @@ function ServiceNotice({
           ? "Servizio in modalità ridotta: alcune fonti non sono attualmente monitorate. I contenuti mostrati restano consultabili ma potrebbero non essere completi."
           : "Contenuti non recenti: l'ultimo aggiornamento della pipeline redazionale risale a un intervallo superiore alle 36 ore."}{" "}
         Ultimo aggiornamento riuscito:{" "}
-        {new Date(lastRunAt).toLocaleString("it-IT", { timeZone: "Europe/Rome",
+        {new Date(lastRunAt).toLocaleString("it-IT", {
+          timeZone: "Europe/Rome",
           day: "2-digit",
           month: "2-digit",
           year: "numeric",
@@ -82,6 +84,15 @@ function ServiceNotice({
   );
 }
 
+/** Estrae la lista ordinata di paesi unici dagli articoli caricati. */
+function extractCountries(items: NewsItem[]): string[] {
+  const set = new Set<string>();
+  for (const item of items) {
+    if (item.country) set.add(item.country);
+  }
+  return Array.from(set).sort((a, b) => a.localeCompare(b, "it"));
+}
+
 export function AttualitaFeed({
   fixedGeo,
 }: {
@@ -91,13 +102,15 @@ export function AttualitaFeed({
   const [submittedQuery, setSubmittedQuery] = useState("");
   const [geo, setGeo] = useState<NewsFilters["geo"]>(fixedGeo ?? "TUTTE");
   const [topic, setTopic] = useState<NewsFilters["topic"]>("TUTTI");
+  const [category, setCategory] = useState<NewsFilters["category"]>("TUTTE");
+  const [country, setCountry] = useState<string>("");
   const [institutionalOnly, setInstitutionalOnly] = useState(false);
 
   const fetchFeed = useServerFn(getNewsFeed);
   const effectiveGeo = fixedGeo ?? geo;
   const filters = useMemo(
-    () => ({ query: submittedQuery, geo: effectiveGeo, topic, institutionalOnly }),
-    [submittedQuery, effectiveGeo, topic, institutionalOnly],
+    () => ({ query: submittedQuery, geo: effectiveGeo, topic, institutionalOnly, category, country }),
+    [submittedQuery, effectiveGeo, topic, institutionalOnly, category, country],
   );
 
   const { data, isPending, isError, isFetching, refetch } = useQuery({
@@ -105,7 +118,21 @@ export function AttualitaFeed({
     queryFn: () => fetchFeed({ data: filters }),
   });
 
+  // Lista paesi dinamica estratta da tutti gli articoli disponibili
+  const allItems = data ? [...(data.featured ? [data.featured] : []), ...data.latest, ...data.archive] : [];
+  const countryOptions = extractCountries(allItems);
+
   const archiveGroups = data ? groupByMonth(data.archive) : [];
+
+  function resetFilters() {
+    setQuery("");
+    setSubmittedQuery("");
+    setGeo(fixedGeo ?? "TUTTE");
+    setTopic("TUTTI");
+    setCategory("TUTTE");
+    setCountry("");
+    setInstitutionalOnly(false);
+  }
 
   return (
     <>
@@ -116,31 +143,82 @@ export function AttualitaFeed({
           <h2 id="ricerca" className="font-serif text-xl">
             Ricerca e filtri
           </h2>
+
           <form
-            className={
-              fixedGeo
-                ? "mt-4 grid gap-4 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_auto]"
-                : "mt-4 grid gap-4 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_auto]"
-            }
+            className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
             onSubmit={(event) => {
               event.preventDefault();
               setSubmittedQuery(query);
             }}
           >
-            <div className="min-w-0">
+            {/* Ricerca testo */}
+            <div className="min-w-0 sm:col-span-2 lg:col-span-4">
               <Label htmlFor="news-query">Cerca nel titolo, nella sintesi o nella fonte</Label>
-              <Input
-                id="news-query"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Es. comparabili, Pillar Two, documentazione"
-                className="mt-2 min-h-11"
-              />
+              <div className="mt-2 flex gap-2">
+                <Input
+                  id="news-query"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="Es. APA, Pillar Two, comparabili"
+                  className="min-h-11"
+                />
+                <Button type="submit" className="min-h-11 shrink-0">
+                  <Search aria-hidden="true" />
+                  Cerca
+                </Button>
+              </div>
             </div>
+
+            {/* Filtro Categoria editoriale */}
+            <div className="min-w-0">
+              <Label htmlFor="news-category">Categoria</Label>
+              <Select
+                value={category}
+                onValueChange={(value) => setCategory(value as NewsFilters["category"])}
+              >
+                <SelectTrigger id="news-category" className="mt-2 min-h-11 w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="TUTTE">Tutte le categorie</SelectItem>
+                  {NEWS_CATEGORIES.map((cat) => (
+                    <SelectItem key={cat} value={cat}>
+                      {cat}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Filtro Paese */}
+            <div className="min-w-0">
+              <Label htmlFor="news-country">Paese</Label>
+              <Select
+                value={country || "__all"}
+                onValueChange={(value) => setCountry(value === "__all" ? "" : value)}
+              >
+                <SelectTrigger id="news-country" className="mt-2 min-h-11 w-full">
+                  <SelectValue placeholder="Tutti i paesi" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all">Tutti i paesi</SelectItem>
+                  {countryOptions.map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {c}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Filtro Area geografica */}
             {fixedGeo ? null : (
               <div className="min-w-0">
                 <Label htmlFor="news-geo">Area geografica</Label>
-                <Select value={geo} onValueChange={(value) => setGeo(value as NewsFilters["geo"])}>
+                <Select
+                  value={geo}
+                  onValueChange={(value) => setGeo(value as NewsFilters["geo"])}
+                >
                   <SelectTrigger id="news-geo" className="mt-2 min-h-11 w-full">
                     <SelectValue />
                   </SelectTrigger>
@@ -154,6 +232,8 @@ export function AttualitaFeed({
                 </Select>
               </div>
             )}
+
+            {/* Filtro Tema granulare */}
             <div className="min-w-0">
               <Label htmlFor="news-topic">Tema</Label>
               <Select
@@ -172,13 +252,9 @@ export function AttualitaFeed({
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex items-end">
-              <Button type="submit" className="min-h-11 w-full md:w-auto">
-                <Search aria-hidden="true" />
-                Cerca
-              </Button>
-            </div>
           </form>
+
+          {/* Solo fonti istituzionali */}
           <div className="mt-4 flex items-center gap-3">
             <Switch
               id="only-institutional"
@@ -259,17 +335,7 @@ export function AttualitaFeed({
                   Nessun elemento corrisponde ai criteri impostati. Prova a modificare il
                   testo cercato oppure ad ampliare area geografica e tema.
                 </p>
-                <Button
-                  variant="outline"
-                  className="mt-4 min-h-11"
-                  onClick={() => {
-                    setQuery("");
-                    setSubmittedQuery("");
-                    setGeo(fixedGeo ?? "TUTTE");
-                    setTopic("TUTTI");
-                    setInstitutionalOnly(false);
-                  }}
-                >
+                <Button variant="outline" className="mt-4 min-h-11" onClick={resetFilters}>
                   Azzera i filtri
                 </Button>
               </div>
@@ -302,9 +368,9 @@ export function AttualitaFeed({
             Come vengono acquisiti i contenuti
           </h2>
           <p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted-foreground">
-            L'acquisizione è esclusivamente lato server. I feed RSS/Atom sono utilizzati
+            L’acquisizione è esclusivamente lato server. I feed RSS/Atom sono utilizzati
             solo quando verificati; in assenza di feed verificato si adotta il
-            monitoraggio della pagina, l'inserimento manuale oppure la disattivazione
+            monitoraggio della pagina, l’inserimento manuale oppure la disattivazione
             della fonte. Ogni elemento acquisito entra come bozza e non può diventare
             pubblico in modo automatico: il passaggio richiede revisione e approvazione
             redazionale.
