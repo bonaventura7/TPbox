@@ -1,7 +1,8 @@
-import { Download, ExternalLink, MapPin } from "lucide-react";
+import { Download, ExternalLink } from "lucide-react";
 
 import { DemoBadge } from "@/components/site/DemoBadge";
-import type { NewsCategory, NewsItem } from "@/lib/domain/types";
+import type { NewsItem } from "@/lib/domain/types";
+import { CATEGORY_COLORS } from "@/lib/domain/types";
 import { cn } from "@/lib/utils";
 
 const LANG_LABEL: Record<NewsItem["language"], string> = {
@@ -10,13 +11,28 @@ const LANG_LABEL: Record<NewsItem["language"], string> = {
   fr: "Francese",
 };
 
-/** Colore badge per macro-categoria editoriale */
-const CATEGORY_COLOR: Record<NewsCategory, string> = {
-  "Transfer Pricing": "border-petrol/60 bg-petrol/10 text-petrol",
-  "VAT": "border-amber-500/60 bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400",
-  "Pillar Two": "border-blue-500/60 bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400",
-  "Anti-Avoidance": "border-rose-500/60 bg-rose-50 text-rose-700 dark:bg-rose-950/30 dark:text-rose-400",
+/** Emoji bandiera per paese (fallback al nome se non mappato). */
+const COUNTRY_FLAG: Record<string, string> = {
+  India: "🇮🇳",
+  Germania: "🇩🇪",
+  Belgio: "🇧🇪",
+  "Paesi Bassi": "🇳🇱",
+  Australia: "🇦🇺",
+  Malaysia: "🇲🇾",
+  Cipro: "🇨🇾",
+  Italia: "🇮🇹",
+  Francia: "🇫🇷",
+  Giappone: "🇯🇵",
+  Canada: "🇨🇦",
+  "Regno Unito": "🇬🇧",
+  "Stati Uniti": "🇺🇸",
+  OCSE: "🌐",
+  "Unione Europea": "🇪🇺",
 };
+
+function flagOf(country: string): string {
+  return COUNTRY_FLAG[country] ?? "🌍";
+}
 
 function formatDate(value: string): string {
   return new Date(value).toLocaleDateString("it-IT", {
@@ -68,12 +84,6 @@ export function NewsMeta({ item }: { item: NewsItem }) {
         <dt className="shrink-0 text-muted-foreground">Tema</dt>
         <dd className="font-medium">{item.topic}</dd>
       </div>
-      {item.country ? (
-        <div className="flex gap-2">
-          <dt className="shrink-0 text-muted-foreground">Paese</dt>
-          <dd className="font-medium">{item.country}</dd>
-        </div>
-      ) : null}
       <div className="flex gap-2">
         <dt className="shrink-0 text-muted-foreground">Ultima verifica</dt>
         <dd className="font-medium">{formatDateTime(item.lastVerifiedAt)}</dd>
@@ -90,6 +100,7 @@ export function NewsCard({
   variant?: "list" | "featured" | "compact";
 }) {
   const featured = variant === "featured";
+  const catColors = item.category ? CATEGORY_COLORS[item.category] : null;
 
   return (
     <article
@@ -98,28 +109,27 @@ export function NewsCard({
         featured && "border-petrol/40 bg-surface p-6 sm:p-8",
       )}
     >
-      {/* Badge riga superiore */}
+      {/* Badge row: categoria + paese + geo + topic */}
       <div className="flex flex-wrap items-center gap-2 text-[0.7rem] tracking-wide uppercase">
-        {/* Macro-categoria editoriale */}
-        {item.category ? (
+        {item.category && catColors ? (
           <span
             className={cn(
               "border px-2 py-0.5 font-semibold",
-              CATEGORY_COLOR[item.category],
+              catColors.border,
+              catColors.text,
+              catColors.bg,
             )}
           >
             {item.category}
           </span>
+        ) : null}
+        {item.country ? (
+          <span className="border border-border px-2 py-0.5 text-muted-foreground">
+            {flagOf(item.country)} {item.country}
+          </span>
         ) : (
           <span className="border border-petrol/50 px-2 py-0.5 text-petrol">{item.geo}</span>
         )}
-        {/* Paese specifico */}
-        {item.country ? (
-          <span className="flex items-center gap-1 text-muted-foreground">
-            <MapPin className="h-3 w-3" aria-hidden="true" />
-            {item.country}
-          </span>
-        ) : null}
         <span className="text-muted-foreground">{item.topic}</span>
         <DemoBadge />
       </div>
@@ -144,10 +154,9 @@ export function NewsCard({
         {item.summary}
       </p>
 
-      {/* Meta dati */}
+      {/* Meta (list / featured) oppure riga compatta */}
       {variant === "compact" ? (
         <p className="mt-3 text-xs text-muted-foreground">
-          {item.country ? `${item.country} · ` : ""}
           {item.sourceName} · {formatDate(item.originalDate)}
         </p>
       ) : (
@@ -155,7 +164,7 @@ export function NewsCard({
       )}
 
       {/* Azioni: fonte originale + PDF */}
-      <div className="mt-4 flex flex-wrap gap-4">
+      <div className="mt-4 flex flex-wrap items-center gap-4">
         <a
           href={item.originalUrl}
           target="_blank"
