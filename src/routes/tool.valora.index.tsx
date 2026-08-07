@@ -103,9 +103,7 @@ function ModuleCard({ item }: { readonly item: ValoraItem }) {
         </div>
         <div className="flex flex-wrap gap-x-2">
           <dt>Fonte primaria:</dt>
-          <dd className="min-w-0 break-words">
-            {source?.primarySourceName ?? "non disponibile"}
-          </dd>
+          <dd className="min-w-0 break-words">{source?.primarySourceName ?? "non disponibile"}</dd>
         </div>
         <div className="flex flex-wrap gap-x-2">
           <dt>Versione:</dt>

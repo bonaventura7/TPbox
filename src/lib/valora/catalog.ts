@@ -35,7 +35,10 @@ export const VALORA_SOURCE_STATUSES: readonly SourceStatus[] = [
 ] as const;
 
 /** Rotte Valora effettivamente esistenti: usate per validare i percorsi del catalogo. */
-export const VALORA_KNOWN_ROUTES: readonly string[] = ["/tool/valora", "/tool/valora/wacc"] as const;
+export const VALORA_KNOWN_ROUTES: readonly string[] = [
+  "/tool/valora",
+  "/tool/valora/wacc",
+] as const;
 
 const PROFESSIONAL_NOTICE =
   "Riferimento informativo: i contenuti non costituiscono consulenza fiscale, finanziaria o di valutazione e vanno verificati da un professionista.";
@@ -93,7 +96,8 @@ const SOURCES: readonly ValoraSource[] = [
     status: "VERIFIED",
     permittedUse:
       "Valori sintetici costruiti dalla redazione per finalità dimostrative, con quadro metodologico istituzionale.",
-    limitations: "I valori non rappresentano dati di mercato e non sono utilizzabili in produzione.",
+    limitations:
+      "I valori non rappresentano dati di mercato e non sono utilizzabili in produzione.",
     professionalNotice: PROFESSIONAL_NOTICE,
   },
 ] as const;

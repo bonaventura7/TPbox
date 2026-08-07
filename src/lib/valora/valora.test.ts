@@ -2,12 +2,7 @@ import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-import {
-  VALORA_KNOWN_ROUTES,
-  VALORA_SOURCE_STATUSES,
-  filterItems,
-  valoraCatalog,
-} from "./catalog";
+import { VALORA_KNOWN_ROUTES, VALORA_SOURCE_STATUSES, filterItems, valoraCatalog } from "./catalog";
 import { daysSince, inspectCatalog, isAllowedUrl } from "./validator";
 import { backoffDelayMs, idempotencyKey } from "./resilience.contracts";
 import { betaLevered, computeWacc } from "./wacc";
@@ -45,9 +40,9 @@ describe("catalogo Valora", () => {
       expect(source.limitations.trim().length).toBeGreaterThan(0);
       expect(source.professionalNotice.trim().length).toBeGreaterThan(0);
       // lastVerifiedAt è nullable: nessun fallback inventato.
-      expect(source.lastVerifiedAt === null || /^\d{4}-\d{2}-\d{2}$/.test(source.lastVerifiedAt)).toBe(
-        true,
-      );
+      expect(
+        source.lastVerifiedAt === null || /^\d{4}-\d{2}-\d{2}$/.test(source.lastVerifiedAt),
+      ).toBe(true);
       expect(source.sourceDateOrVersion === null || source.sourceDateOrVersion.length > 0).toBe(
         true,
       );
