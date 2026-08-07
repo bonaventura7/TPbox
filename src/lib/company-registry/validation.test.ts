@@ -17,7 +17,9 @@ const verifiedSource: CompanyRegistrySource = {
   eu_member_state: true,
   official_register_name: "Registro delle imprese",
   official_register_url: "https://italianbusinessregister.it",
+  official_register_host: "italianbusinessregister.it",
   official_information_url: "https://italianbusinessregister.it",
+  official_information_host: "italianbusinessregister.it",
   search_mode: "EXTERNAL_REGISTER",
   search_url_template: null,
   api_adapter_key: null,
@@ -47,9 +49,10 @@ describe("company registry validation", () => {
     expect(validateCompanyQuery("a".repeat(161))).toBe(false);
   });
 
-  it("requires verified HTTPS official sources", () => {
+  it("requires verified HTTPS official sources and matching hosts", () => {
     expect(validateVerifiedSource(verifiedSource)).toEqual([]);
-    expect(validateVerifiedSource({ ...verifiedSource, official_register_url: "not-https" })).toContain("REGISTER_URL_NOT_HTTPS");
+    expect(validateVerifiedSource({ ...verifiedSource, official_register_url: "http://italianbusinessregister.it" })).toContain("REGISTER_HOST_MISMATCH");
+    expect(validateVerifiedSource({ ...verifiedSource, official_register_host: "example.com" })).toContain("REGISTER_HOST_MISMATCH");
     expect(validateVerifiedSource({ ...verifiedSource, status: "UNDER_REVIEW" })).toContain("NOT_VERIFIED");
   });
 
