@@ -14,19 +14,44 @@ export type ValoraStatus = "LIVE" | "DEMO" | "STALE" | "UNAVAILABLE" | "PLANNED"
 
 export type ValoraMode = "demo" | "live";
 
+/** Livello della fonte. Solo PRIMARY può essere esposto in UI o alimentare metadati. */
+export type SourceTier = "PRIMARY";
+
+/** Stato dichiarato della fonte primaria. */
+export type SourceStatus = "VERIFIED" | "PENDING_VERIFICATION" | "STALE" | "UNAVAILABLE";
+
 export interface ValoraSource {
   /** Identificativo stabile della fonte (usato dal futuro source_registry). */
   readonly id: string;
-  readonly name: string;
-  /** Autore/curatore attribuito. Nessuno scraping, nessun iframe. */
-  readonly attribution: string;
-  /** URL ufficiale, sempre HTTPS e su host in allowlist. */
-  readonly officialUrl: string;
-  /** Data del dato più recente noto, se dichiarata dalla fonte. */
-  readonly lastKnownDataDate: ISODate | null;
-  /** Data dell'ultima verifica manuale dei metadati. */
+  /** Solo fonti primarie e istituzionali: nessun prodotto, brand o persona di terzi. */
+  readonly tier: SourceTier;
+  /** Denominazione istituzionale della fonte primaria. */
+  readonly primarySourceName: string;
+  /** URL canonico della fonte primaria, sempre HTTPS e su host in allowlist. */
+  readonly canonicalUrl: string;
+  /** Data o versione dichiarata dalla fonte. null quando non disponibile. */
+  readonly sourceDateOrVersion: string | null;
+  /** Data dell'ultima verifica manuale dei metadati. null = non disponibile. */
   readonly lastVerifiedAt: ISODate | null;
-  readonly licenseNote: string;
+  readonly status: SourceStatus;
+  /** Uso consentito del riferimento (nessuna copia, nessun scraping, nessun iframe). */
+  readonly permittedUse: string;
+  /** Limiti d'uso dichiarati. */
+  readonly limitations: string;
+  /** Avviso professionale mostrato accanto al riferimento. */
+  readonly professionalNotice: string;
+}
+
+/**
+ * Riferimento di discovery interno: mai esposto in UI, mai usato per alimentare
+ * dati o calcoli. Non contiene denominazioni di prodotti, siti o persone terze.
+ */
+export interface InternalDiscoveryReference {
+  readonly id: string;
+  readonly exposed: false;
+  readonly feedsData: false;
+  /** Nota interna generica sull'ambito di ricerca manuale. */
+  readonly scopeNote: string;
 }
 
 export interface ValoraItem {
@@ -71,6 +96,10 @@ export type FindingCode =
   | "CHECKSUM_MISSING"
   | "MANIFEST_INCOMPLETE"
   | "SOURCE_UNKNOWN"
+  | "PRIMARY_SOURCE_MISSING"
+  | "SOURCE_DATE_MISSING"
+  | "SOURCE_STATUS_INVALID"
+  | "ROUTE_UNKNOWN"
   | "STATUS_MODE_MISMATCH";
 
 export interface QualityFinding {
@@ -100,11 +129,12 @@ export interface InspectionReport {
 
 export interface SourceRegistryRow {
   readonly id: string;
-  readonly name: string;
-  readonly official_url: string;
-  readonly attribution: string;
+  readonly primary_source_name: string;
+  readonly canonical_url: string;
+  readonly source_date_or_version: string | null;
+  readonly last_verified_at: ISODate | null;
   readonly acquisition_mode: "MANUAL_IMPORT" | "HTML_WATCH" | "DISABLED";
-  readonly status: ValoraStatus;
+  readonly status: SourceStatus;
   readonly created_at: string;
 }
 
