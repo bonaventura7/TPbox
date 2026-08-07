@@ -10,6 +10,7 @@ import type {
   QualityFinding,
   SourceCheckRow,
   SourceRegistryRow,
+  SourceStatus,
   SourceVersionRow,
   ValoraCatalogRepository,
 } from "./types";
@@ -18,26 +19,37 @@ export type SourceHealth = "OK" | "STALE" | "UNAVAILABLE";
 
 export interface SourceStatusView {
   readonly sourceId: string;
-  readonly name: string;
-  readonly officialUrl: string;
-  readonly attribution: string;
+  readonly primarySourceName: string;
+  readonly canonicalUrl: string;
+  readonly sourceDateOrVersion: string | null;
+  readonly status: SourceStatus;
   readonly health: SourceHealth;
   readonly lastVerifiedAt: string | null;
-  readonly lastKnownDataDate: string | null;
+  readonly permittedUse: string;
+  readonly limitations: string;
+  readonly professionalNotice: string;
   readonly note: string;
 }
 
 export function sourceStatusViews(): readonly SourceStatusView[] {
   return valoraCatalog.sources.map((source) => {
-    const health: SourceHealth = source.lastVerifiedAt === null ? "STALE" : "OK";
+    const health: SourceHealth =
+      source.status === "UNAVAILABLE"
+        ? "UNAVAILABLE"
+        : source.status === "VERIFIED" && source.lastVerifiedAt !== null
+          ? "OK"
+          : "STALE";
     return {
       sourceId: source.id,
-      name: source.name,
-      officialUrl: source.officialUrl,
-      attribution: source.attribution,
+      primarySourceName: source.primarySourceName,
+      canonicalUrl: source.canonicalUrl,
+      sourceDateOrVersion: source.sourceDateOrVersion,
+      status: source.status,
       health,
       lastVerifiedAt: source.lastVerifiedAt,
-      lastKnownDataDate: source.lastKnownDataDate,
+      permittedUse: source.permittedUse,
+      limitations: source.limitations,
+      professionalNotice: source.professionalNotice,
       note:
         health === "OK"
           ? "Metadati verificati manualmente: nessuna acquisizione automatica attiva."
@@ -50,11 +62,12 @@ export const mockValoraCatalogRepository: ValoraCatalogRepository = {
   async listSources(): Promise<readonly SourceRegistryRow[]> {
     return valoraCatalog.sources.map((source) => ({
       id: source.id,
-      name: source.name,
-      official_url: source.officialUrl,
-      attribution: source.attribution,
+      primary_source_name: source.primarySourceName,
+      canonical_url: source.canonicalUrl,
+      source_date_or_version: source.sourceDateOrVersion,
+      last_verified_at: source.lastVerifiedAt,
       acquisition_mode: "DISABLED",
-      status: source.lastVerifiedAt === null ? "STALE" : "LIVE",
+      status: source.status,
       created_at: `${valoraCatalog.generatedAt}T00:00:00Z`,
     }));
   },
