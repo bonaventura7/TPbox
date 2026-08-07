@@ -3,8 +3,8 @@ import { createClient } from "@supabase/supabase-js";
 import type { CompanyRegistrySource } from "./types";
 import { validateVerifiedSource } from "./validation";
 
-const url = process.env.SUPABASE_URL;
-const key = process.env.SUPABASE_PUBLISHABLE_KEY ?? process.env.SUPABASE_ANON_KEY;
+const url = process.env["SUPABASE_URL"];
+const key = process.env["SUPABASE_PUBLISHABLE_KEY"] ?? process.env["SUPABASE_ANON_KEY"];
 
 function getClient() {
   if (!url || !key) return null;
