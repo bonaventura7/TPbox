@@ -36,7 +36,7 @@ const PERMITTED_USE =
 
 /**
  * Registry di fonti primarie: solo enti esterni, autorevoli e pertinenti al
- * perimetro della scheda che le cita. Nessuna fonte interna, sintetica o demo.
+ * perimetro della scheda che le cita. Nessuna fonte interna.
  */
 const SOURCES: readonly ValoraSource[] = [
   {

@@ -38,6 +38,15 @@ export function daysSince(date: string, reference: string): number | null {
   return Math.round((to - from) / MS_DAY);
 }
 
+/**
+ * Controllo di FORMA della stringa di rotta: verifica solo che il percorso stia
+ * sotto `/tool/valora`. Non è un controllo di route integrity e non verifica
+ * che la pagina esista realmente.
+ */
+export function isValoraRoute(route: string): boolean {
+  return /^\/tool\/valora(\/[a-z0-9-]+)*$/.test(route);
+}
+
 function inspectSource(source: ValoraSource, referenceDate: string): QualityFinding[] {
   const findings: QualityFinding[] = [];
   const subject = { subjectId: source.id, subjectKind: "source" as const };

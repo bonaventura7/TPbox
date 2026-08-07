@@ -21,5 +21,8 @@ campo `route` è tipizzato su `FileRouteTypes["fullPaths"]`, quindi un percorso
 inesistente è un errore di type-check. Le schede senza pagina usano `route: null`.
 Nessuna lista manuale di rotte.
 
-Le fonti sono esclusivamente enti esterni primari; nessuna fonte interna,
-sintetica o demo è presente nel registry e nessun valore numerico è pubblicato.
+Le fonti sono esclusivamente enti esterni primari; il registry non contiene
+fonti interne e nessun valore numerico è pubblicato.
+
+`isValoraRoute` è unicamente un controllo di forma della stringa (`/tool/valora`
+seguito da segmenti minuscoli): non verifica l'esistenza reale della pagina.
