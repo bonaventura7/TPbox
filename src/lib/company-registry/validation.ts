@@ -19,7 +19,8 @@ function hostnameMatchesAllowlist(countryCode: string, urlValue: string, purpose
     if (url.protocol !== "https:") return false;
     const allowed = COMPANY_REGISTRY_ALLOWED_HOSTS[countryCode.toUpperCase() as keyof typeof COMPANY_REGISTRY_ALLOWED_HOSTS];
     if (!allowed) return false;
-    return allowed[purpose].includes(url.hostname.toLowerCase() as never);
+    const allowedHosts: readonly string[] = allowed[purpose];
+    return allowedHosts.includes(url.hostname.toLowerCase());
   } catch {
     return false;
   }
