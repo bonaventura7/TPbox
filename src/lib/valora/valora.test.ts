@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import { filterItems, valoraCatalog } from "./catalog";
-import { daysSince, inspectCatalog, isAllowedUrl } from "./inspector";
-import { backoffDelayMs, idempotencyKey } from "./ha";
+import { daysSince, inspectCatalog, isAllowedUrl } from "./validator";
+import { backoffDelayMs, idempotencyKey } from "./resilience.contracts";
 import { betaLevered, computeWacc } from "./wacc";
 
 describe("catalogo Valora", () => {

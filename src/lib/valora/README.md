@@ -8,9 +8,9 @@ dal server), nessun segreto, nessuna pubblicazione automatica.
 | --------------------- | ------------------------------------------------------------------ |
 | `types.ts`            | Tipi di dominio e contratti delle future tabelle Supabase          |
 | `catalog.ts`          | Catalogo tool/dataset/risorse, allowlist host, filtro puro         |
-| `inspector.ts`        | Validazione metadati → finding strutturati                         |
+| `validator.ts`        | Validazione metadati → finding strutturati                         |
 | `repository.mock.ts`  | Repository mock, sostituibile da adapter Supabase                  |
-| `ha.ts`               | Contratti di resilienza (timeout, backoff, DLQ, idempotenza, log)  |
+| `resilience.contracts.ts`               | Contratti di resilienza (timeout, backoff, DLQ, idempotenza, log)  |
 | `wacc.ts`             | Modulo WACC: funzioni pure, aritmetica in basis point              |
 | `valora.test.ts`      | Test di catalogo, inspector, utilità HA e WACC                     |
 

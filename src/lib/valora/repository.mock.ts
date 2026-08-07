@@ -5,7 +5,7 @@
  */
 
 import { valoraCatalog } from "./catalog";
-import { inspectCatalog } from "./inspector";
+import { inspectCatalog } from "./validator";
 import type {
   QualityFinding,
   SourceCheckRow,

@@ -15,7 +15,7 @@ import {
   getSource,
   valoraCatalog,
 } from "../lib/valora/catalog";
-import { inspectCatalog } from "../lib/valora/inspector";
+import { inspectCatalog } from "../lib/valora/validator";
 import { sourceStatusViews } from "../lib/valora/repository.mock";
 import type { ValoraItem } from "../lib/valora/types";
 
