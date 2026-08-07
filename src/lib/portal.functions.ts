@@ -36,16 +36,12 @@ export const getSources = createServerFn({ method: "GET" }).handler(async () => 
   return listSources();
 });
 
-export const searchCompanies = createServerFn({ method: "POST" })
-  .inputValidator((data: unknown) =>
-    z
-      .object({ query: z.string().max(160), country: z.string().max(2).default("") })
-      .parse(data),
-  )
-  .handler(async ({ data }) => {
-    const { searchCompanies: run } = await import("./repositories/tools.repository.server");
-    return run(data);
-  });
+export const getCompanyRegistrySources = createServerFn({ method: "GET" }).handler(async () => {
+  const { listVerifiedCompanyRegistrySources } = await import(
+    "./company-registry/repository.server"
+  );
+  return listVerifiedCompanyRegistrySources();
+});
 
 export const getBilancio = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) =>
@@ -66,7 +62,6 @@ export const getBilancio = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     const { fetchBilancio } = await import("./repositories/tools.repository.server");
-    // Il ruolo effettivo sarà letto dalla sessione autenticata (USER/EDITOR/ADMIN/PRO).
     return fetchBilancio({
       companyId: data.companyId,
       role: data.simulate === "NOT_AUTHORIZED" ? "USER" : "PRO",
