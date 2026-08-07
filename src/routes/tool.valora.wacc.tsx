@@ -5,7 +5,7 @@
  */
 
 import { Link, createFileRoute } from "@tanstack/react-router";
-import { ArrowLeft, ExternalLink, Info } from "lucide-react";
+import { ArrowLeft, Info } from "lucide-react";
 import { useState } from "react";
 
 import { getItem, getSource } from "../lib/valora/catalog";
@@ -157,22 +157,11 @@ function WaccInfoPage() {
           ) : null}
         </dl>
         {source ? (
-          <a
-            href={source.canonicalUrl}
-            target="_blank"
-            rel="noreferrer noopener external"
-            className="mt-3 inline-flex items-center gap-1 break-all text-sm text-petrol underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            URL canonico della fonte primaria
-            <ExternalLink className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-          </a>
+          <p className="mt-3 text-xs text-muted-foreground">
+            Fonte primaria: {source.primarySourceName} · versione {source.sourceDateOrVersion} · ultima verifica {source.lastVerifiedAt}
+          </p>
         ) : null}
       </section>
-
-      <p className="mt-12 rounded-lg border border-rule bg-muted/40 p-4 text-xs text-muted-foreground">
-        {source?.professionalNotice ??
-          "Riferimento informativo: i contenuti non costituiscono consulenza fiscale, finanziaria o di valutazione e vanno verificati da un professionista."}
-      </p>
     </div>
   );
 }
