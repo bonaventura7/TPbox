@@ -256,7 +256,7 @@ export const STATUS_LABEL: Record<ValoraItem["status"], string> = {
   DEMO: "dimostrativo",
   STALE: "da verificare",
   UNAVAILABLE: "non disponibile",
-  PLANNED: "in sviluppo",
+  PLANNED: "in validazione",
 };
 
 /** Filtro puro sul catalogo: usato dalla dashboard e dai test. */
