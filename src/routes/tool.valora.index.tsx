@@ -25,9 +25,9 @@ const DESCRIPTION =
 
 export const Route = createFileRoute("/tool/valora/")({
   validateSearch: (search: Record<string, unknown>) => ({
-    q: typeof search.q === "string" ? search.q : "",
-    categoria: typeof search.categoria === "string" ? search.categoria : "all",
-    stato: typeof search.stato === "string" ? search.stato : "all",
+    q: typeof search["q"] === "string" ? search["q"] : "",
+    categoria: typeof search["categoria"] === "string" ? search["categoria"] : "all",
+    stato: typeof search["stato"] === "string" ? search["stato"] : "all",
   }),
   head: () => ({
     meta: [
@@ -136,7 +136,7 @@ function ValoraDashboard() {
   const staleSources = sources.filter((source) => source.health !== "OK");
 
   const update = (patch: Partial<typeof search>) => {
-    void navigate({ to: ".", search: (prev) => ({ ...prev, ...patch }) });
+    void navigate({ to: ".", search: { ...search, ...patch } });
   };
 
   return (
