@@ -1,7 +1,9 @@
 /**
- * Valora Suite — contratti di dominio.
+ * Valora Suite — contratti di dominio del Catalog MVP.
  * Nessuna dipendenza da React, rete o filesystem. Nessun segreto.
  */
+
+import type { FileRouteTypes } from "../../routeTree.gen";
 
 export type ISODate = string; // YYYY-MM-DD
 
@@ -9,21 +11,26 @@ export type ValoraCategory = "COST_OF_CAPITAL" | "RISK_PREMIA" | "CREDIT" | "VAL
 
 export type ValoraKind = "TOOL" | "DATASET" | "RESOURCE";
 
-/** Stato del modulo/dataset. STALE e UNAVAILABLE non producono mai dati inventati. */
-export type ValoraStatus = "LIVE" | "DEMO" | "STALE" | "UNAVAILABLE" | "PLANNED";
+/** Stato del modulo. Nessun modulo del Catalog MVP è operativo. */
+export type ValoraStatus = "PLANNED" | "IN_VALIDATION";
 
-export type ValoraMode = "demo" | "live";
-
-/** Livello della fonte. Solo PRIMARY può essere esposto in UI o alimentare metadati. */
+/** Livello della fonte. Solo fonti primarie esterne possono essere esposte. */
 export type SourceTier = "PRIMARY";
 
 /** Stato dichiarato della fonte primaria. */
 export type SourceStatus = "VERIFIED" | "PENDING_VERIFICATION" | "STALE" | "UNAVAILABLE";
 
+/**
+ * Percorso interno realmente esistente: il tipo deriva dal router generato,
+ * quindi un percorso inesistente è un errore di type-check e non una
+ * convenzione di forma o una lista manuale.
+ */
+export type ValoraRoutePath = FileRouteTypes["fullPaths"];
+
 export interface ValoraSource {
-  /** Identificativo stabile della fonte (usato dal futuro source_registry). */
+  /** Identificativo stabile della fonte. */
   readonly id: string;
-  /** Solo fonti primarie e istituzionali: nessun prodotto, brand o persona di terzi. */
+  /** Solo fonti primarie esterne e istituzionali: nessun brand o persona terza. */
   readonly tier: SourceTier;
   /** Denominazione istituzionale della fonte primaria. */
   readonly primarySourceName: string;
@@ -34,24 +41,12 @@ export interface ValoraSource {
   /** Data dell'ultima verifica manuale dei metadati. null = non disponibile. */
   readonly lastVerifiedAt: ISODate | null;
   readonly status: SourceStatus;
-  /** Uso consentito del riferimento (nessuna copia, nessun scraping, nessun iframe). */
+  /** Uso consentito del riferimento (nessuna copia, nessun iframe, nessuno scraping). */
   readonly permittedUse: string;
   /** Limiti d'uso dichiarati. */
   readonly limitations: string;
   /** Avviso professionale mostrato accanto al riferimento. */
   readonly professionalNotice: string;
-}
-
-/**
- * Riferimento di discovery interno: mai esposto in UI, mai usato per alimentare
- * dati o calcoli. Non contiene denominazioni di prodotti, siti o persone terze.
- */
-export interface InternalDiscoveryReference {
-  readonly id: string;
-  readonly exposed: false;
-  readonly feedsData: false;
-  /** Nota interna generica sull'ambito di ricerca manuale. */
-  readonly scopeNote: string;
 }
 
 export interface ValoraItem {
@@ -61,15 +56,13 @@ export interface ValoraItem {
   readonly title: string;
   readonly description: string;
   readonly status: ValoraStatus;
-  readonly mode: ValoraMode;
-  /** Rotta interna del modulo, quando esiste. */
-  readonly route: string | null;
+  /** Percorso interno del modulo quando la pagina esiste, altrimenti null. */
+  readonly route: ValoraRoutePath | null;
   readonly sourceId: string;
-  /** Versione del dataset/metodo, se dichiarabile. */
+  /** Versione documentale della scheda, se dichiarabile. */
   readonly version: string | null;
-  /** Checksum del dataset, se disponibile. */
-  readonly checksum: string | null;
   readonly lastVerifiedAt: ISODate | null;
+  /** Relazioni metodologiche in forma simbolica, senza parametri né valori. */
   readonly formulaChain: readonly string[];
   readonly keywords: readonly string[];
 }
@@ -93,19 +86,15 @@ export type FindingCode =
   | "VERIFICATION_MISSING"
   | "VERIFICATION_STALE"
   | "VERSION_MISSING"
-  | "CHECKSUM_MISSING"
   | "MANIFEST_INCOMPLETE"
   | "SOURCE_UNKNOWN"
   | "PRIMARY_SOURCE_MISSING"
   | "SOURCE_DATE_MISSING"
-  | "SOURCE_STATUS_INVALID"
-  | "ROUTE_UNKNOWN"
-  | "STATUS_MODE_MISMATCH";
+  | "SOURCE_STATUS_INVALID";
 
 export interface QualityFinding {
   readonly code: FindingCode;
   readonly severity: FindingSeverity;
-  /** Oggetto ispezionato: id di item o di fonte. */
   readonly subjectId: string;
   readonly subjectKind: "item" | "source";
   readonly message: string;
@@ -119,6 +108,6 @@ export interface InspectionReport {
   readonly findings: readonly QualityFinding[];
   readonly errors: number;
   readonly warnings: number;
-  /** L'ispettore non pubblica nulla: è solo un giudizio informativo. */
+  /** Giudizio informativo: l'ispettore non pubblica e non modifica nulla. */
   readonly passed: boolean;
 }
