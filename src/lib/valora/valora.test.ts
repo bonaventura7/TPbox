@@ -26,10 +26,12 @@ describe("catalogo Valora", () => {
     }
   });
 
-  it("mantiene tutte le schede non operative", () => {
+  it("dichiara operativo solo il modulo WACC", () => {
     for (const item of valoraCatalog.items) {
-      expect(["PLANNED", "IN_VALIDATION"]).toContain(item.status);
+      expect(["PLANNED", "IN_VALIDATION", "LIVE"]).toContain(item.status);
+      if (item.id !== "valora-wacc") expect(item.status).not.toBe("LIVE");
     }
+    expect(valoraCatalog.items.find((item) => item.id === "valora-wacc")?.status).toBe("LIVE");
   });
 
   it("espone solo fonti primarie con URL canonico HTTPS e stato valido", () => {

@@ -11,8 +11,8 @@ export type ValoraCategory = "COST_OF_CAPITAL" | "RISK_PREMIA" | "CREDIT" | "VAL
 
 export type ValoraKind = "TOOL" | "DATASET" | "RESOURCE";
 
-/** Stato del modulo. Nessun modulo del Catalog MVP è operativo. */
-export type ValoraStatus = "PLANNED" | "IN_VALIDATION";
+/** Stato del modulo: LIVE solo per i moduli realmente operativi. */
+export type ValoraStatus = "PLANNED" | "IN_VALIDATION" | "LIVE";
 
 /** Livello della fonte. Solo fonti primarie esterne possono essere esposte. */
 export type SourceTier = "PRIMARY";
