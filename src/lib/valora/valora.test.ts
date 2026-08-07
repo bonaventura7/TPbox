@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { VALORA_SOURCE_STATUSES, filterItems, valoraCatalog } from "./catalog";
-import { daysSince, inspectCatalog, isAllowedUrl } from "./validator";
+import { daysSince, inspectCatalog, isAllowedUrl, isValoraRoute } from "./validator";
 
 describe("catalogo Valora", () => {
   it("ha id stabili e unici", () => {
@@ -96,5 +96,11 @@ describe("validator", () => {
   it("calcola l'età della verifica", () => {
     expect(daysSince("2026-01-01", "2026-01-31")).toBe(30);
     expect(daysSince("non-data", "2026-01-31")).toBeNull();
+  });
+
+  it("isValoraRoute è solo un controllo di forma", () => {
+    expect(isValoraRoute("/tool/valora")).toBe(true);
+    expect(isValoraRoute("/tool/valora/wacc")).toBe(true);
+    expect(isValoraRoute("/tool/altro")).toBe(false);
   });
 });
