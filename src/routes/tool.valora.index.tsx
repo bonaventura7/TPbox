@@ -21,7 +21,7 @@ import type { ValoraItem } from "../lib/valora/types";
 
 const TITLE = "Valora Suite — costo del capitale e valutazione d'impresa";
 const DESCRIPTION =
-  "Catalogo di moduli per costo del capitale, premi per il rischio e valutazione: WACC, beta, country risk premium, credit spread e DCF, con fonti, versioni e stato di verifica in chiaro.";
+  "Catalogo documentale su costo del capitale, premi per il rischio e valutazione: WACC, beta, country risk premium, credit spread e DCF, con fonti primarie, versioni e stato di verifica in chiaro.";
 
 interface ValoraSearch {
   q?: string;
@@ -76,11 +76,8 @@ const SOURCE_STATUS_LABEL: Record<string, string> = {
 };
 
 const STATUS_CLASS: Record<ValoraItem["status"], string> = {
-  LIVE: "border-petrol/40 text-petrol",
-  DEMO: "border-gold text-gold-foreground bg-gold/10",
-  STALE: "border-border text-muted-foreground",
-  UNAVAILABLE: "border-destructive/40 text-destructive",
   PLANNED: "border-border text-muted-foreground",
+  IN_VALIDATION: "border-petrol/40 text-petrol",
 };
 
 function ModuleCard({ item }: { readonly item: ValoraItem }) {
@@ -182,13 +179,15 @@ function ValoraDashboard() {
       <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Tool</p>
       <h1 className="mt-1 font-serif text-4xl tracking-tight">Valora Suite</h1>
       <p className="mt-3 max-w-2xl text-lg text-muted-foreground">
-        Moduli di calcolo per costo del capitale, premi per il rischio e valutazione d&apos;impresa.
-        Ogni voce dichiara fonte, versione e data di ultima verifica: dove la verifica manca, il
-        dato non alimenta alcun calcolo.
+        Catalogo documentale su costo del capitale, premi per il rischio e valutazione
+        d&apos;impresa. Ogni voce dichiara fonte primaria, versione e data di ultima verifica:
+        nessuna scheda esegue calcoli e nessun valore viene pubblicato.
       </p>
 
       <div className="mt-4 flex flex-wrap gap-2 text-xs">
-        <span className="rounded-full border border-border px-2.5 py-1 font-medium">DEMO</span>
+        <span className="rounded-full border border-border px-2.5 py-1 font-medium">
+          Catalogo informativo
+        </span>
         <span className="rounded-full border border-border px-2.5 py-1 text-muted-foreground">
           Catalogo {VALORA_CATALOG_VERSION}
         </span>
@@ -207,8 +206,8 @@ function ValoraDashboard() {
             aria-hidden="true"
           />
           <span className="min-w-0">
-            Servizio in modalità ridotta: {staleSources.length} fonte/i senza verifica registrata. I
-            moduli collegati restano consultabili con dati dimostrativi.
+            Servizio in modalità ridotta: {staleSources.length} fonte/i senza verifica registrata.
+            Le schede collegate restano consultabili come sole descrizioni metodologiche.
           </span>
         </p>
       ) : null}
