@@ -1,0 +1,43 @@
+name: Attualita Quality Gate
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: Typecheck, test, build and Attualita lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm run test
+
+      - name: Build
+        run: npm run build
+
+      - name: Lint Attualita scope
+        run: >
+          npx eslint
+          src/lib/attualita/newsAdapter.ts
+          src/lib/attualita/news.repository.supabase.server.ts
+          src/lib/repositories/news.repository.server.ts
+          src/lib/domain/types.ts
