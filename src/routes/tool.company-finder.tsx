@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { ExternalLink, Search } from "lucide-react";
+import { Check, Copy, ExternalLink, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { PageHeader } from "@/components/site/SectionPage";
@@ -36,6 +36,7 @@ function CompanyFinderPage() {
   const [query, setQuery] = useState("");
   const [country, setCountry] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const registryQuery = useQuery({
     queryKey: ["company-registry-sources"],
@@ -50,6 +51,16 @@ function CompanyFinderPage() {
 
   const queryError = submitted && query.trim().length < 3;
   const countryError = submitted && country.length !== 2;
+
+  const copyQuery = async () => {
+    try {
+      await navigator.clipboard.writeText(query.trim());
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
+    } catch {
+      setCopied(false);
+    }
+  };
 
   return (
     <>
@@ -163,9 +174,20 @@ function CompanyFinderPage() {
                         : "Accesso soggetto a condizioni"}
                 </h2>
               </div>
-              <span className="border border-border px-3 py-1 text-xs font-medium">
-                {source.status === "VERIFIED" ? "FONTE VERIFICATA" : "IN VERIFICA"}
-              </span>
+              <div className="flex flex-wrap gap-2" aria-label="Stato della fonte">
+                <span className="border border-border px-3 py-1 text-xs font-medium">
+                  REGISTRO UFFICIALE VERIFICATO
+                </span>
+                {source.terms_status === "UNDER_REVIEW" ? (
+                  <span className="border border-border px-3 py-1 text-xs font-medium">
+                    CONDIZIONI DI ACCESSO DA VERIFICARE
+                  </span>
+                ) : (
+                  <span className="border border-border px-3 py-1 text-xs font-medium">
+                    CONDIZIONI DI ACCESSO VERIFICATE
+                  </span>
+                )}
+              </div>
             </div>
 
             <dl className="mt-6 grid gap-3 text-sm sm:grid-cols-2">
@@ -189,22 +211,30 @@ function CompanyFinderPage() {
 
             <div className="mt-6 border-t border-border pt-5">
               <p className="text-sm text-muted-foreground">
-                {source.search_mode === "EXTERNAL_REGISTER"
-                  ? "Inserisci la denominazione o l’identificativo nel registro ufficiale aperto. Non viene costruito alcun deep link non documentato."
-                  : "Il canale integrato sarà attivato solo quando endpoint, accesso e condizioni d’uso saranno verificati."}
+                Ricerca pronta per il registro ufficiale. La query non viene trasferita
+                automaticamente perché non è disponibile un deep link documentato.
               </p>
-              {source.search_mode === "EXTERNAL_REGISTER" ? (
-                <Button asChild className="mt-4 min-h-11">
-                  <a
-                    href={source.official_register_url}
-                    target="_blank"
-                    rel="noopener noreferrer external"
-                  >
-                    Apri il registro ufficiale
-                    <ExternalLink aria-hidden="true" />
-                  </a>
+              <div className="mt-4 flex flex-wrap gap-3">
+                <Button type="button" variant="outline" onClick={copyQuery} className="min-h-11">
+                  {copied ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}
+                  {copied ? "Copiata" : "Copia denominazione / identificativo"}
                 </Button>
-              ) : null}
+                {source.search_mode === "EXTERNAL_REGISTER" ? (
+                  <Button asChild className="min-h-11">
+                    <a
+                      href={source.official_register_url}
+                      target="_blank"
+                      rel="noopener noreferrer external"
+                    >
+                      Apri il registro ufficiale
+                      <ExternalLink aria-hidden="true" />
+                    </a>
+                  </Button>
+                ) : null}
+              </div>
+              <p className="mt-3 text-xs text-muted-foreground">
+                Inserisci la query copiata nel registro ufficiale aperto.
+              </p>
             </div>
           </section>
         ) : null}
