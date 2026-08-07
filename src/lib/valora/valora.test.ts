@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { VALORA_SOURCE_STATUSES, filterItems, valoraCatalog } from "./catalog";
-import { daysSince, inspectCatalog, isAllowedUrl, isValoraRoute } from "./validator";
+import { daysSince, inspectCatalog, isAllowedUrl } from "./validator";
 
 describe("catalogo Valora", () => {
   it("ha id stabili e unici", () => {
@@ -14,7 +14,7 @@ describe("catalogo Valora", () => {
     for (const item of valoraCatalog.items) expect(sourceIds.has(item.sourceId)).toBe(true);
   });
 
-  it("copre le schede previste dal catalogo MVP", () => {
+  it("copre le schede previste dal Catalog MVP", () => {
     for (const id of [
       "valora-wacc",
       "valora-beta",
@@ -23,6 +23,12 @@ describe("catalogo Valora", () => {
       "valora-dcf-fcff",
     ]) {
       expect(valoraCatalog.items.some((item) => item.id === id)).toBe(true);
+    }
+  });
+
+  it("mantiene tutte le schede non operative", () => {
+    for (const item of valoraCatalog.items) {
+      expect(["PLANNED", "IN_VALIDATION"]).toContain(item.status);
     }
   });
 
@@ -45,10 +51,9 @@ describe("catalogo Valora", () => {
     }
   });
 
-  it("dichiara solo percorsi interni Valora", () => {
-    for (const item of valoraCatalog.items) {
-      if (item.route !== null) expect(isValoraRoute(item.route)).toBe(true);
-    }
+  it("dichiara un percorso interno solo dove la pagina esiste", () => {
+    const withRoute = valoraCatalog.items.filter((item) => item.route !== null);
+    expect(withRoute.map((item) => item.route)).toEqual(["/tool/valora/wacc"]);
   });
 
   it("filtra per testo, categoria e stato", () => {
@@ -60,7 +65,9 @@ describe("catalogo Valora", () => {
       ),
     ).toBe(true);
     expect(
-      filterItems(valoraCatalog.items, { status: "STALE" }).every((i) => i.status === "STALE"),
+      filterItems(valoraCatalog.items, { status: "IN_VALIDATION" }).every(
+        (i) => i.status === "IN_VALIDATION",
+      ),
     ).toBe(true);
   });
 });
@@ -71,13 +78,6 @@ describe("validator", () => {
     expect(isAllowedUrl("http://www.oecd.org/x")).toBe(false);
     expect(isAllowedUrl("https://example.com/x")).toBe(false);
     expect(isAllowedUrl("non-un-url")).toBe(false);
-  });
-
-  it("accetta solo percorsi interni Valora", () => {
-    expect(isValoraRoute("/tool/valora")).toBe(true);
-    expect(isValoraRoute("/tool/valora/wacc")).toBe(true);
-    expect(isValoraRoute("/tool/altro")).toBe(false);
-    expect(isValoraRoute("https://esterno.example/tool/valora")).toBe(false);
   });
 
   it("non produce errori bloccanti sul catalogo corrente", () => {

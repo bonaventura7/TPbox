@@ -9,13 +9,17 @@ nessuno scraping, nessun monitor, nessun salvataggio utente, nessuna migrazione 
 | --------------------- | ---------------------------------------------------------------- |
 | `types.ts`            | Tipi del catalogo, delle fonti primarie e dei finding            |
 | `catalog.ts`          | Catalogo statico, allowlist host HTTPS, filtro puro              |
-| `validator.ts`        | Controlli positivi su fonte primaria, URL, stato, verifica, rotte |
+| `validator.ts`        | Controlli positivi su fonte primaria, URL, stato e verifica       |
 | `repository.mock.ts`  | Vista di sola lettura sullo stato delle fonti                    |
 | `valora.test.ts`      | Test su catalogo e validator                                     |
 
 Rotte: `/tool/valora` (dashboard di catalogo) e `/tool/valora/wacc` (scheda
 informativa, modulo non operativo, stato "in validazione").
 
-L'integrità dei percorsi dichiarati dal catalogo è verificata con un controllo di
-forma positivo (`isValoraRoute`) e, in via definitiva, dal router generato tramite
-build e type-check: nessuna lista manuale di rotte.
+L'integrità dei percorsi dichiarati dal catalogo deriva dal router generato: il
+campo `route` è tipizzato su `FileRouteTypes["fullPaths"]`, quindi un percorso
+inesistente è un errore di type-check. Le schede senza pagina usano `route: null`.
+Nessuna lista manuale di rotte.
+
+Le fonti sono esclusivamente enti esterni primari; nessuna fonte interna,
+sintetica o demo è presente nel registry e nessun valore numerico è pubblicato.

@@ -74,8 +74,8 @@ const CALCULATORS: readonly Tool[] = [
     description:
       "Costo del capitale, premi per il rischio e valutazione d'impresa: WACC, beta, country risk premium, credit spread e DCF.",
     icon: LineChart,
-    status: "dimostrativo",
-    detail: "Catalogo con fonti, versioni e stato di verifica",
+    status: "in sviluppo",
+    detail: "Catalogo documentale con fonti primarie e stato di verifica",
   },
 ] as const;
 

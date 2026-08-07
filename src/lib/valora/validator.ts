@@ -6,7 +6,6 @@
 
 import {
   VALORA_ALLOWED_HOSTS,
-  VALORA_ROUTE_PREFIX,
   VALORA_SOURCE_STATUSES,
   VALORA_VERIFICATION_MAX_AGE_DAYS,
   valoraCatalog,
@@ -37,17 +36,6 @@ export function daysSince(date: string, reference: string): number | null {
   const to = Date.parse(`${reference}T00:00:00Z`);
   if (Number.isNaN(from) || Number.isNaN(to)) return null;
   return Math.round((to - from) / MS_DAY);
-}
-
-/**
- * Controllo positivo di forma sul percorso interno: la reale esistenza della
- * rotta è garantita dal router generato e verificata da build e type-check.
- */
-export function isValoraRoute(route: string): boolean {
-  return (
-    route === VALORA_ROUTE_PREFIX ||
-    (route.startsWith(`${VALORA_ROUTE_PREFIX}/`) && /^[a-z0-9/-]+$/.test(route))
-  );
 }
 
 function inspectSource(source: ValoraSource, referenceDate: string): QualityFinding[] {
@@ -161,38 +149,12 @@ function inspectItem(item: ValoraItem, catalog: ValoraCatalog): QualityFinding[]
     });
   }
 
-  if (item.mode === "live" && item.status === "DEMO") {
-    findings.push({
-      ...subject,
-      code: "STATUS_MODE_MISMATCH",
-      severity: "ERROR",
-      message: `"${item.title}" è marcato live ma con stato dimostrativo.`,
-    });
-  }
-  if (item.mode === "demo" && item.status === "LIVE") {
-    findings.push({
-      ...subject,
-      code: "STATUS_MODE_MISMATCH",
-      severity: "ERROR",
-      message: `"${item.title}" è marcato demo ma con stato operativo.`,
-    });
-  }
-
   if (item.version === null) {
     findings.push({
       ...subject,
       code: "VERSION_MISSING",
-      severity: item.status === "LIVE" ? "ERROR" : "WARNING",
+      severity: "WARNING",
       message: `Nessuna versione dichiarata per "${item.title}".`,
-    });
-  }
-
-  if (item.checksum === null) {
-    findings.push({
-      ...subject,
-      code: "CHECKSUM_MISSING",
-      severity: "INFO",
-      message: `Checksum non disponibile per "${item.title}": il dato non è confrontabile fra due run.`,
     });
   }
 
@@ -202,15 +164,6 @@ function inspectItem(item: ValoraItem, catalog: ValoraCatalog): QualityFinding[]
       code: "VERIFICATION_MISSING",
       severity: "WARNING",
       message: `Nessuna data di verifica per "${item.title}".`,
-    });
-  }
-
-  if (item.route !== null && !isValoraRoute(item.route)) {
-    findings.push({
-      ...subject,
-      code: "ROUTE_UNKNOWN",
-      severity: "ERROR",
-      message: `Il percorso dichiarato da "${item.title}" non è un percorso interno Valora valido.`,
     });
   }
 
