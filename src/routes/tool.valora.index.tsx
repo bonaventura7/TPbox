@@ -128,7 +128,12 @@ function ValoraDashboard() {
   const navigate = Route.useNavigate();
 
   const items = useMemo(
-    () => filterItems(valoraCatalog.items, { query: search.q, category: search.categoria, status: search.stato }),
+    () =>
+      filterItems(valoraCatalog.items, {
+        query: search.q,
+        category: search.categoria,
+        status: search.stato,
+      }),
     [search.q, search.categoria, search.stato],
   );
   const report = useMemo(() => inspectCatalog(), []);
@@ -145,8 +150,8 @@ function ValoraDashboard() {
       <h1 className="mt-1 font-serif text-4xl tracking-tight">Valora Suite</h1>
       <p className="mt-3 max-w-2xl text-lg text-muted-foreground">
         Moduli di calcolo per costo del capitale, premi per il rischio e valutazione d&apos;impresa.
-        Ogni voce dichiara fonte, versione e data di ultima verifica: dove la verifica manca, il dato
-        non alimenta alcun calcolo.
+        Ogni voce dichiara fonte, versione e data di ultima verifica: dove la verifica manca, il
+        dato non alimenta alcun calcolo.
       </p>
 
       <div className="mt-4 flex flex-wrap gap-2 text-xs">
@@ -164,7 +169,10 @@ function ValoraDashboard() {
           role="status"
           className="mt-6 flex items-start gap-2 rounded-lg border border-gold bg-gold/10 p-4 text-sm"
         >
-          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-gold-foreground" aria-hidden="true" />
+          <AlertTriangle
+            className="mt-0.5 h-4 w-4 shrink-0 text-gold-foreground"
+            aria-hidden="true"
+          />
           <span className="min-w-0">
             Servizio in modalità ridotta: {staleSources.length} fonte/i senza verifica registrata. I
             moduli collegati restano consultabili con dati dimostrativi.
@@ -263,8 +271,8 @@ function ValoraDashboard() {
           Stato fonti
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Le fonti sono citate come riferimento: nessuna acquisizione automatica è attiva e il browser
-          non contatta mai un servizio esterno.
+          Le fonti sono citate come riferimento: nessuna acquisizione automatica è attiva e il
+          browser non contatta mai un servizio esterno.
         </p>
         <ul className="mt-5 space-y-4">
           {sources.map((source) => (
@@ -315,9 +323,9 @@ function ValoraDashboard() {
           <p className="flex items-start gap-2 text-sm">
             <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-petrol" aria-hidden="true" />
             <span className="min-w-0">
-              Controllo dei metadati del {formatDate(report.checkedAt)}: {report.itemsChecked} moduli e{" "}
-              {report.sourcesChecked} fonti esaminati, {report.errors} errori e {report.warnings}{" "}
-              segnalazioni. L&apos;ispettore non pubblica e non modifica nulla.
+              Controllo dei metadati del {formatDate(report.checkedAt)}: {report.itemsChecked}{" "}
+              moduli e {report.sourcesChecked} fonti esaminati, {report.errors} errori e{" "}
+              {report.warnings} segnalazioni. L&apos;ispettore non pubblica e non modifica nulla.
             </span>
           </p>
           {report.findings.length > 0 ? (
@@ -339,9 +347,9 @@ function ValoraDashboard() {
 
       <p className="mt-14 rounded-lg border border-rule bg-muted/40 p-4 text-xs text-muted-foreground">
         Tutti i valori numerici presenti nei moduli Valora sono sintetici e hanno finalità
-        dimostrativa: non provengono da alcuna fonte esterna e non costituiscono consulenza fiscale o
-        finanziaria. I riferimenti a dataset di terzi sono citazioni metodologiche, con attribuzione
-        all&apos;autore e collegamento al sito ufficiale.
+        dimostrativa: non provengono da alcuna fonte esterna e non costituiscono consulenza fiscale
+        o finanziaria. I riferimenti a dataset di terzi sono citazioni metodologiche, con
+        attribuzione all&apos;autore e collegamento al sito ufficiale.
       </p>
     </div>
   );

@@ -26,7 +26,11 @@ export function newCorrelationId(): string {
 }
 
 /** Ritardo del tentativo n (0-based): backoff esponenziale con jitter deterministico in test. */
-export function backoffDelayMs(attempt: number, policy: HaPolicy = VALORA_HA_POLICY, jitter = 0): number {
+export function backoffDelayMs(
+  attempt: number,
+  policy: HaPolicy = VALORA_HA_POLICY,
+  jitter = 0,
+): number {
   const exponential = policy.baseDelayMs * 2 ** attempt;
   return exponential + Math.round(jitter * policy.jitterMs);
 }

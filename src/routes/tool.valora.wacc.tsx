@@ -35,8 +35,16 @@ interface FieldSpec {
 
 const FIELDS: readonly FieldSpec[] = [
   { key: "riskFreeBp", label: "Tasso privo di rischio (bp)", hint: "100 bp = 1,00%" },
-  { key: "equityRiskPremiumBp", label: "Equity risk premium (bp)", hint: "Premio per il rischio azionario" },
-  { key: "countryRiskPremiumBp", label: "Country risk premium (bp)", hint: "Componente additiva di rischio paese" },
+  {
+    key: "equityRiskPremiumBp",
+    label: "Equity risk premium (bp)",
+    hint: "Premio per il rischio azionario",
+  },
+  {
+    key: "countryRiskPremiumBp",
+    label: "Country risk premium (bp)",
+    hint: "Componente additiva di rischio paese",
+  },
   { key: "betaUnleveredMilli", label: "Beta unlevered (millesimi)", hint: "1000 = 1,00" },
   { key: "creditSpreadBp", label: "Credit spread (bp)", hint: "Spread sul costo del debito" },
   { key: "taxRateBp", label: "Aliquota fiscale (bp)", hint: "2400 = 24,00%" },
@@ -91,8 +99,8 @@ function WaccModule() {
         WACC — costo medio ponderato del capitale
       </h1>
       <p className="mt-2 max-w-2xl text-muted-foreground">
-        Composizione del costo del capitale a partire dalle sue componenti. Gli importi sono espressi
-        in punti base per evitare errori di arrotondamento.
+        Composizione del costo del capitale a partire dalle sue componenti. Gli importi sono
+        espressi in punti base per evitare errori di arrotondamento.
       </p>
 
       <div className="mt-4 flex flex-wrap gap-2 text-xs">
@@ -109,7 +117,10 @@ function WaccModule() {
         ) : null}
       </div>
 
-      <form className="mt-8 grid gap-4 rounded-lg border border-rule bg-card p-5 sm:grid-cols-2" onSubmit={(event) => event.preventDefault()}>
+      <form
+        className="mt-8 grid gap-4 rounded-lg border border-rule bg-card p-5 sm:grid-cols-2"
+        onSubmit={(event) => event.preventDefault()}
+      >
         {FIELDS.map((field) => (
           <div key={field.key} className="min-w-0">
             <label className="block text-sm font-medium" htmlFor={`wacc-${field.key}`}>
@@ -139,7 +150,10 @@ function WaccModule() {
         <div aria-live="polite" className="mt-4">
           {outcome.status === "blocked" ? (
             <p className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/5 p-4 text-sm">
-              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" aria-hidden="true" />
+              <AlertTriangle
+                className="mt-0.5 h-4 w-4 shrink-0 text-destructive"
+                aria-hidden="true"
+              />
               <span className="min-w-0">{outcome.message}</span>
             </p>
           ) : (
@@ -199,9 +213,9 @@ function WaccModule() {
       </section>
 
       <p className="mt-12 rounded-lg border border-rule bg-muted/40 p-4 text-xs text-muted-foreground">
-        Il risultato è ottenuto da valori sintetici a scopo dimostrativo e non costituisce consulenza
-        fiscale, finanziaria o di valutazione. Prima di qualsiasi impiego professionale, parametri e
-        fonti vanno verificati e approvati da un professionista.
+        Il risultato è ottenuto da valori sintetici a scopo dimostrativo e non costituisce
+        consulenza fiscale, finanziaria o di valutazione. Prima di qualsiasi impiego professionale,
+        parametri e fonti vanno verificati e approvati da un professionista.
       </p>
     </div>
   );

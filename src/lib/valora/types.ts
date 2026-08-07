@@ -5,12 +5,7 @@
 
 export type ISODate = string; // YYYY-MM-DD
 
-export type ValoraCategory =
-  | "COST_OF_CAPITAL"
-  | "RISK_PREMIA"
-  | "CREDIT"
-  | "VALUATION"
-  | "DATASET";
+export type ValoraCategory = "COST_OF_CAPITAL" | "RISK_PREMIA" | "CREDIT" | "VALUATION" | "DATASET";
 
 export type ValoraKind = "TOOL" | "DATASET" | "RESOURCE";
 

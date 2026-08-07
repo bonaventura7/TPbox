@@ -4,11 +4,7 @@
  * Non pubblica e non modifica nulla: restituisce finding strutturati.
  */
 
-import {
-  VALORA_ALLOWED_HOSTS,
-  VALORA_VERIFICATION_MAX_AGE_DAYS,
-  valoraCatalog,
-} from "./catalog";
+import { VALORA_ALLOWED_HOSTS, VALORA_VERIFICATION_MAX_AGE_DAYS, valoraCatalog } from "./catalog";
 import type {
   InspectionReport,
   QualityFinding,

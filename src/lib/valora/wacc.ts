@@ -62,7 +62,12 @@ export function formatMilli(milli: number): string {
   }).format(milli / 1000);
 }
 
-export function betaLevered(betaUnleveredMilli: number, taxRateBp: number, debt: number, equity: number): number {
+export function betaLevered(
+  betaUnleveredMilli: number,
+  taxRateBp: number,
+  debt: number,
+  equity: number,
+): number {
   if (equity <= 0) return betaUnleveredMilli;
   const leverage = debt / equity;
   return Math.round(betaUnleveredMilli * (1 + (1 - taxRateBp / 10_000) * leverage));
@@ -102,7 +107,12 @@ export function computeWacc(input: WaccInput): WaccOutcome {
     };
   }
 
-  const betaLeveredMilli = betaLevered(input.betaUnleveredMilli, input.taxRateBp, input.debt, input.equity);
+  const betaLeveredMilli = betaLevered(
+    input.betaUnleveredMilli,
+    input.taxRateBp,
+    input.debt,
+    input.equity,
+  );
   const costOfEquityBp = Math.round(
     input.riskFreeBp +
       (betaLeveredMilli * input.equityRiskPremiumBp) / 1000 +

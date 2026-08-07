@@ -17,7 +17,13 @@ describe("catalogo Valora", () => {
   });
 
   it("copre i moduli richiesti", () => {
-    for (const id of ["valora-wacc", "valora-beta", "valora-crp", "valora-credit-spread", "valora-dcf-fcff"]) {
+    for (const id of [
+      "valora-wacc",
+      "valora-beta",
+      "valora-crp",
+      "valora-credit-spread",
+      "valora-dcf-fcff",
+    ]) {
       expect(valoraCatalog.items.some((item) => item.id === id)).toBe(true);
     }
   });
@@ -26,9 +32,13 @@ describe("catalogo Valora", () => {
     expect(filterItems(valoraCatalog.items, { query: "wacc" }).length).toBeGreaterThan(0);
     expect(filterItems(valoraCatalog.items, { query: "zzz-non-esiste" })).toHaveLength(0);
     expect(
-      filterItems(valoraCatalog.items, { category: "VALUATION" }).every((i) => i.category === "VALUATION"),
+      filterItems(valoraCatalog.items, { category: "VALUATION" }).every(
+        (i) => i.category === "VALUATION",
+      ),
     ).toBe(true);
-    expect(filterItems(valoraCatalog.items, { status: "STALE" }).every((i) => i.status === "STALE")).toBe(true);
+    expect(
+      filterItems(valoraCatalog.items, { status: "STALE" }).every((i) => i.status === "STALE"),
+    ).toBe(true);
   });
 });
 
