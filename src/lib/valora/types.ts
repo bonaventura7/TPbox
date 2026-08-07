@@ -25,7 +25,7 @@ export type SourceStatus = "VERIFIED" | "PENDING_VERIFICATION" | "STALE" | "UNAV
  * quindi un percorso inesistente è un errore di type-check e non una
  * convenzione di forma o una lista manuale.
  */
-export type ValoraRoutePath = FileRouteTypes["fullPaths"];
+export type ValoraRoutePath = FileRouteTypes["to"];
 
 export interface ValoraSource {
   /** Identificativo stabile della fonte. */
