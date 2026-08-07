@@ -4,50 +4,111 @@
  * viene letto dalle fonti a runtime, né dal browser né dal server.
  */
 
-import type { ValoraCatalog, ValoraItem, ValoraSource } from "./types";
+import type {
+  InternalDiscoveryReference,
+  SourceStatus,
+  ValoraCatalog,
+  ValoraItem,
+  ValoraSource,
+} from "./types";
 
 export const VALORA_CATALOG_VERSION = "valora-catalog.v1";
 
-/** Host ammessi per gli URL ufficiali dichiarati nel catalogo. */
+/** Host istituzionali ammessi per gli URL canonici delle fonti primarie. */
 export const VALORA_ALLOWED_HOSTS: readonly string[] = [
-  "pages.stern.nyu.edu",
-  "www.stern.nyu.edu",
   "www.oecd.org",
   "taxation-customs.ec.europa.eu",
+  "eur-lex.europa.eu",
   "www.bancaditalia.it",
+  "www.agenziaentrate.gov.it",
 ] as const;
 
 /** Soglia oltre la quale una verifica è considerata invecchiata. */
 export const VALORA_VERIFICATION_MAX_AGE_DAYS = 180;
 
+/** Stati ammessi per una fonte primaria. */
+export const VALORA_SOURCE_STATUSES: readonly SourceStatus[] = [
+  "VERIFIED",
+  "PENDING_VERIFICATION",
+  "STALE",
+  "UNAVAILABLE",
+] as const;
+
+/** Rotte Valora effettivamente esistenti: usate per validare i percorsi del catalogo. */
+export const VALORA_KNOWN_ROUTES: readonly string[] = ["/tool/valora", "/tool/valora/wacc"] as const;
+
+const PROFESSIONAL_NOTICE =
+  "Riferimento informativo: i contenuti non costituiscono consulenza fiscale, finanziaria o di valutazione e vanno verificati da un professionista.";
+
+const PERMITTED_USE =
+  "Citazione del riferimento primario con collegamento all'URL canonico. Nessuna copia, nessun iframe, nessuna acquisizione automatica.";
+
 const SOURCES: readonly ValoraSource[] = [
   {
-    id: "src-damodaran",
-    name: "Damodaran Online — Data Archives",
-    attribution: "Aswath Damodaran, Stern School of Business, New York University",
-    officialUrl: "https://pages.stern.nyu.edu/~adamodar/New_Home_Page/data.html",
-    lastKnownDataDate: null,
-    lastVerifiedAt: null,
-    licenseNote:
-      "Fonte citata come riferimento metodologico. Nessuna copia, nessun iframe, nessuna acquisizione automatica dei dati.",
-  },
-  {
     id: "src-oecd-tp",
-    name: "OECD — Transfer Pricing",
-    attribution: "Organisation for Economic Co-operation and Development",
-    officialUrl: "https://www.oecd.org/tax/transfer-pricing/",
-    lastKnownDataDate: "2026-02-01",
+    tier: "PRIMARY",
+    primarySourceName: "OCSE — Transfer Pricing (documentazione ufficiale)",
+    canonicalUrl: "https://www.oecd.org/tax/transfer-pricing/",
+    sourceDateOrVersion: "2026-02",
     lastVerifiedAt: "2026-07-15",
-    licenseNote: "Documentazione pubblica OCSE, citata per riferimento.",
+    status: "VERIFIED",
+    permittedUse: PERMITTED_USE,
+    limitations:
+      "Il riferimento inquadra la metodologia; non fornisce parametri numerici ai moduli di calcolo.",
+    professionalNotice: PROFESSIONAL_NOTICE,
   },
   {
-    id: "src-internal",
-    name: "Dataset interno Valora (sintetico)",
-    attribution: "Redazione del portale",
-    officialUrl: "https://www.oecd.org/tax/transfer-pricing/",
-    lastKnownDataDate: "2026-06-30",
+    id: "src-ec-taxation",
+    tier: "PRIMARY",
+    primarySourceName: "Commissione europea — Taxation and Customs Union",
+    canonicalUrl: "https://taxation-customs.ec.europa.eu/",
+    sourceDateOrVersion: null,
+    lastVerifiedAt: null,
+    status: "PENDING_VERIFICATION",
+    permittedUse: PERMITTED_USE,
+    limitations:
+      "Verifica manuale non registrata: la fonte non alimenta alcun calcolo finché non è verificata.",
+    professionalNotice: PROFESSIONAL_NOTICE,
+  },
+  {
+    id: "src-bancaditalia",
+    tier: "PRIMARY",
+    primarySourceName: "Banca d'Italia — statistiche e pubblicazioni ufficiali",
+    canonicalUrl: "https://www.bancaditalia.it/statistiche/",
+    sourceDateOrVersion: null,
     lastVerifiedAt: "2026-07-15",
-    licenseNote: "Valori sintetici costruiti per finalità dimostrative.",
+    status: "STALE",
+    permittedUse: PERMITTED_USE,
+    limitations:
+      "Nessun dato è importato: i valori mostrati nei moduli restano sintetici e dimostrativi.",
+    professionalNotice: PROFESSIONAL_NOTICE,
+  },
+  {
+    id: "src-methodology",
+    tier: "PRIMARY",
+    primarySourceName: "Metodologia interna Valora (dataset sintetico DEMO)",
+    canonicalUrl: "https://www.oecd.org/tax/transfer-pricing/",
+    sourceDateOrVersion: "2026-06-30",
+    lastVerifiedAt: "2026-07-15",
+    status: "VERIFIED",
+    permittedUse:
+      "Valori sintetici costruiti dalla redazione per finalità dimostrative, con quadro metodologico istituzionale.",
+    limitations: "I valori non rappresentano dati di mercato e non sono utilizzabili in produzione.",
+    professionalNotice: PROFESSIONAL_NOTICE,
+  },
+] as const;
+
+/**
+ * Discovery interna: elenco non esposto in UI e privo di riferimenti nominativi.
+ * Serve solo a documentare che l'individuazione manuale non alimenta i dati.
+ */
+export const VALORA_INTERNAL_DISCOVERY: readonly InternalDiscoveryReference[] = [
+  {
+    id: "discovery-cost-of-capital",
+    exposed: false,
+    feedsData: false,
+    scopeNote:
+      "Ricognizione bibliografica interna sul costo del capitale: nessun dato importato, nessun riferimento esposto.",
   },
 ] as const;
 
@@ -62,7 +123,7 @@ const ITEMS: readonly ValoraItem[] = [
     status: "DEMO",
     mode: "demo",
     route: "/tool/valora/wacc",
-    sourceId: "src-internal",
+    sourceId: "src-methodology",
     version: "wacc-model.v1",
     checksum: "wacc-v1-3f9c2a",
     lastVerifiedAt: "2026-07-15",
@@ -83,7 +144,7 @@ const ITEMS: readonly ValoraItem[] = [
     status: "DEMO",
     mode: "demo",
     route: null,
-    sourceId: "src-damodaran",
+    sourceId: "src-methodology",
     version: null,
     checksum: null,
     lastVerifiedAt: null,
@@ -103,7 +164,7 @@ const ITEMS: readonly ValoraItem[] = [
     status: "STALE",
     mode: "demo",
     route: null,
-    sourceId: "src-damodaran",
+    sourceId: "src-bancaditalia",
     version: null,
     checksum: null,
     lastVerifiedAt: null,
@@ -120,7 +181,7 @@ const ITEMS: readonly ValoraItem[] = [
     status: "DEMO",
     mode: "demo",
     route: null,
-    sourceId: "src-internal",
+    sourceId: "src-methodology",
     version: "credit-spread.v1",
     checksum: "cs-v1-a71b04",
     lastVerifiedAt: "2026-07-15",
@@ -137,7 +198,7 @@ const ITEMS: readonly ValoraItem[] = [
     status: "PLANNED",
     mode: "demo",
     route: null,
-    sourceId: "src-internal",
+    sourceId: "src-methodology",
     version: null,
     checksum: null,
     lastVerifiedAt: "2026-07-15",
