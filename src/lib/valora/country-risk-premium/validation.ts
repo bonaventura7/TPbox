@@ -4,7 +4,7 @@ import type { CountryRiskPremiumRecord } from "./model";
 export type CountryRiskPremiumValidationCode =
   | "DUPLICATE_COUNTRY_CODE"
   | "INVALID_COUNTRY_CODE"
-  | "INVALID_CRp"
+  | "INVALID_CRP"
   | "INVALID_SPREAD"
   | "SOURCE_ID_MISSING"
   | "SOURCE_VERSION_MISSING"
@@ -41,7 +41,7 @@ export function validateCountryRiskPremiumRecord(
   }
   if (!Number.isFinite(record.countryRiskPremiumBp) || record.countryRiskPremiumBp < 0) {
     findings.push({
-      code: "INVALID_CRp",
+      code: "INVALID_CRP",
       countryCode,
       message: "Il CRP deve essere finito e non negativo.",
     });
