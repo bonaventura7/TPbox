@@ -23,12 +23,25 @@ const TITLE = "Valora Suite — costo del capitale e valutazione d'impresa";
 const DESCRIPTION =
   "Catalogo di moduli per costo del capitale, premi per il rischio e valutazione: WACC, beta, country risk premium, credit spread e DCF, con fonti, versioni e stato di verifica in chiaro.";
 
+interface ValoraSearch {
+  q?: string;
+  categoria?: string;
+  stato?: string;
+}
+
 export const Route = createFileRoute("/tool/valora/")({
-  validateSearch: (search: Record<string, unknown>) => ({
-    q: typeof search["q"] === "string" ? search["q"] : "",
-    categoria: typeof search["categoria"] === "string" ? search["categoria"] : "all",
-    stato: typeof search["stato"] === "string" ? search["stato"] : "all",
-  }),
+  validateSearch: (search: Record<string, unknown>): ValoraSearch => {
+    const value = (key: string): string | undefined =>
+      typeof search[key] === "string" && search[key] !== "" ? (search[key] as string) : undefined;
+    const parsed: ValoraSearch = {};
+    const q = value("q");
+    if (q !== undefined) parsed.q = q;
+    const categoria = value("categoria");
+    if (categoria !== undefined) parsed.categoria = categoria;
+    const stato = value("stato");
+    if (stato !== undefined) parsed.stato = stato;
+    return parsed;
+  },
   head: () => ({
     meta: [
       { title: TITLE },
@@ -124,7 +137,12 @@ function ModuleCard({ item }: { readonly item: ValoraItem }) {
 }
 
 function ValoraDashboard() {
-  const search = Route.useSearch();
+  const rawSearch = Route.useSearch();
+  const search = {
+    q: rawSearch.q ?? "",
+    categoria: rawSearch.categoria ?? "all",
+    stato: rawSearch.stato ?? "all",
+  };
   const navigate = Route.useNavigate();
 
   const items = useMemo(
@@ -141,7 +159,15 @@ function ValoraDashboard() {
   const staleSources = sources.filter((source) => source.health !== "OK");
 
   const update = (patch: Partial<typeof search>) => {
-    void navigate({ to: ".", search: { ...search, ...patch } });
+    const next = { ...search, ...patch };
+    void navigate({
+      to: ".",
+      search: {
+        ...(next.q === "" ? {} : { q: next.q }),
+        ...(next.categoria === "all" ? {} : { categoria: next.categoria }),
+        ...(next.stato === "all" ? {} : { stato: next.stato }),
+      },
+    });
   };
 
   return (
