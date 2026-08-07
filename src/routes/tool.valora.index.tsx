@@ -63,10 +63,17 @@ const DATE_FORMAT = new Intl.DateTimeFormat("it-IT", {
 });
 
 function formatDate(value: string | null): string {
-  if (value === null) return "non registrata";
+  if (value === null) return "non disponibile";
   const parsed = new Date(`${value}T00:00:00Z`);
-  return Number.isNaN(parsed.getTime()) ? "non registrata" : DATE_FORMAT.format(parsed);
+  return Number.isNaN(parsed.getTime()) ? "non disponibile" : DATE_FORMAT.format(parsed);
 }
+
+const SOURCE_STATUS_LABEL: Record<string, string> = {
+  VERIFIED: "verificata",
+  PENDING_VERIFICATION: "in attesa di verifica",
+  STALE: "da verificare",
+  UNAVAILABLE: "non disponibile",
+};
 
 const STATUS_CLASS: Record<ValoraItem["status"], string> = {
   LIVE: "border-petrol/40 text-petrol",
@@ -95,8 +102,8 @@ function ModuleCard({ item }: { readonly item: ValoraItem }) {
           <dd className="min-w-0">{CATEGORY_LABEL[item.category]}</dd>
         </div>
         <div className="flex flex-wrap gap-x-2">
-          <dt>Fonte:</dt>
-          <dd className="min-w-0 break-words">{source?.name ?? "non registrata"}</dd>
+          <dt>Fonte primaria:</dt>
+          <dd className="min-w-0 break-words">{source?.primarySourceName ?? "non disponibile"}</dd>
         </div>
         <div className="flex flex-wrap gap-x-2">
           <dt>Versione:</dt>
@@ -297,14 +304,17 @@ function ValoraDashboard() {
           Stato fonti
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Le fonti sono citate come riferimento: nessuna acquisizione automatica è attiva e il
-          browser non contatta mai un servizio esterno.
+          Sono ammesse esclusivamente fonti primarie e istituzionali, citate con URL canonico:
+          nessuna acquisizione automatica è attiva e il browser non contatta mai un servizio
+          esterno.
         </p>
         <ul className="mt-5 space-y-4">
           {sources.map((source) => (
             <li key={source.sourceId} className="min-w-0 rounded-lg border border-rule bg-card p-4">
               <div className="flex flex-wrap items-start justify-between gap-2">
-                <h3 className="min-w-0 break-words font-serif text-lg">{source.name}</h3>
+                <h3 className="min-w-0 break-words font-serif text-lg">
+                  {source.primarySourceName}
+                </h3>
                 <span
                   className={`shrink-0 rounded-full border px-2 py-0.5 text-xs ${
                     source.health === "OK"
@@ -312,10 +322,12 @@ function ValoraDashboard() {
                       : "border-border text-muted-foreground"
                   }`}
                 >
-                  {source.health === "OK" ? "verificata" : "da verificare"}
+                  {SOURCE_STATUS_LABEL[source.status] ?? "non disponibile"}
                 </span>
               </div>
-              <p className="mt-1 break-words text-sm text-muted-foreground">{source.attribution}</p>
+              <p className="mt-1 text-xs uppercase tracking-wide text-muted-foreground">
+                Fonte primaria
+              </p>
               <p className="mt-2 text-sm text-muted-foreground">{source.note}</p>
               <dl className="mt-3 grid gap-1 text-xs text-muted-foreground sm:grid-cols-2">
                 <div className="flex flex-wrap gap-x-2">
@@ -323,17 +335,26 @@ function ValoraDashboard() {
                   <dd>{formatDate(source.lastVerifiedAt)}</dd>
                 </div>
                 <div className="flex flex-wrap gap-x-2">
-                  <dt>Dato più recente noto:</dt>
-                  <dd>{formatDate(source.lastKnownDataDate)}</dd>
+                  <dt>Data o versione:</dt>
+                  <dd>{source.sourceDateOrVersion ?? "non disponibile"}</dd>
+                </div>
+                <div className="flex flex-wrap gap-x-2 sm:col-span-2">
+                  <dt>Uso consentito:</dt>
+                  <dd className="min-w-0 break-words">{source.permittedUse}</dd>
+                </div>
+                <div className="flex flex-wrap gap-x-2 sm:col-span-2">
+                  <dt>Limiti d&apos;uso:</dt>
+                  <dd className="min-w-0 break-words">{source.limitations}</dd>
                 </div>
               </dl>
+              <p className="mt-3 text-xs text-muted-foreground">{source.professionalNotice}</p>
               <a
-                href={source.officialUrl}
+                href={source.canonicalUrl}
                 target="_blank"
                 rel="noreferrer noopener external"
                 className="mt-3 inline-flex items-center gap-1 break-all text-sm text-petrol underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
-                Sito ufficiale della fonte
+                URL canonico della fonte primaria
                 <ExternalLink className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
               </a>
             </li>
@@ -374,8 +395,8 @@ function ValoraDashboard() {
       <p className="mt-14 rounded-lg border border-rule bg-muted/40 p-4 text-xs text-muted-foreground">
         Tutti i valori numerici presenti nei moduli Valora sono sintetici e hanno finalità
         dimostrativa: non provengono da alcuna fonte esterna e non costituiscono consulenza fiscale
-        o finanziaria. I riferimenti a dataset di terzi sono citazioni metodologiche, con
-        attribuzione all&apos;autore e collegamento al sito ufficiale.
+        o finanziaria. Le sole provenienze esposte sono fonti primarie e istituzionali, citate con
+        URL canonico, data o versione e limiti d&apos;uso.
       </p>
     </div>
   );

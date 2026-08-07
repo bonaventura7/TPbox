@@ -4,7 +4,13 @@
  * Non pubblica e non modifica nulla: restituisce finding strutturati.
  */
 
-import { VALORA_ALLOWED_HOSTS, VALORA_VERIFICATION_MAX_AGE_DAYS, valoraCatalog } from "./catalog";
+import {
+  VALORA_ALLOWED_HOSTS,
+  VALORA_KNOWN_ROUTES,
+  VALORA_SOURCE_STATUSES,
+  VALORA_VERIFICATION_MAX_AGE_DAYS,
+  valoraCatalog,
+} from "./catalog";
 import type {
   InspectionReport,
   QualityFinding,
@@ -39,7 +45,7 @@ function inspectSource(source: ValoraSource, referenceDate: string): QualityFind
 
   let parsed: URL | null = null;
   try {
-    parsed = new URL(source.officialUrl);
+    parsed = new URL(source.canonicalUrl);
   } catch {
     parsed = null;
   }
@@ -49,7 +55,7 @@ function inspectSource(source: ValoraSource, referenceDate: string): QualityFind
       ...subject,
       code: "URL_NOT_HTTPS",
       severity: "ERROR",
-      message: `L'URL ufficiale di ${source.name} non è un indirizzo HTTPS valido.`,
+      message: `L'URL canonico di ${source.primarySourceName} non è un indirizzo HTTPS valido.`,
     });
   } else if (!VALORA_ALLOWED_HOSTS.includes(parsed.hostname)) {
     findings.push({
@@ -60,12 +66,43 @@ function inspectSource(source: ValoraSource, referenceDate: string): QualityFind
     });
   }
 
-  if (source.attribution.trim() === "" || source.licenseNote.trim() === "") {
+  if (source.tier !== "PRIMARY" || source.primarySourceName.trim() === "") {
+    findings.push({
+      ...subject,
+      code: "PRIMARY_SOURCE_MISSING",
+      severity: "ERROR",
+      message: `La fonte ${source.id} non dichiara una fonte primaria valida.`,
+    });
+  }
+
+  if (!VALORA_SOURCE_STATUSES.includes(source.status)) {
+    findings.push({
+      ...subject,
+      code: "SOURCE_STATUS_INVALID",
+      severity: "ERROR",
+      message: `Stato non ammesso per ${source.primarySourceName}: ${String(source.status)}.`,
+    });
+  }
+
+  if (
+    source.permittedUse.trim() === "" ||
+    source.limitations.trim() === "" ||
+    source.professionalNotice.trim() === ""
+  ) {
     findings.push({
       ...subject,
       code: "MANIFEST_INCOMPLETE",
       severity: "WARNING",
-      message: `Attribuzione o nota di licenza mancante per ${source.name}.`,
+      message: `Limiti d'uso o avviso professionale mancanti per ${source.primarySourceName}.`,
+    });
+  }
+
+  if (source.sourceDateOrVersion === null) {
+    findings.push({
+      ...subject,
+      code: "SOURCE_DATE_MISSING",
+      severity: "INFO",
+      message: `Data o versione non disponibile per ${source.primarySourceName}: nessun valore viene stimato.`,
     });
   }
 
@@ -74,7 +111,7 @@ function inspectSource(source: ValoraSource, referenceDate: string): QualityFind
       ...subject,
       code: "VERIFICATION_MISSING",
       severity: "WARNING",
-      message: `Nessuna verifica registrata per ${source.name}: la fonte va trattata come da verificare.`,
+      message: `Nessuna verifica registrata per ${source.primarySourceName}: la fonte va trattata come da verificare.`,
     });
   } else {
     const age = daysSince(source.lastVerifiedAt, referenceDate);
@@ -83,7 +120,7 @@ function inspectSource(source: ValoraSource, referenceDate: string): QualityFind
         ...subject,
         code: "VERIFICATION_STALE",
         severity: "WARNING",
-        message: `Ultima verifica di ${source.name} risalente a ${age} giorni.`,
+        message: `Ultima verifica di ${source.primarySourceName} risalente a ${age} giorni.`,
       });
     }
   }
@@ -154,6 +191,15 @@ function inspectItem(item: ValoraItem, catalog: ValoraCatalog): QualityFinding[]
       code: "VERIFICATION_MISSING",
       severity: "WARNING",
       message: `Nessuna data di verifica per "${item.title}".`,
+    });
+  }
+
+  if (item.route !== null && !VALORA_KNOWN_ROUTES.includes(item.route)) {
+    findings.push({
+      ...subject,
+      code: "ROUTE_UNKNOWN",
+      severity: "ERROR",
+      message: `Il percorso dichiarato da "${item.title}" non corrisponde a una rotta esistente.`,
     });
   }
 

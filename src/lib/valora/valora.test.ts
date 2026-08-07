@@ -1,6 +1,8 @@
+import { readFileSync, readdirSync, statSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { filterItems, valoraCatalog } from "./catalog";
+import { VALORA_KNOWN_ROUTES, VALORA_SOURCE_STATUSES, filterItems, valoraCatalog } from "./catalog";
 import { daysSince, inspectCatalog, isAllowedUrl } from "./validator";
 import { backoffDelayMs, idempotencyKey } from "./resilience.contracts";
 import { betaLevered, computeWacc } from "./wacc";
@@ -28,6 +30,31 @@ describe("catalogo Valora", () => {
     }
   });
 
+  it("espone solo fonti primarie con URL canonico HTTPS e stato valido", () => {
+    for (const source of valoraCatalog.sources) {
+      expect(source.tier).toBe("PRIMARY");
+      expect(source.primarySourceName.trim().length).toBeGreaterThan(0);
+      expect(isAllowedUrl(source.canonicalUrl)).toBe(true);
+      expect(VALORA_SOURCE_STATUSES).toContain(source.status);
+      expect(source.permittedUse.trim().length).toBeGreaterThan(0);
+      expect(source.limitations.trim().length).toBeGreaterThan(0);
+      expect(source.professionalNotice.trim().length).toBeGreaterThan(0);
+      // lastVerifiedAt è nullable: nessun fallback inventato.
+      expect(
+        source.lastVerifiedAt === null || /^\d{4}-\d{2}-\d{2}$/.test(source.lastVerifiedAt),
+      ).toBe(true);
+      expect(source.sourceDateOrVersion === null || source.sourceDateOrVersion.length > 0).toBe(
+        true,
+      );
+    }
+  });
+
+  it("dichiara solo percorsi esistenti", () => {
+    for (const item of valoraCatalog.items) {
+      if (item.route !== null) expect(VALORA_KNOWN_ROUTES).toContain(item.route);
+    }
+  });
+
   it("filtra per testo, categoria e stato", () => {
     expect(filterItems(valoraCatalog.items, { query: "wacc" }).length).toBeGreaterThan(0);
     expect(filterItems(valoraCatalog.items, { query: "zzz-non-esiste" })).toHaveLength(0);
@@ -44,8 +71,8 @@ describe("catalogo Valora", () => {
 
 describe("inspector", () => {
   it("accetta solo URL HTTPS su host in allowlist", () => {
-    expect(isAllowedUrl("https://pages.stern.nyu.edu/x")).toBe(true);
-    expect(isAllowedUrl("http://pages.stern.nyu.edu/x")).toBe(false);
+    expect(isAllowedUrl("https://www.oecd.org/x")).toBe(true);
+    expect(isAllowedUrl("http://www.oecd.org/x")).toBe(false);
     expect(isAllowedUrl("https://example.com/x")).toBe(false);
     expect(isAllowedUrl("non-un-url")).toBe(false);
   });
@@ -78,8 +105,38 @@ describe("utilità HA", () => {
   });
 
   it("produce chiavi di idempotenza stabili", () => {
-    expect(idempotencyKey("check", "src-damodaran")).toBe(idempotencyKey("check", "src-damodaran"));
+    expect(idempotencyKey("check", "src-oecd-tp")).toBe(idempotencyKey("check", "src-oecd-tp"));
     expect(idempotencyKey("check", "a")).not.toBe(idempotencyKey("check", "b"));
+  });
+});
+
+describe("primary source policy (validazione statica)", () => {
+  const FORBIDDEN = [
+    "damodaran",
+    "adamodar",
+    "aswath",
+    "stern.nyu",
+    "nyu.edu",
+    "assolombarda",
+  ] as const;
+
+  function walk(dir: string): readonly string[] {
+    return readdirSync(dir).flatMap((entry) => {
+      const full = join(dir, entry);
+      if (statSync(full).isDirectory()) return walk(full);
+      return /\.(ts|tsx|md)$/.test(entry) ? [full] : [];
+    });
+  }
+
+  it("non contiene riferimenti nominativi a fonti secondarie nel codice Valora e nelle rotte", () => {
+    const files = [...walk("src/lib/valora"), ...walk("src/routes")].filter(
+      (file) => !file.endsWith("valora.test.ts"),
+    );
+    const offenders = files.filter((file) => {
+      const content = readFileSync(file, "utf8").toLowerCase();
+      return FORBIDDEN.some((token) => content.includes(token));
+    });
+    expect(offenders).toEqual([]);
   });
 });
 

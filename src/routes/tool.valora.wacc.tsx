@@ -195,17 +195,30 @@ function WaccModule() {
             versione {item?.version ?? "non dichiarata"}.
           </p>
           <p className="mt-1 break-words">
-            <span className="text-muted-foreground">Fonte metodologica:</span>{" "}
-            {source?.name ?? "non registrata"} — {source?.attribution ?? "attribuzione assente"}.
+            <span className="text-muted-foreground">Fonte primaria:</span>{" "}
+            {source?.primarySourceName ?? "non disponibile"} · data o versione{" "}
+            {source?.sourceDateOrVersion ?? "non disponibile"} · ultima verifica{" "}
+            {source?.lastVerifiedAt ?? "non disponibile"}.
           </p>
           {source ? (
+            <>
+              <p className="mt-1 break-words">
+                <span className="text-muted-foreground">Limiti d&apos;uso:</span>{" "}
+                {source.limitations}
+              </p>
+              <p className="mt-1 break-words text-xs text-muted-foreground">
+                {source.professionalNotice}
+              </p>
+            </>
+          ) : null}
+          {source ? (
             <a
-              href={source.officialUrl}
+              href={source.canonicalUrl}
               target="_blank"
               rel="noreferrer noopener external"
               className="mt-2 inline-flex items-center gap-1 break-all text-petrol underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              Sito ufficiale della fonte
+              URL canonico della fonte primaria
               <ExternalLink className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
             </a>
           ) : null}
