@@ -25,6 +25,8 @@ export type CompanyRegistryStatus =
   | "UNAVAILABLE"
   | "RETIRED";
 
+export type CompanyRegistryTermsStatus = "VERIFIED" | "UNDER_REVIEW";
+
 export interface CompanyRegistrySource {
   id: string;
   country_code: string;
@@ -33,13 +35,15 @@ export interface CompanyRegistrySource {
   eu_member_state: boolean;
   official_register_name: string;
   official_register_url: string;
+  official_register_host: string;
   official_information_url: string;
+  official_information_host: string;
   search_mode: CompanyRegistrySearchMode;
   search_url_template: string | null;
   api_adapter_key: string | null;
   access_type: CompanyRegistryAccessType;
   document_access: CompanyRegistryDocumentAccess;
-  terms_status: string;
+  terms_status: CompanyRegistryTermsStatus;
   last_verified_at: string;
   status: CompanyRegistryStatus;
   notes: string | null;
