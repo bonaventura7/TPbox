@@ -15,8 +15,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getCompanyRegistrySources } from "@/lib/portal.functions";
 import type { CompanyRegistrySource } from "@/lib/company-registry/types";
+import { getCompanyRegistrySources } from "@/lib/portal.functions";
 
 const TITLE = "Company Finder UE";
 const DESCRIPTION =
@@ -78,7 +78,9 @@ function CompanyFinderPage() {
       window.setTimeout(() => setCopied(false), 1800);
     } catch {
       setCopied(false);
-      setCopyMessage("Copia automatica non disponibile. Seleziona e copia manualmente il testo inserito.");
+      setCopyMessage(
+        "Copia automatica non disponibile. Seleziona e copia manualmente il testo inserito.",
+      );
     }
   };
 
@@ -104,7 +106,10 @@ function CompanyFinderPage() {
           <div className="mt-5 grid gap-4 sm:grid-cols-2">
             <div className="min-w-0">
               <Label htmlFor="company-country">
-                Paese <span className="text-destructive" aria-hidden="true">*</span>
+                Paese{" "}
+                <span className="text-destructive" aria-hidden="true">
+                  *
+                </span>
               </Label>
               <Select value={country} onValueChange={setCountry}>
                 <SelectTrigger
@@ -124,7 +129,11 @@ function CompanyFinderPage() {
                 </SelectContent>
               </Select>
               {countryError ? (
-                <p id="company-country-error" role="alert" className="mt-2 text-xs text-destructive">
+                <p
+                  id="company-country-error"
+                  role="alert"
+                  className="mt-2 text-xs text-destructive"
+                >
                   Seleziona uno Stato membro dell’Unione europea.
                 </p>
               ) : null}
@@ -132,7 +141,10 @@ function CompanyFinderPage() {
 
             <div className="min-w-0">
               <Label htmlFor="company-query">
-                Denominazione o identificativo <span className="text-destructive" aria-hidden="true">*</span>
+                Denominazione o identificativo{" "}
+                <span className="text-destructive" aria-hidden="true">
+                  *
+                </span>
               </Label>
               <Input
                 id="company-query"
@@ -147,7 +159,11 @@ function CompanyFinderPage() {
                 La ricerca esterna viene effettuata esclusivamente sul registro ufficiale.
               </p>
               {queryError ? (
-                <p id="company-query-error" role="alert" className="mt-2 text-xs text-destructive">
+                <p
+                  id="company-query-error"
+                  role="alert"
+                  className="mt-2 text-xs text-destructive"
+                >
                   Inserisci almeno tre caratteri.
                 </p>
               ) : null}
@@ -178,7 +194,10 @@ function CompanyFinderPage() {
         ) : null}
 
         {validSubmission && source ? (
-          <section aria-labelledby="registry-status" className="mt-8 border border-border bg-card p-6">
+          <section
+            aria-labelledby="registry-status"
+            className="mt-8 border border-border bg-card p-6"
+          >
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
@@ -255,13 +274,18 @@ function CompanyFinderPage() {
               <p className="mt-3 text-xs text-muted-foreground">
                 Inserisci la query copiata nel registro ufficiale aperto.
               </p>
-              <p className="sr-only" aria-live="polite">{copyMessage}</p>
+              <p className="sr-only" aria-live="polite">
+                {copyMessage}
+              </p>
             </div>
           </section>
         ) : null}
 
         {validSubmission && !source && !registryQuery.isLoading && !registryQuery.isError ? (
-          <div role="status" className="mt-6 border border-dashed border-border bg-secondary/40 p-8 text-center">
+          <div
+            role="status"
+            className="mt-6 border border-dashed border-border bg-secondary/40 p-8 text-center"
+          >
             <h2 className="font-serif text-xl">Registro in verifica</h2>
             <p className="mx-auto mt-2 max-w-xl text-sm text-muted-foreground">
               Il registro ufficiale per questo Paese è in fase di verifica. Non sono disponibili
@@ -272,8 +296,8 @@ function CompanyFinderPage() {
 
         <p className="mt-8 border-l-2 border-border bg-secondary/40 p-4 text-xs text-muted-foreground">
           Fonte del registry: indice dei registri nazionali del Portale europeo della giustizia.
-          Il tool non esegue scraping, non interroga registri esterni dal browser e non mostra
-          dati societari sintetici.
+          Il tool non esegue scraping, non interroga registri esterni dal browser e non mostra dati
+          societari sintetici.
         </p>
       </div>
     </>
@@ -282,20 +306,30 @@ function CompanyFinderPage() {
 
 function accessLabel(source: CompanyRegistrySource) {
   switch (source.access_type) {
-    case "FREE": return "Gratuito per le informazioni indicate";
-    case "PARTLY_FREE": return "Parzialmente gratuito";
-    case "PAID": return "A pagamento";
-    case "CONDITIONS_APPLY": return "Soggetto a condizioni";
-    default: return "Condizioni da verificare";
+    case "FREE":
+      return "Gratuito per le informazioni indicate";
+    case "PARTLY_FREE":
+      return "Parzialmente gratuito";
+    case "PAID":
+      return "A pagamento";
+    case "CONDITIONS_APPLY":
+      return "Soggetto a condizioni";
+    default:
+      return "Condizioni da verificare";
   }
 }
 
 function documentLabel(source: CompanyRegistrySource) {
   switch (source.document_access) {
-    case "AVAILABLE": return "Disponibili";
-    case "PARTLY_AVAILABLE": return "Parzialmente disponibili";
-    case "PAID": return "Disponibili a pagamento";
-    case "NOT_AVAILABLE": return "Non disponibili";
-    default: return "Condizioni da verificare";
+    case "AVAILABLE":
+      return "Disponibili";
+    case "PARTLY_AVAILABLE":
+      return "Parzialmente disponibili";
+    case "PAID":
+      return "Disponibili a pagamento";
+    case "NOT_AVAILABLE":
+      return "Non disponibili";
+    default:
+      return "Condizioni da verificare";
   }
 }
