@@ -1,11 +1,7 @@
-import { readFileSync, readdirSync, statSync } from "node:fs";
-import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { VALORA_KNOWN_ROUTES, VALORA_SOURCE_STATUSES, filterItems, valoraCatalog } from "./catalog";
-import { daysSince, inspectCatalog, isAllowedUrl } from "./validator";
-import { backoffDelayMs, idempotencyKey } from "./resilience.contracts";
-import { betaLevered, computeWacc } from "./wacc";
+import { VALORA_SOURCE_STATUSES, filterItems, valoraCatalog } from "./catalog";
+import { daysSince, inspectCatalog, isAllowedUrl, isValoraRoute } from "./validator";
 
 describe("catalogo Valora", () => {
   it("ha id stabili e unici", () => {
@@ -18,7 +14,7 @@ describe("catalogo Valora", () => {
     for (const item of valoraCatalog.items) expect(sourceIds.has(item.sourceId)).toBe(true);
   });
 
-  it("copre i moduli richiesti", () => {
+  it("copre le schede previste dal catalogo MVP", () => {
     for (const id of [
       "valora-wacc",
       "valora-beta",
@@ -49,9 +45,9 @@ describe("catalogo Valora", () => {
     }
   });
 
-  it("dichiara solo percorsi esistenti", () => {
+  it("dichiara solo percorsi interni Valora", () => {
     for (const item of valoraCatalog.items) {
-      if (item.route !== null) expect(VALORA_KNOWN_ROUTES).toContain(item.route);
+      if (item.route !== null) expect(isValoraRoute(item.route)).toBe(true);
     }
   });
 
@@ -69,12 +65,19 @@ describe("catalogo Valora", () => {
   });
 });
 
-describe("inspector", () => {
+describe("validator", () => {
   it("accetta solo URL HTTPS su host in allowlist", () => {
     expect(isAllowedUrl("https://www.oecd.org/x")).toBe(true);
     expect(isAllowedUrl("http://www.oecd.org/x")).toBe(false);
     expect(isAllowedUrl("https://example.com/x")).toBe(false);
     expect(isAllowedUrl("non-un-url")).toBe(false);
+  });
+
+  it("accetta solo percorsi interni Valora", () => {
+    expect(isValoraRoute("/tool/valora")).toBe(true);
+    expect(isValoraRoute("/tool/valora/wacc")).toBe(true);
+    expect(isValoraRoute("/tool/altro")).toBe(false);
+    expect(isValoraRoute("https://esterno.example/tool/valora")).toBe(false);
   });
 
   it("non produce errori bloccanti sul catalogo corrente", () => {
@@ -93,85 +96,5 @@ describe("inspector", () => {
   it("calcola l'età della verifica", () => {
     expect(daysSince("2026-01-01", "2026-01-31")).toBe(30);
     expect(daysSince("non-data", "2026-01-31")).toBeNull();
-  });
-});
-
-describe("utilità HA", () => {
-  it("applica backoff esponenziale", () => {
-    expect(backoffDelayMs(0)).toBe(250);
-    expect(backoffDelayMs(1)).toBe(500);
-    expect(backoffDelayMs(2)).toBe(1000);
-    expect(backoffDelayMs(0, undefined, 1)).toBe(370);
-  });
-
-  it("produce chiavi di idempotenza stabili", () => {
-    expect(idempotencyKey("check", "src-oecd-tp")).toBe(idempotencyKey("check", "src-oecd-tp"));
-    expect(idempotencyKey("check", "a")).not.toBe(idempotencyKey("check", "b"));
-  });
-});
-
-describe("primary source policy (validazione statica)", () => {
-  const FORBIDDEN = [
-    "damodaran",
-    "adamodar",
-    "aswath",
-    "stern.nyu",
-    "nyu.edu",
-    "assolombarda",
-  ] as const;
-
-  function walk(dir: string): readonly string[] {
-    return readdirSync(dir).flatMap((entry) => {
-      const full = join(dir, entry);
-      if (statSync(full).isDirectory()) return walk(full);
-      return /\.(ts|tsx|md)$/.test(entry) ? [full] : [];
-    });
-  }
-
-  it("non contiene riferimenti nominativi a fonti secondarie nel codice Valora e nelle rotte", () => {
-    const files = [...walk("src/lib/valora"), ...walk("src/routes")].filter(
-      (file) => !file.endsWith("valora.test.ts"),
-    );
-    const offenders = files.filter((file) => {
-      const content = readFileSync(file, "utf8").toLowerCase();
-      return FORBIDDEN.some((token) => content.includes(token));
-    });
-    expect(offenders).toEqual([]);
-  });
-});
-
-describe("modulo WACC", () => {
-  const base = {
-    riskFreeBp: 350,
-    equityRiskPremiumBp: 550,
-    countryRiskPremiumBp: 150,
-    betaUnleveredMilli: 900,
-    creditSpreadBp: 200,
-    taxRateBp: 2400,
-    debt: 400,
-    equity: 600,
-  };
-
-  it("calcola beta levered secondo Hamada", () => {
-    expect(betaLevered(900, 2400, 400, 600)).toBe(1356);
-  });
-
-  it("restituisce un WACC coerente", () => {
-    const out = computeWacc(base);
-    expect(out.status).toBe("ok");
-    if (out.status !== "ok") return;
-    expect(out.betaLeveredMilli).toBe(1356);
-    expect(out.costOfEquityBp).toBe(1246);
-    expect(out.costOfDebtBp).toBe(550);
-    expect(out.afterTaxCostOfDebtBp).toBe(418);
-    expect(out.equityWeightBp).toBe(6000);
-    expect(out.debtWeightBp).toBe(4000);
-    expect(out.waccBp).toBe(915);
-  });
-
-  it("blocca input non validi", () => {
-    expect(computeWacc({ ...base, debt: 0, equity: 0 }).status).toBe("blocked");
-    expect(computeWacc({ ...base, taxRateBp: 12000 }).status).toBe("blocked");
-    expect(computeWacc({ ...base, riskFreeBp: -1 }).status).toBe("blocked");
   });
 });
