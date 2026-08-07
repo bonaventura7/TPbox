@@ -8,6 +8,7 @@ import {
   Building,
   Calculator,
   Database,
+  LineChart,
   Scale,
   Search,
   type LucideIcon,
@@ -66,6 +67,15 @@ const CALCULATORS: readonly Tool[] = [
     icon: Scale,
     status: "operativo",
     detail: "Tassi legali 1997-2025 · dataset versionato",
+  },
+  {
+    href: "/tool/valora",
+    title: "Valora Suite",
+    description:
+      "Costo del capitale, premi per il rischio e valutazione d'impresa: WACC, beta, country risk premium, credit spread e DCF.",
+    icon: LineChart,
+    status: "dimostrativo",
+    detail: "Catalogo con fonti, versioni e stato di verifica",
   },
 ] as const;
 
