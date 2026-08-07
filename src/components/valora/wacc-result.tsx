@@ -9,6 +9,7 @@ import {
   formatAmount,
   formatBeta,
   formatBpAsPercent,
+  formatMultiple,
   formatRatio,
   formatTimestamp,
 } from "../../lib/valora/wacc/format";
@@ -69,7 +70,7 @@ export function WaccResult({ outcome }: { readonly outcome: WaccOutcome }) {
         />
         <Row label="Peso dell'equity (wE)" value={formatRatio(b.equityWeight)} />
         <Row label="Peso del debito (wD)" value={formatRatio(b.debtWeight)} />
-        <Row label="Rapporto D/E" value={formatRatio(b.debtToEquity)} />
+        <Row label="Rapporto D/E" value={formatMultiple(b.debtToEquity)} />
         <Row
           label="Premio per il rischio paese usato"
           value={`${formatBpAsPercent(b.countryRiskPremiumBp)}${
