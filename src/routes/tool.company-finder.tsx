@@ -37,6 +37,7 @@ function CompanyFinderPage() {
   const [country, setCountry] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [copyMessage, setCopyMessage] = useState("");
 
   const registryQuery = useQuery({
     queryKey: ["company-registry-sources"],
@@ -51,14 +52,33 @@ function CompanyFinderPage() {
 
   const queryError = submitted && query.trim().length < 3;
   const countryError = submitted && country.length !== 2;
+  const validSubmission = submitted && !queryError && !countryError;
 
   const copyQuery = async () => {
+    const value = query.trim();
+    if (!value) return;
+
     try {
-      await navigator.clipboard.writeText(query.trim());
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(value);
+      } else {
+        const textarea = document.createElement("textarea");
+        textarea.value = value;
+        textarea.setAttribute("readonly", "");
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        const copiedWithFallback = document.execCommand("copy");
+        document.body.removeChild(textarea);
+        if (!copiedWithFallback) throw new Error("Clipboard fallback unavailable");
+      }
       setCopied(true);
+      setCopyMessage("Identificativo copiato. Incollalo nel registro ufficiale aperto.");
       window.setTimeout(() => setCopied(false), 1800);
     } catch {
       setCopied(false);
+      setCopyMessage("Copia automatica non disponibile. Seleziona e copia manualmente il testo inserito.");
     }
   };
 
@@ -157,7 +177,7 @@ function CompanyFinderPage() {
           </div>
         ) : null}
 
-        {submitted && source ? (
+        {validSubmission && source ? (
           <section aria-labelledby="registry-status" className="mt-8 border border-border bg-card p-6">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
@@ -235,11 +255,12 @@ function CompanyFinderPage() {
               <p className="mt-3 text-xs text-muted-foreground">
                 Inserisci la query copiata nel registro ufficiale aperto.
               </p>
+              <p className="sr-only" aria-live="polite">{copyMessage}</p>
             </div>
           </section>
         ) : null}
 
-        {submitted && !source && !registryQuery.isLoading && !registryQuery.isError ? (
+        {validSubmission && !source && !registryQuery.isLoading && !registryQuery.isError ? (
           <div role="status" className="mt-6 border border-dashed border-border bg-secondary/40 p-8 text-center">
             <h2 className="font-serif text-xl">Registro in verifica</h2>
             <p className="mx-auto mt-2 max-w-xl text-sm text-muted-foreground">
