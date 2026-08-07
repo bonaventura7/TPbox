@@ -8,7 +8,7 @@ import { Link, createFileRoute } from "@tanstack/react-router";
 import { ArrowLeft, Info } from "lucide-react";
 import { useState } from "react";
 
-import { getItem, getSource } from "../lib/valora/catalog";
+import { getItem } from "../lib/valora/catalog";
 import { WaccForm } from "../components/valora/wacc-form";
 import { WaccResult } from "../components/valora/wacc-result";
 import type { WaccOutcome } from "../lib/valora/wacc/model";
@@ -33,7 +33,6 @@ export const Route = createFileRoute("/tool/valora/wacc")({
 
 function WaccInfoPage() {
   const item = getItem("valora-wacc");
-  const source = item ? getSource(item.sourceId) : null;
   const [outcome, setOutcome] = useState<WaccOutcome | null>(null);
 
   return (
@@ -114,53 +113,6 @@ function WaccInfoPage() {
           Le relazioni sono riportate in forma simbolica a scopo documentale: nessun parametro è
           precompilato e nessun valore viene elaborato.
         </p>
-      </section>
-
-      <section aria-labelledby="provenienza" className="mt-12">
-        <h2 id="provenienza" className="font-serif text-2xl">
-          Inquadramento metodologico della fonte
-        </h2>
-        <p className="mt-2 text-sm text-muted-foreground">
-          La fonte primaria inquadra la metodologia. I valori inseriti nel calcolatore sono scelti
-          dall&apos;utente e non sono attribuibili ad alcuna fonte esterna.
-        </p>
-        <dl className="mt-4 space-y-2 rounded-lg border border-rule bg-card p-4 text-sm">
-          <div className="flex flex-wrap gap-x-2">
-            <dt className="text-muted-foreground">Fonte primaria:</dt>
-            <dd className="min-w-0 break-words">
-              {source?.primarySourceName ?? "non disponibile"}
-            </dd>
-          </div>
-          <div className="flex flex-wrap gap-x-2">
-            <dt className="text-muted-foreground">Data o versione della fonte:</dt>
-            <dd className="min-w-0">{source?.sourceDateOrVersion ?? "non disponibile"}</dd>
-          </div>
-          <div className="flex flex-wrap gap-x-2">
-            <dt className="text-muted-foreground">Ultima verifica:</dt>
-            <dd className="min-w-0">{source?.lastVerifiedAt ?? "non disponibile"}</dd>
-          </div>
-          <div className="flex flex-wrap gap-x-2">
-            <dt className="text-muted-foreground">Versione del modulo:</dt>
-            <dd className="min-w-0">{item?.version ?? "non dichiarata"}</dd>
-          </div>
-          {source ? (
-            <>
-              <div className="flex flex-wrap gap-x-2">
-                <dt className="text-muted-foreground">Uso consentito:</dt>
-                <dd className="min-w-0 break-words">{source.permittedUse}</dd>
-              </div>
-              <div className="flex flex-wrap gap-x-2">
-                <dt className="text-muted-foreground">Limiti d&apos;uso:</dt>
-                <dd className="min-w-0 break-words">{source.limitations}</dd>
-              </div>
-            </>
-          ) : null}
-        </dl>
-        {source ? (
-          <p className="mt-3 text-xs text-muted-foreground">
-            Fonte primaria: {source.primarySourceName} · versione {source.sourceDateOrVersion} · ultima verifica {source.lastVerifiedAt}
-          </p>
-        ) : null}
       </section>
     </div>
   );
