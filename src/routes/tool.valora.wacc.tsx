@@ -1,16 +1,21 @@
 /**
- * Valora Suite — scheda informativa del modulo WACC.
- * Pagina di sola lettura: nessun form, nessun calcolo, nessun valore dimostrativo.
+ * Valora Suite — calcolatore WACC.
+ * Tutti i parametri sono inseriti manualmente dall'utente: nessun fetch,
+ * nessun dato di mercato precompilato, nessuna persistenza.
  */
 
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { ArrowLeft, ExternalLink, Info } from "lucide-react";
+import { useState } from "react";
 
 import { getItem, getSource } from "../lib/valora/catalog";
+import { WaccForm } from "../components/valora/wacc-form";
+import { WaccResult } from "../components/valora/wacc-result";
+import type { WaccOutcome } from "../lib/valora/wacc/model";
 
-const TITLE = "WACC — scheda di catalogo in validazione | Valora Suite";
+const TITLE = "Calcolatore WACC — costo medio ponderato del capitale | Valora Suite";
 const DESCRIPTION =
-  "Scheda informativa del modulo WACC: perimetro metodologico, fonte primaria, versione e stato di verifica. Il modulo non è operativo e non produce risultati.";
+  "Calcolatore WACC manuale: inserisci tasso privo di rischio, premi per il rischio, beta unlevered, spread creditizio, aliquota e struttura finanziaria e ottieni Ke, Kd e WACC con tutti i passaggi.";
 
 export const Route = createFileRoute("/tool/valora/wacc")({
   head: () => ({
@@ -29,6 +34,7 @@ export const Route = createFileRoute("/tool/valora/wacc")({
 function WaccInfoPage() {
   const item = getItem("valora-wacc");
   const source = item ? getSource(item.sourceId) : null;
+  const [outcome, setOutcome] = useState<WaccOutcome | null>(null);
 
   return (
     <div className="container mx-auto max-w-3xl px-4 py-8">
@@ -46,21 +52,47 @@ function WaccInfoPage() {
 
       <div className="mt-4 flex flex-wrap gap-2 text-xs">
         <span className="rounded-full border border-border px-2.5 py-1 text-muted-foreground">
-          In validazione
+          Calcolatore operativo
         </span>
         <span className="rounded-full border border-border px-2.5 py-1 text-muted-foreground">
-          Modulo non operativo
+          Inserimento manuale
         </span>
       </div>
 
       <p className="mt-5 flex items-start gap-2 rounded-lg border border-rule bg-muted/40 p-4 text-sm">
         <Info className="mt-0.5 h-4 w-4 shrink-0 text-petrol" aria-hidden="true" />
         <span className="min-w-0">
-          Questa pagina descrive soltanto il perimetro metodologico del modulo. Non è disponibile
-          alcun calcolo, alcun input e alcun risultato: la scheda resta informativa fino al
-          completamento della validazione metodologica e documentale.
+          I dati sono inseriti manualmente dall&apos;utente. Il tool non recupera dati da fonti
+          esterne: non esistono valori di mercato precompilati, non viene salvato nulla e il
+          risultato compare soltanto dopo un calcolo valido.
         </span>
       </p>
+
+      <section aria-labelledby="calcolatore" className="mt-10">
+        <h2 id="calcolatore" className="font-serif text-2xl">
+          Parametri di calcolo
+        </h2>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Percentuali in punti percentuali (ad esempio 3,5), beta come indice (ad esempio 0,9),
+          debito ed equity nella stessa unità monetaria: il calcolatore non effettua conversioni.
+        </p>
+        <WaccForm onResult={setOutcome} />
+      </section>
+
+      <section aria-labelledby="risultato" className="mt-12">
+        <h2 id="risultato" className="font-serif text-2xl">
+          Risultato e tracciabilità
+        </h2>
+        <div aria-live="polite">
+          {outcome === null ? (
+            <p className="mt-3 text-sm text-muted-foreground">
+              Nessun risultato disponibile: compila i parametri e seleziona «Calcola WACC».
+            </p>
+          ) : (
+            <WaccResult outcome={outcome} />
+          )}
+        </div>
+      </section>
 
       <section aria-labelledby="perimetro" className="mt-10">
         <h2 id="perimetro" className="font-serif text-2xl">
@@ -86,8 +118,12 @@ function WaccInfoPage() {
 
       <section aria-labelledby="provenienza" className="mt-12">
         <h2 id="provenienza" className="font-serif text-2xl">
-          Provenienza e stato di verifica
+          Inquadramento metodologico della fonte
         </h2>
+        <p className="mt-2 text-sm text-muted-foreground">
+          La fonte primaria inquadra la metodologia. I valori inseriti nel calcolatore sono scelti
+          dall&apos;utente e non sono attribuibili ad alcuna fonte esterna.
+        </p>
         <dl className="mt-4 space-y-2 rounded-lg border border-rule bg-card p-4 text-sm">
           <div className="flex flex-wrap gap-x-2">
             <dt className="text-muted-foreground">Fonte primaria:</dt>

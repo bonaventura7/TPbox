@@ -78,6 +78,7 @@ const SOURCE_STATUS_LABEL: Record<string, string> = {
 const STATUS_CLASS: Record<ValoraItem["status"], string> = {
   PLANNED: "border-border text-muted-foreground",
   IN_VALIDATION: "border-petrol/40 text-petrol",
+  LIVE: "border-petrol bg-petrol/10 text-petrol",
 };
 
 function ModuleCard({ item }: { readonly item: ValoraItem }) {

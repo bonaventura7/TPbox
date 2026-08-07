@@ -87,11 +87,11 @@ const ITEMS: readonly ValoraItem[] = [
     category: "COST_OF_CAPITAL",
     title: "WACC — costo medio ponderato del capitale",
     description:
-      "Perimetro metodologico del costo del capitale: relazione fra costo dell'equity, costo del debito e struttura finanziaria, con la catena di derivazione in chiaro.",
-    status: "IN_VALIDATION",
+      "Calcolatore manuale del costo del capitale: costo dell'equity, costo del debito e struttura finanziaria, con la catena di derivazione in chiaro. Tutti i parametri sono inseriti dall'utente.",
+    status: "LIVE",
     route: "/tool/valora/wacc",
     sourceId: "src-oecd-tp",
-    version: null,
+    version: "wacc.v1",
     lastVerifiedAt: "2026-07-15",
     formulaChain: [
       "WACC = E/(D+E) × Ke + D/(D+E) × Kd × (1 − t)",
@@ -209,6 +209,7 @@ export const CATEGORY_LABEL: Record<ValoraItem["category"], string> = {
 export const STATUS_LABEL: Record<ValoraItem["status"], string> = {
   PLANNED: "pianificato",
   IN_VALIDATION: "in validazione",
+  LIVE: "operativo",
 };
 
 /** Filtro puro sul catalogo: usato dalla dashboard e dai test. */
