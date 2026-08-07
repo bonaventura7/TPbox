@@ -38,4 +38,3 @@ jobs:
           src/routes/tool.company-finder.tsx
           src/lib/company-registry
           src/lib/portal.functions.ts
-          src/components/tools
