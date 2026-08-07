@@ -17,7 +17,7 @@ export async function listVerifiedCompanyRegistrySources(): Promise<CompanyRegis
   const { data, error } = await client
     .from("company_registry_sources")
     .select(
-      "id,country_code,country_name_it,country_name_local,eu_member_state,official_register_name,official_register_url,official_information_url,search_mode,search_url_template,api_adapter_key,access_type,document_access,terms_status,last_verified_at,status,notes",
+      "id,country_code,country_name_it,country_name_local,eu_member_state,official_register_name,official_register_url,official_register_host,official_information_url,official_information_host,search_mode,search_url_template,api_adapter_key,access_type,document_access,terms_status,last_verified_at,status,notes",
     )
     .eq("status", "VERIFIED")
     .eq("eu_member_state", true)
