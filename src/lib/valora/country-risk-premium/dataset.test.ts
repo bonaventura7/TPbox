@@ -31,7 +31,7 @@ describe("Country Risk Premium dataset", () => {
     expect(COUNTRY_RISK_PREMIUM_MANIFEST.sourceSnapshotVerified).toBe(false);
   });
 
-  it("accepts a valid record only with complete source metadata", () => {
+  it("requires a verified source snapshot before a record can be VERIFIED", () => {
     const report = validateCountryRiskPremiumDataset([validRecord]);
     expect(report.valid).toBe(false);
     expect(report.findings.some((finding) => finding.code === "VERIFIED_RECORD_WITHOUT_SNAPSHOT")).toBe(
@@ -52,7 +52,7 @@ describe("Country Risk Premium dataset", () => {
       adjustedDefaultSpreadBp: Number.NaN,
     };
     const report = validateCountryRiskPremiumDataset([invalid]);
-    expect(report.findings.map((finding) => finding.code)).toContain("INVALID_CRp");
+    expect(report.findings.map((finding) => finding.code)).toContain("INVALID_CRP");
     expect(report.findings.map((finding) => finding.code)).toContain("INVALID_SPREAD");
   });
 
@@ -65,7 +65,12 @@ describe("Country Risk Premium dataset", () => {
   it("searches country names case- and accent-insensitively", () => {
     const records = [
       validRecord,
-      { ...validRecord, countryCode: "CI", countryNameIt: "Costa d'Avorio", countryNameSource: "Côte d'Ivoire" },
+      {
+        ...validRecord,
+        countryCode: "CI",
+        countryNameIt: "Costa d'Avorio",
+        countryNameSource: "Côte d'Ivoire",
+      },
     ];
     expect(searchCountryRiskPremiums("COTE", records)).toHaveLength(1);
     expect(searchCountryRiskPremiums("costa", records)).toHaveLength(1);
