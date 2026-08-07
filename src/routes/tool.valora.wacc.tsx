@@ -1,17 +1,16 @@
 /**
- * Valora Suite — modulo WACC. Calcolo puro su input dimostrativi.
+ * Valora Suite — scheda informativa del modulo WACC.
+ * Pagina di sola lettura: nessun form, nessun calcolo, nessun valore dimostrativo.
  */
 
 import { Link, createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
-import { AlertTriangle, ArrowLeft, ExternalLink } from "lucide-react";
+import { ArrowLeft, ExternalLink, Info } from "lucide-react";
 
 import { getItem, getSource } from "../lib/valora/catalog";
-import { computeWacc, formatBp, formatMilli, type WaccInput } from "../lib/valora/wacc";
 
-const TITLE = "WACC — costo medio ponderato del capitale | Valora Suite";
+const TITLE = "WACC — scheda di catalogo in validazione | Valora Suite";
 const DESCRIPTION =
-  "Calcolo dimostrativo del WACC: costo dell'equity, costo del debito netto d'imposta e pesi della struttura finanziaria, con catena formula → dataset → fonte → versione.";
+  "Scheda informativa del modulo WACC: perimetro metodologico, fonte primaria, versione e stato di verifica. Il modulo non è operativo e non produce risultati.";
 
 export const Route = createFileRoute("/tool/valora/wacc")({
   head: () => ({
@@ -20,73 +19,19 @@ export const Route = createFileRoute("/tool/valora/wacc")({
       { name: "description", content: DESCRIPTION },
       { property: "og:title", content: TITLE },
       { property: "og:description", content: DESCRIPTION },
-      { property: "og:type", content: "website" },
+      { property: "og:type", content: "article" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  component: WaccModule,
+  component: WaccInfoPage,
 });
 
-interface FieldSpec {
-  readonly key: keyof WaccInput;
-  readonly label: string;
-  readonly hint: string;
-}
-
-const FIELDS: readonly FieldSpec[] = [
-  { key: "riskFreeBp", label: "Tasso privo di rischio (bp)", hint: "100 bp = 1,00%" },
-  {
-    key: "equityRiskPremiumBp",
-    label: "Equity risk premium (bp)",
-    hint: "Premio per il rischio azionario",
-  },
-  {
-    key: "countryRiskPremiumBp",
-    label: "Country risk premium (bp)",
-    hint: "Componente additiva di rischio paese",
-  },
-  { key: "betaUnleveredMilli", label: "Beta unlevered (millesimi)", hint: "1000 = 1,00" },
-  { key: "creditSpreadBp", label: "Credit spread (bp)", hint: "Spread sul costo del debito" },
-  { key: "taxRateBp", label: "Aliquota fiscale (bp)", hint: "2400 = 24,00%" },
-  { key: "debt", label: "Debito finanziario", hint: "Unità monetarie" },
-  { key: "equity", label: "Patrimonio netto", hint: "Unità monetarie" },
-] as const;
-
-const DEMO_INPUT: WaccInput = {
-  riskFreeBp: 350,
-  equityRiskPremiumBp: 550,
-  countryRiskPremiumBp: 150,
-  betaUnleveredMilli: 900,
-  creditSpreadBp: 200,
-  taxRateBp: 2400,
-  debt: 400,
-  equity: 600,
-};
-
-function WaccModule() {
-  const [form, setForm] = useState<Record<keyof WaccInput, string>>(() => ({
-    riskFreeBp: String(DEMO_INPUT.riskFreeBp),
-    equityRiskPremiumBp: String(DEMO_INPUT.equityRiskPremiumBp),
-    countryRiskPremiumBp: String(DEMO_INPUT.countryRiskPremiumBp),
-    betaUnleveredMilli: String(DEMO_INPUT.betaUnleveredMilli),
-    creditSpreadBp: String(DEMO_INPUT.creditSpreadBp),
-    taxRateBp: String(DEMO_INPUT.taxRateBp),
-    debt: String(DEMO_INPUT.debt),
-    equity: String(DEMO_INPUT.equity),
-  }));
-
-  const outcome = useMemo(() => {
-    const parsed = Object.fromEntries(
-      Object.entries(form).map(([key, value]) => [key, Number(value.replace(",", "."))]),
-    ) as unknown as WaccInput;
-    return computeWacc(parsed);
-  }, [form]);
-
+function WaccInfoPage() {
   const item = getItem("valora-wacc");
   const source = item ? getSource(item.sourceId) : null;
 
   return (
-    <div className="container mx-auto max-w-4xl px-4 py-8">
+    <div className="container mx-auto max-w-3xl px-4 py-8">
       <Link
         to="/tool/valora"
         className="inline-flex items-center gap-1 text-sm text-petrol underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -98,89 +43,33 @@ function WaccModule() {
       <h1 className="mt-3 font-serif text-3xl tracking-tight">
         WACC — costo medio ponderato del capitale
       </h1>
-      <p className="mt-2 max-w-2xl text-muted-foreground">
-        Composizione del costo del capitale a partire dalle sue componenti. Gli importi sono
-        espressi in punti base per evitare errori di arrotondamento.
-      </p>
 
       <div className="mt-4 flex flex-wrap gap-2 text-xs">
-        <span className="rounded-full border border-gold bg-gold/10 px-2.5 py-1 font-medium text-gold-foreground">
-          DEMO
+        <span className="rounded-full border border-border px-2.5 py-1 text-muted-foreground">
+          In validazione
         </span>
         <span className="rounded-full border border-border px-2.5 py-1 text-muted-foreground">
-          Modello {item?.version ?? "non dichiarato"}
+          Modulo non operativo
         </span>
-        {item?.checksum ? (
-          <span className="rounded-full border border-border px-2.5 py-1 text-muted-foreground">
-            Checksum {item.checksum}
-          </span>
-        ) : null}
       </div>
 
-      <form
-        className="mt-8 grid gap-4 rounded-lg border border-rule bg-card p-5 sm:grid-cols-2"
-        onSubmit={(event) => event.preventDefault()}
-      >
-        {FIELDS.map((field) => (
-          <div key={field.key} className="min-w-0">
-            <label className="block text-sm font-medium" htmlFor={`wacc-${field.key}`}>
-              {field.label}
-            </label>
-            <input
-              id={`wacc-${field.key}`}
-              type="number"
-              inputMode="decimal"
-              min={0}
-              value={form[field.key]}
-              placeholder="0…"
-              onChange={(event) =>
-                setForm((prev) => ({ ...prev, [field.key]: event.target.value }))
-              }
-              className="mt-1 w-full min-w-0 rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            />
-            <p className="mt-1 text-xs text-muted-foreground">{field.hint}</p>
-          </div>
-        ))}
-      </form>
+      <p className="mt-5 flex items-start gap-2 rounded-lg border border-rule bg-muted/40 p-4 text-sm">
+        <Info className="mt-0.5 h-4 w-4 shrink-0 text-petrol" aria-hidden="true" />
+        <span className="min-w-0">
+          Questa pagina descrive soltanto il perimetro metodologico del modulo. Non è disponibile
+          alcun calcolo, alcun input e alcun risultato: la scheda resta informativa fino al
+          completamento della validazione metodologica e documentale.
+        </span>
+      </p>
 
-      <section aria-labelledby="risultato" className="mt-10">
-        <h2 id="risultato" className="font-serif text-2xl">
-          Risultato
+      <section aria-labelledby="perimetro" className="mt-10">
+        <h2 id="perimetro" className="font-serif text-2xl">
+          Perimetro metodologico
         </h2>
-        <div aria-live="polite" className="mt-4">
-          {outcome.status === "blocked" ? (
-            <p className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/5 p-4 text-sm">
-              <AlertTriangle
-                className="mt-0.5 h-4 w-4 shrink-0 text-destructive"
-                aria-hidden="true"
-              />
-              <span className="min-w-0">{outcome.message}</span>
-            </p>
-          ) : (
-            <div className="rounded-lg border border-rule bg-card p-5">
-              <p className="text-sm text-muted-foreground">WACC</p>
-              <p className="font-serif text-4xl">{formatBp(outcome.waccBp)}</p>
-              <dl className="mt-5 grid gap-3 sm:grid-cols-2">
-                {outcome.steps.map((step) => (
-                  <div key={step.label} className="min-w-0 rounded-md border border-border p-3">
-                    <dt className="text-xs text-muted-foreground">{step.label}</dt>
-                    <dd className="mt-1 font-serif text-lg">{step.value}</dd>
-                  </div>
-                ))}
-              </dl>
-              <p className="mt-4 text-xs text-muted-foreground">
-                Beta levered impiegato: {formatMilli(outcome.betaLeveredMilli)} · modello{" "}
-                {outcome.modelVersion}
-              </p>
-            </div>
-          )}
-        </div>
-      </section>
-
-      <section aria-labelledby="derivazione" className="mt-12">
-        <h2 id="derivazione" className="font-serif text-2xl">
-          Formula, dataset, fonte, versione
-        </h2>
+        <p className="mt-2 text-muted-foreground">
+          {item?.description ??
+            "Descrizione non disponibile: la scheda non è presente nel catalogo."}
+        </p>
         <ol className="mt-4 space-y-3">
           {(item?.formulaChain ?? []).map((formula, index) => (
             <li key={formula} className="min-w-0 rounded-lg border border-rule bg-card p-4 text-sm">
@@ -189,46 +78,64 @@ function WaccModule() {
             </li>
           ))}
         </ol>
-        <div className="mt-4 rounded-lg border border-rule bg-muted/40 p-4 text-sm">
-          <p>
-            <span className="text-muted-foreground">Dataset:</span> valori dimostrativi sintetici,
-            versione {item?.version ?? "non dichiarata"}.
-          </p>
-          <p className="mt-1 break-words">
-            <span className="text-muted-foreground">Fonte primaria:</span>{" "}
-            {source?.primarySourceName ?? "non disponibile"} · data o versione{" "}
-            {source?.sourceDateOrVersion ?? "non disponibile"} · ultima verifica{" "}
-            {source?.lastVerifiedAt ?? "non disponibile"}.
-          </p>
+        <p className="mt-3 text-xs text-muted-foreground">
+          Le relazioni sono riportate in forma simbolica a scopo documentale: nessun parametro è
+          precompilato e nessun valore viene elaborato.
+        </p>
+      </section>
+
+      <section aria-labelledby="provenienza" className="mt-12">
+        <h2 id="provenienza" className="font-serif text-2xl">
+          Provenienza e stato di verifica
+        </h2>
+        <dl className="mt-4 space-y-2 rounded-lg border border-rule bg-card p-4 text-sm">
+          <div className="flex flex-wrap gap-x-2">
+            <dt className="text-muted-foreground">Fonte primaria:</dt>
+            <dd className="min-w-0 break-words">
+              {source?.primarySourceName ?? "non disponibile"}
+            </dd>
+          </div>
+          <div className="flex flex-wrap gap-x-2">
+            <dt className="text-muted-foreground">Data o versione della fonte:</dt>
+            <dd className="min-w-0">{source?.sourceDateOrVersion ?? "non disponibile"}</dd>
+          </div>
+          <div className="flex flex-wrap gap-x-2">
+            <dt className="text-muted-foreground">Ultima verifica:</dt>
+            <dd className="min-w-0">{source?.lastVerifiedAt ?? "non disponibile"}</dd>
+          </div>
+          <div className="flex flex-wrap gap-x-2">
+            <dt className="text-muted-foreground">Versione del modulo:</dt>
+            <dd className="min-w-0">{item?.version ?? "non dichiarata"}</dd>
+          </div>
           {source ? (
             <>
-              <p className="mt-1 break-words">
-                <span className="text-muted-foreground">Limiti d&apos;uso:</span>{" "}
-                {source.limitations}
-              </p>
-              <p className="mt-1 break-words text-xs text-muted-foreground">
-                {source.professionalNotice}
-              </p>
+              <div className="flex flex-wrap gap-x-2">
+                <dt className="text-muted-foreground">Uso consentito:</dt>
+                <dd className="min-w-0 break-words">{source.permittedUse}</dd>
+              </div>
+              <div className="flex flex-wrap gap-x-2">
+                <dt className="text-muted-foreground">Limiti d&apos;uso:</dt>
+                <dd className="min-w-0 break-words">{source.limitations}</dd>
+              </div>
             </>
           ) : null}
-          {source ? (
-            <a
-              href={source.canonicalUrl}
-              target="_blank"
-              rel="noreferrer noopener external"
-              className="mt-2 inline-flex items-center gap-1 break-all text-petrol underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              URL canonico della fonte primaria
-              <ExternalLink className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-            </a>
-          ) : null}
-        </div>
+        </dl>
+        {source ? (
+          <a
+            href={source.canonicalUrl}
+            target="_blank"
+            rel="noreferrer noopener external"
+            className="mt-3 inline-flex items-center gap-1 break-all text-sm text-petrol underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            URL canonico della fonte primaria
+            <ExternalLink className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+          </a>
+        ) : null}
       </section>
 
       <p className="mt-12 rounded-lg border border-rule bg-muted/40 p-4 text-xs text-muted-foreground">
-        Il risultato è ottenuto da valori sintetici a scopo dimostrativo e non costituisce
-        consulenza fiscale, finanziaria o di valutazione. Prima di qualsiasi impiego professionale,
-        parametri e fonti vanno verificati e approvati da un professionista.
+        {source?.professionalNotice ??
+          "Riferimento informativo: i contenuti non costituiscono consulenza fiscale, finanziaria o di valutazione e vanno verificati da un professionista."}
       </p>
     </div>
   );
