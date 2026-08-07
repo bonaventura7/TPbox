@@ -12,14 +12,25 @@ export function validateCompanyQuery(query: string): boolean {
   return query.trim().length >= 3 && query.trim().length <= 160;
 }
 
+function hostnameMatches(urlValue: string, expectedHost: string): boolean {
+  try {
+    const url = new URL(urlValue);
+    return url.protocol === "https:" && url.hostname.toLowerCase() === expectedHost.toLowerCase();
+  } catch {
+    return false;
+  }
+}
+
 export function validateVerifiedSource(source: CompanyRegistrySource): string[] {
   const errors: string[] = [];
   if (!validateCountryCode(source.country_code)) errors.push("INVALID_COUNTRY");
   if (!source.eu_member_state) errors.push("NOT_EU_MEMBER");
   if (source.status !== "VERIFIED") errors.push("NOT_VERIFIED");
-  if (!/^https:\/\//.test(source.official_register_url)) errors.push("REGISTER_URL_NOT_HTTPS");
-  if (!/^https:\/\//.test(source.official_information_url)) errors.push("INFO_URL_NOT_HTTPS");
+  if (!hostnameMatches(source.official_register_url, source.official_register_host)) errors.push("REGISTER_HOST_MISMATCH");
+  if (!hostnameMatches(source.official_information_url, source.official_information_host)) errors.push("INFO_HOST_MISMATCH");
   if (!source.official_register_name.trim()) errors.push("MISSING_REGISTER_NAME");
+  if (!source.official_register_host.trim()) errors.push("MISSING_REGISTER_HOST");
+  if (!source.official_information_host.trim()) errors.push("MISSING_INFO_HOST");
   return errors;
 }
 
