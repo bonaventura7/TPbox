@@ -49,10 +49,40 @@ describe("company registry validation", () => {
     expect(validateCompanyQuery("a".repeat(161))).toBe(false);
   });
 
-  it("requires verified HTTPS official sources and matching hosts", () => {
+  it("accepts an HTTPS URL whose host is curated for the country", () => {
     expect(validateVerifiedSource(verifiedSource)).toEqual([]);
-    expect(validateVerifiedSource({ ...verifiedSource, official_register_url: "http://italianbusinessregister.it" })).toContain("REGISTER_HOST_MISMATCH");
-    expect(validateVerifiedSource({ ...verifiedSource, official_register_host: "example.com" })).toContain("REGISTER_HOST_MISMATCH");
+  });
+
+  it("rejects non-HTTPS and declared-host mismatches", () => {
+    expect(
+      validateVerifiedSource({ ...verifiedSource, official_register_url: "http://italianbusinessregister.it" }),
+    ).toContain("REGISTER_HOST_MISMATCH");
+    expect(
+      validateVerifiedSource({ ...verifiedSource, official_register_host: "example.com" }),
+    ).toContain("REGISTER_HOST_MISMATCH");
+  });
+
+  it("rejects a host not present in the curated allowlist", () => {
+    expect(
+      validateVerifiedSource({
+        ...verifiedSource,
+        official_register_url: "https://example.com/register",
+        official_register_host: "example.com",
+      }),
+    ).toContain("REGISTER_HOST_NOT_ALLOWED");
+  });
+
+  it("rejects a valid host when it belongs to a different country", () => {
+    expect(
+      validateVerifiedSource({
+        ...verifiedSource,
+        official_register_url: "https://www.handelsregister.de/rp_web/welcome.do",
+        official_register_host: "www.handelsregister.de",
+      }),
+    ).toContain("REGISTER_HOST_NOT_ALLOWED");
+  });
+
+  it("rejects sources that are not verified", () => {
     expect(validateVerifiedSource({ ...verifiedSource, status: "UNDER_REVIEW" })).toContain("NOT_VERIFIED");
   });
 
