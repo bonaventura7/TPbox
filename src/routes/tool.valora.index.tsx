@@ -393,10 +393,10 @@ function ValoraDashboard() {
       </section>
 
       <p className="mt-14 rounded-lg border border-rule bg-muted/40 p-4 text-xs text-muted-foreground">
-        Tutti i valori numerici presenti nei moduli Valora sono sintetici e hanno finalità
-        dimostrativa: non provengono da alcuna fonte esterna e non costituiscono consulenza fiscale
-        o finanziaria. Le sole provenienze esposte sono fonti primarie e istituzionali, citate con
-        URL canonico, data o versione e limiti d&apos;uso.
+        Il catalogo è statico e informativo: le schede non eseguono calcoli, non producono
+        risultati e non costituiscono consulenza fiscale o finanziaria. Le sole provenienze esposte
+        sono fonti primarie e istituzionali, citate con URL canonico, data o versione e limiti
+        d&apos;uso.
       </p>
     </div>
   );
