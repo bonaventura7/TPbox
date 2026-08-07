@@ -1,7 +1,7 @@
 /**
  * Catalogo Valora Suite: tool, dataset e risorse con i relativi metadati di fonte.
- * I valori numerici usati dai moduli sono sintetici e marcati DEMO: nessun dato
- * viene letto dalle fonti a runtime, né dal browser né dal server.
+ * Il catalogo è statico e di sola lettura: nessun dato viene letto dalle fonti a
+ * runtime, né dal browser né dal server, e nessun modulo esegue calcoli.
  */
 
 import type {
@@ -34,11 +34,8 @@ export const VALORA_SOURCE_STATUSES: readonly SourceStatus[] = [
   "UNAVAILABLE",
 ] as const;
 
-/** Rotte Valora effettivamente esistenti: usate per validare i percorsi del catalogo. */
-export const VALORA_KNOWN_ROUTES: readonly string[] = [
-  "/tool/valora",
-  "/tool/valora/wacc",
-] as const;
+/** Prefisso ammesso per i percorsi interni dichiarati dal catalogo. */
+export const VALORA_ROUTE_PREFIX = "/tool/valora";
 
 const PROFESSIONAL_NOTICE =
   "Riferimento informativo: i contenuti non costituiscono consulenza fiscale, finanziaria o di valutazione e vanno verificati da un professionista.";
@@ -124,12 +121,12 @@ const ITEMS: readonly ValoraItem[] = [
     title: "WACC — costo medio ponderato del capitale",
     description:
       "Composizione del costo del capitale a partire da costo dell'equity, costo del debito e struttura finanziaria, con la catena di derivazione in chiaro.",
-    status: "DEMO",
+    status: "PLANNED",
     mode: "demo",
     route: "/tool/valora/wacc",
     sourceId: "src-methodology",
-    version: "wacc-model.v1",
-    checksum: "wacc-v1-3f9c2a",
+    version: null,
+    checksum: null,
     lastVerifiedAt: "2026-07-15",
     formulaChain: [
       "WACC = E/(D+E) × Ke + D/(D+E) × Kd × (1 − t)",
@@ -259,7 +256,7 @@ export const STATUS_LABEL: Record<ValoraItem["status"], string> = {
   DEMO: "dimostrativo",
   STALE: "da verificare",
   UNAVAILABLE: "non disponibile",
-  PLANNED: "in sviluppo",
+  PLANNED: "in validazione",
 };
 
 /** Filtro puro sul catalogo: usato dalla dashboard e dai test. */

@@ -1,19 +1,10 @@
 /**
- * Repository mock del catalogo Valora.
- * Sostituibile da un adapter Supabase senza toccare la UI. Nessuna scrittura,
- * nessuna pubblicazione automatica.
+ * Vista di sola lettura sullo stato delle fonti del catalogo statico.
+ * Nessuna scrittura, nessuna rete, nessuna pubblicazione automatica.
  */
 
 import { valoraCatalog } from "./catalog";
-import { inspectCatalog } from "./validator";
-import type {
-  QualityFinding,
-  SourceCheckRow,
-  SourceRegistryRow,
-  SourceStatus,
-  SourceVersionRow,
-  ValoraCatalogRepository,
-} from "./types";
+import type { SourceStatus } from "./types";
 
 export type SourceHealth = "OK" | "STALE" | "UNAVAILABLE";
 
@@ -53,53 +44,7 @@ export function sourceStatusViews(): readonly SourceStatusView[] {
       note:
         health === "OK"
           ? "Metadati verificati manualmente: nessuna acquisizione automatica attiva."
-          : "Verifica non registrata: la fonte è trattata come da verificare e non alimenta alcun calcolo.",
+          : "Verifica non registrata: la fonte è trattata come da verificare e non alimenta alcun contenuto.",
     };
   });
 }
-
-export const mockValoraCatalogRepository: ValoraCatalogRepository = {
-  async listSources(): Promise<readonly SourceRegistryRow[]> {
-    return valoraCatalog.sources.map((source) => ({
-      id: source.id,
-      primary_source_name: source.primarySourceName,
-      canonical_url: source.canonicalUrl,
-      source_date_or_version: source.sourceDateOrVersion,
-      last_verified_at: source.lastVerifiedAt,
-      acquisition_mode: "DISABLED",
-      status: source.status,
-      created_at: `${valoraCatalog.generatedAt}T00:00:00Z`,
-    }));
-  },
-
-  async listVersions(sourceId: string): Promise<readonly SourceVersionRow[]> {
-    return valoraCatalog.items
-      .filter((item) => item.sourceId === sourceId && item.version !== null)
-      .map((item) => ({
-        id: `${item.id}-version`,
-        source_id: sourceId,
-        version: item.version as string,
-        checksum: item.checksum,
-        data_date: item.lastVerifiedAt,
-        created_at: `${valoraCatalog.generatedAt}T00:00:00Z`,
-      }));
-  },
-
-  async listChecks(sourceId: string): Promise<readonly SourceCheckRow[]> {
-    const view = sourceStatusViews().find((item) => item.sourceId === sourceId);
-    if (!view) return [];
-    return [
-      {
-        id: `${sourceId}-check`,
-        source_id: sourceId,
-        checked_at: `${valoraCatalog.generatedAt}T00:00:00Z`,
-        outcome: view.health,
-        correlation_id: `${sourceId}-seed`,
-      },
-    ];
-  },
-
-  async listFindings(): Promise<readonly QualityFinding[]> {
-    return inspectCatalog().findings;
-  },
-};
