@@ -16,12 +16,23 @@ dal server), nessun segreto, nessuna pubblicazione automatica.
 
 UI: `src/routes/tool.valora.index.tsx` (dashboard) e `src/routes/tool.valora.wacc.tsx`.
 
-## Dati
+## Primary source policy
 
-I valori numerici sono sintetici e marcati DEMO. La fonte Damodaran è citata come
-riferimento metodologico (attribuzione + URL ufficiale): nessuna copia, nessun
-iframe, nessuno scraping. Quando la verifica manuale manca, lo stato è `STALE` e
-il dato non alimenta alcun calcolo.
+Valora espone soltanto fonti primarie, autorevoli e tracciabili (organismi
+internazionali, istituzioni UE, autorità nazionali). Nessun prodotto, sito, brand
+o persona di terzi viene nominato, replicato o incorporato: né in UI, né nei dati
+demo, né nei commenti.
+
+Ogni fonte dichiara `primarySourceName`, `canonicalUrl` (HTTPS su allowlist),
+`sourceDateOrVersion`, `lastVerifiedAt`, `status`, `permittedUse`, `limitations`
+e `professionalNotice`. Quando una data non è disponibile la UI mostra
+"non disponibile": nessun valore viene stimato o inventato.
+
+La discovery secondaria esiste solo come nota interna (`VALORA_INTERNAL_DISCOVERY`,
+`exposed: false`, `feedsData: false`): non è esposta e non alimenta dati o calcoli.
+
+I valori numerici sono sintetici e marcati DEMO. Nessun iframe, scraping, fetch dal
+browser o pubblicazione automatica.
 
 ## Test
 
