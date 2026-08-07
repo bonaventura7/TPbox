@@ -55,7 +55,10 @@ describe("company registry validation", () => {
 
   it("rejects non-HTTPS and declared-host mismatches", () => {
     expect(
-      validateVerifiedSource({ ...verifiedSource, official_register_url: "http://italianbusinessregister.it" }),
+      validateVerifiedSource({
+        ...verifiedSource,
+        official_register_url: "http://italianbusinessregister.it",
+      }),
     ).toContain("REGISTER_HOST_MISMATCH");
     expect(
       validateVerifiedSource({ ...verifiedSource, official_register_host: "example.com" }),
@@ -83,10 +86,18 @@ describe("company registry validation", () => {
   });
 
   it("rejects sources that are not verified", () => {
-    expect(validateVerifiedSource({ ...verifiedSource, status: "UNDER_REVIEW" })).toContain("NOT_VERIFIED");
+    expect(validateVerifiedSource({ ...verifiedSource, status: "UNDER_REVIEW" })).toContain(
+      "NOT_VERIFIED",
+    );
   });
 
   it("detects duplicate country codes", () => {
-    expect(findDuplicateCountryCodes([{ country_code: "IT" }, { country_code: "DE" }, { country_code: "IT" }])).toEqual(["IT"]);
+    expect(
+      findDuplicateCountryCodes([
+        { country_code: "IT" },
+        { country_code: "DE" },
+        { country_code: "IT" },
+      ]),
+    ).toEqual(["IT"]);
   });
 });
