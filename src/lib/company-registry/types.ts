@@ -19,11 +19,7 @@ export type CompanyRegistryDocumentAccess =
   | "NOT_AVAILABLE"
   | "UNKNOWN";
 
-export type CompanyRegistryStatus =
-  | "VERIFIED"
-  | "UNDER_REVIEW"
-  | "UNAVAILABLE"
-  | "RETIRED";
+export type CompanyRegistryStatus = "VERIFIED" | "UNDER_REVIEW" | "UNAVAILABLE" | "RETIRED";
 
 export type CompanyRegistryTermsStatus = "VERIFIED" | "UNDER_REVIEW";
 
