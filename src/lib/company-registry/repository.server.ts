@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 
 import type { CompanyRegistrySource } from "./types";
+import { validateVerifiedSource } from "./validation";
 
 const url = process.env.SUPABASE_URL;
 const key = process.env.SUPABASE_PUBLISHABLE_KEY ?? process.env.SUPABASE_ANON_KEY;
@@ -24,5 +25,7 @@ export async function listVerifiedCompanyRegistrySources(): Promise<CompanyRegis
     .order("country_name_it", { ascending: true });
 
   if (error) throw new Error(`Company registry unavailable: ${error.message}`);
-  return data as CompanyRegistrySource[];
+
+  const sources = (data ?? []) as CompanyRegistrySource[];
+  return sources.filter((source) => validateVerifiedSource(source).length === 0);
 }
