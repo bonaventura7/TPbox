@@ -6,7 +6,7 @@
 
 import {
   VALORA_ALLOWED_HOSTS,
-  VALORA_KNOWN_ROUTES,
+  VALORA_ROUTE_PREFIX,
   VALORA_SOURCE_STATUSES,
   VALORA_VERIFICATION_MAX_AGE_DAYS,
   valoraCatalog,
@@ -37,6 +37,17 @@ export function daysSince(date: string, reference: string): number | null {
   const to = Date.parse(`${reference}T00:00:00Z`);
   if (Number.isNaN(from) || Number.isNaN(to)) return null;
   return Math.round((to - from) / MS_DAY);
+}
+
+/**
+ * Controllo positivo di forma sul percorso interno: la reale esistenza della
+ * rotta è garantita dal router generato e verificata da build e type-check.
+ */
+export function isValoraRoute(route: string): boolean {
+  return (
+    route === VALORA_ROUTE_PREFIX ||
+    (route.startsWith(`${VALORA_ROUTE_PREFIX}/`) && /^[a-z0-9/-]+$/.test(route))
+  );
 }
 
 function inspectSource(source: ValoraSource, referenceDate: string): QualityFinding[] {
@@ -194,12 +205,12 @@ function inspectItem(item: ValoraItem, catalog: ValoraCatalog): QualityFinding[]
     });
   }
 
-  if (item.route !== null && !VALORA_KNOWN_ROUTES.includes(item.route)) {
+  if (item.route !== null && !isValoraRoute(item.route)) {
     findings.push({
       ...subject,
       code: "ROUTE_UNKNOWN",
       severity: "ERROR",
-      message: `Il percorso dichiarato da "${item.title}" non corrisponde a una rotta esistente.`,
+      message: `Il percorso dichiarato da "${item.title}" non è un percorso interno Valora valido.`,
     });
   }
 
