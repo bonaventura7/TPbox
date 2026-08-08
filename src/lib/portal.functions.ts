@@ -27,13 +27,13 @@ const newsFiltersSchema = z.object({
 export const getNewsFeed = createServerFn({ method: "GET" })
   .inputValidator((data: unknown) => newsFiltersSchema.parse(data ?? {}))
   .handler(async ({ data }) => {
-    const { listNewsFeed } = await import("./repositories/news.repository.server");
-    return listNewsFeed(data);
+    const { getNewsRepo } = await import("./repositories/news.repo.server");
+    return getNewsRepo().getPublished(data);
   });
 
 export const getSources = createServerFn({ method: "GET" }).handler(async () => {
-  const { listSources } = await import("./repositories/news.repository.server");
-  return listSources();
+  const { getNewsRepo } = await import("./repositories/news.repo.server");
+  return getNewsRepo().getSources();
 });
 
 export const searchCompanies = createServerFn({ method: "POST" })
