@@ -67,12 +67,12 @@ function createPublicClient() {
   });
 }
 
-function applyFilters(
-  query: ReturnType<ReturnType<typeof createClient>["from"]>["select"] extends never
-    ? never
-    : any,
-  filters: NewsFilters,
-) {
+interface FilterableQuery<T> {
+  eq(column: string, value: string): T;
+  or(filter: string): T;
+}
+
+function applyFilters<T extends FilterableQuery<T>>(query: T, filters: NewsFilters): T {
   let q = query;
   if (filters.geo !== "TUTTE") q = q.eq("geo", filters.geo);
   if (filters.topic !== "TUTTI") q = q.eq("topic", filters.topic);
