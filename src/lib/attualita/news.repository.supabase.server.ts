@@ -1,5 +1,11 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import type { NewsFeedResult, NewsFilters, NewsItem, NewsSource, ServiceHealth } from "../domain/types";
+import type {
+  NewsFeedResult,
+  NewsFilters,
+  NewsItem,
+  NewsSource,
+  ServiceHealth,
+} from "../domain/types";
 import { mapPublishedNewsRow, type PublishedNewsRow } from "./newsAdapter";
 
 const STALE_AFTER_HOURS = 36;
@@ -9,12 +15,19 @@ function getSupabaseServerClient(): SupabaseClient {
   const url = process.env["SUPABASE_URL"];
   const serviceRoleKey = process.env["SUPABASE_SERVICE_ROLE_KEY"];
   if (!url || !serviceRoleKey) throw new Error("Supabase server configuration is missing");
-  return createClient(url, serviceRoleKey, { auth: { autoRefreshToken: false, persistSession: false } });
+  return createClient(url, serviceRoleKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
 }
 
 function matches(item: NewsItem, filters: NewsFilters): boolean {
   const q = filters.query.trim().toLowerCase();
-  if (q && !`${item.title} ${item.summary} ${item.sourceName} ${item.topic}`.toLowerCase().includes(q)) return false;
+  if (
+    q &&
+    !`${item.title} ${item.summary} ${item.sourceName} ${item.topic}`.toLowerCase().includes(q)
+  ) {
+    return false;
+  }
   if (filters.geo !== "TUTTE" && item.geo !== filters.geo) return false;
   if (filters.topic !== "TUTTI" && item.topic !== filters.topic) return false;
   if (filters.category !== "TUTTE" && item.category !== filters.category) return false;
@@ -35,14 +48,27 @@ export async function listNewsFeed(filters: NewsFilters): Promise<NewsFeedResult
   const now = new Date();
   const { data, error } = await client
     .from("v_news_published")
-    .select("id,it_title,it_summary,it_content,it_references,primary_source_url,source_name,category,country,status,published_at,fetched_at,disclaimer,needs_review,ai_metadata")
+    .select(
+      "id,it_title,it_summary,it_content,it_references,primary_source_url,source_name,category,country,status,published_at,fetched_at,disclaimer,needs_review,ai_metadata",
+    )
     .order("published_at", { ascending: false });
   if (error) throw new Error(`News feed unavailable: ${error.message}`);
 
   const items = (data ?? []).map((row) => mapPublishedNewsRow(row as NewsFeedRow));
   const filtered = items.filter((item) => matches(item, filters));
-  const isFiltering = Boolean(filters.query.trim() || filters.geo !== "TUTTE" || filters.topic !== "TUTTI" || filters.category !== "TUTTE" || filters.country.trim() || filters.institutionalOnly);
-  const lastPipelineRunAt = items.reduce<string | null>((latest, item) => (!latest || item.lastVerifiedAt > latest ? item.lastVerifiedAt : latest), null);
+  const isFiltering = Boolean(
+    filters.query.trim() ||
+      filters.geo !== "TUTTE" ||
+      filters.topic !== "TUTTI" ||
+      filters.category !== "TUTTE" ||
+      filters.country.trim() ||
+      filters.institutionalOnly,
+  );
+  const lastPipelineRunAt = items.reduce<string | null>(
+    (latest, item) =>
+      !latest || item.lastVerifiedAt > latest ? item.lastVerifiedAt : latest,
+    null,
+  );
 
   const { count: draftsPending, error: draftError } = await client
     .from("news_items")
