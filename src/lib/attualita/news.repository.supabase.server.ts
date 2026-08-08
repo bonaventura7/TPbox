@@ -6,8 +6,8 @@ const STALE_AFTER_HOURS = 36;
 type NewsFeedRow = PublishedNewsRow;
 
 function getSupabaseServerClient(): SupabaseClient {
-  const url = process.env.SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const url = process.env["SUPABASE_URL"];
+  const serviceRoleKey = process.env["SUPABASE_SERVICE_ROLE_KEY"];
   if (!url || !serviceRoleKey) throw new Error("Supabase server configuration is missing");
   return createClient(url, serviceRoleKey, { auth: { autoRefreshToken: false, persistSession: false } });
 }
