@@ -19,27 +19,113 @@ export type PublishedNewsRow = {
 };
 
 const COUNTRY_NAMES: Record<string, string> = {
-  AT: "Austria", BE: "Belgio", BG: "Bulgaria", HR: "Croazia", CY: "Cipro",
-  CZ: "Repubblica Ceca", DK: "Danimarca", EE: "Estonia", FI: "Finlandia",
-  FR: "Francia", DE: "Germania", GR: "Grecia", HU: "Ungheria", IE: "Irlanda",
-  IT: "Italia", LV: "Lettonia", LT: "Lituania", LU: "Lussemburgo", MT: "Malta",
-  NL: "Paesi Bassi", PL: "Polonia", PT: "Portogallo", RO: "Romania",
-  SK: "Slovacchia", SI: "Slovenia", ES: "Spagna", SE: "Svezia",
-  GB: "Regno Unito", UK: "Regno Unito", US: "Stati Uniti", IN: "India",
-  SG: "Singapore", CN: "Cina", JP: "Giappone", AU: "Australia", CA: "Canada",
+  AT: "Austria",
+  BE: "Belgio",
+  BG: "Bulgaria",
+  HR: "Croazia",
+  CY: "Cipro",
+  CZ: "Repubblica Ceca",
+  DK: "Danimarca",
+  EE: "Estonia",
+  FI: "Finlandia",
+  FR: "Francia",
+  DE: "Germania",
+  GR: "Grecia",
+  HU: "Ungheria",
+  IE: "Irlanda",
+  IT: "Italia",
+  LV: "Lettonia",
+  LT: "Lituania",
+  LU: "Lussemburgo",
+  MT: "Malta",
+  NL: "Paesi Bassi",
+  PL: "Polonia",
+  PT: "Portogallo",
+  RO: "Romania",
+  SK: "Slovacchia",
+  SI: "Slovenia",
+  ES: "Spagna",
+  SE: "Svezia",
+  GB: "Regno Unito",
+  UK: "Regno Unito",
+  US: "Stati Uniti",
+  IN: "India",
+  SG: "Singapore",
+  CN: "Cina",
+  JP: "Giappone",
+  AU: "Australia",
+  CA: "Canada",
 };
 
 const EU = new Set([
-  "AT", "BE", "BG", "HR", "CY", "CZ", "DK", "EE", "FI", "FR", "DE", "GR",
-  "HU", "IE", "IT", "LV", "LT", "LU", "MT", "NL", "PL", "PT", "RO", "SK",
-  "SI", "ES", "SE",
+  "AT",
+  "BE",
+  "BG",
+  "HR",
+  "CY",
+  "CZ",
+  "DK",
+  "EE",
+  "FI",
+  "FR",
+  "DE",
+  "GR",
+  "HU",
+  "IE",
+  "IT",
+  "LV",
+  "LT",
+  "LU",
+  "MT",
+  "NL",
+  "PL",
+  "PT",
+  "RO",
+  "SK",
+  "SI",
+  "ES",
+  "SE",
 ]);
 
 const OECD = new Set([
-  "AT", "AU", "BE", "CA", "CL", "CO", "CR", "CZ", "DK", "EE", "FI", "FR",
-  "DE", "GR", "HU", "IS", "IE", "IL", "IT", "JP", "KR", "LV", "LT", "LU",
-  "MX", "NL", "NZ", "NO", "PL", "PT", "SK", "SI", "ES", "SE", "CH", "TR",
-  "GB", "US",
+  "AT",
+  "AU",
+  "BE",
+  "CA",
+  "CL",
+  "CO",
+  "CR",
+  "CZ",
+  "DK",
+  "EE",
+  "FI",
+  "FR",
+  "DE",
+  "GR",
+  "HU",
+  "IS",
+  "IE",
+  "IL",
+  "IT",
+  "JP",
+  "KR",
+  "LV",
+  "LT",
+  "LU",
+  "MX",
+  "NL",
+  "NZ",
+  "NO",
+  "PL",
+  "PT",
+  "SK",
+  "SI",
+  "ES",
+  "SE",
+  "CH",
+  "TR",
+  "GB",
+  "US",
 ]);
 
 const TOPIC_HINTS: Array<[Topic, RegExp]> = [
@@ -52,10 +138,14 @@ const TOPIC_HINTS: Array<[Topic, RegExp]> = [
 
 function mapCategory(category: string): NewsCategory {
   switch (category) {
-    case "VAT": return "VAT";
-    case "P2": return "Pillar Two";
-    case "AA": return "Anti-Avoidance";
-    default: return "Transfer Pricing";
+    case "VAT":
+      return "VAT";
+    case "P2":
+      return "Pillar Two";
+    case "AA":
+      return "Anti-Avoidance";
+    default:
+      return "Transfer Pricing";
   }
 }
 
