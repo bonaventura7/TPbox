@@ -1,77 +1,68 @@
-# Lovable Project Plan
+# TPBox — Analisi tecnica stato Git e piano operativo (nessuna modifica)
 
-## Stato corrente
+## Stato verificato ora (sole letture)
 
-Progetto React + TypeScript + Vite + Bun, con shadcn/ui e TanStack Router.
+- Il repository di lavoro Lovable è su un branch di editing interno; il suo HEAD è
+  `716de58` ("feat(valora/wacc): rimuovi sezione 'Inquadramento metodologico della
+  fonte'"), coerente con il tuo `main = 716de581`.
+- Il remote `origin` di questo workspace **non è GitHub**: è lo storage Git interno della
+  piattaforma. Branch remoti presenti: `main` più backup automatici `lovable-backup-main-*`.
+- `feat/attualita-supabase-pipeline` **non esiste** in questo repository, né locale né remoto.
+- I commit `f352d113…` e `ba86d05a` **non sono raggiungibili** da qui: gli oggetti non
+  esistono nel repository di lavoro. Vivono solo nel tuo clone locale e/o su GitHub.
+- **Non esiste `.github/workflows/`** nel repo: nessun workflow di Quality Gate è definito
+  nel codice. Un gate ufficiale, se attivo, è configurato fuori dal repository
+  (branch protection lato GitHub) oppure non è ancora stato creato.
 
-## Strumenti implementati
+## Risposte alle quattro domande
 
-### Amount B – Pillar One (OECD)
+**(1) Cosa può fare Lovable direttamente su Git**
+- Può creare commit additivi sul proprio branch di editing, che la piattaforma propaga verso
+  il repository sincronizzato sul branch di default.
+- Non può: checkout, reset, rebase, force push, creare o cambiare branch arbitrari, aprire o
+  mergiare pull request, spostare `main` a mano, riscrivere la storia.
+- Non ha visibilità sui commit presenti solo nel tuo clone locale.
 
-**Route:** `/tool/amount-b`
+**(2) Portare il codice a `f352d11` senza compromettere la Golden Rule**
+- Non direttamente: `f352d11` non è presente qui, quindi né cherry-pick né fast-forward sono
+  possibili.
+- L'unica via equivalente è **riapplicare il delta come nuovo commit additivo** sopra
+  `716de58`, e solo se mi fornisci la patch (diff) o i file interessati. Il risultato sarebbe
+  tree-equivalente, non lo stesso SHA.
+- Raccomandazione: la strada canonica resta il `git push` del tuo `f352d11` sul branch
+  applicativo, perché è l'unica che preserva SHA deterministico e GitHub come source of truth.
 
-**Stato:** completato e operativo. Motore di calcolo, dataset versionati, golden test e
-interfaccia guidata.
+**(3) Verificare o innescare il Quality Gate GitHub**
+- No. Lovable non accede alle GitHub Actions del progetto, non legge i check runs e non può
+  rilanciare workflow. In più, nel repo non c'è alcun workflow: prima di parlare di "gate
+  ufficiale certificato" va deciso se il gate deve vivere come workflow versionato
+  (`.github/workflows/quality-gate.yml`) o solo come branch protection.
+- Ciò che posso fare è eseguire **gli stessi controlli in locale** (`typecheck`, `test`,
+  `build`, eslint sul perimetro) e riportare l'output reale come pre-gate, senza sostituire
+  la certificazione GitHub.
 
-- Dataset estratti dal workbook: 214 giurisdizioni per ciascuna data table (marzo 2024,
-  dicembre 2024, gennaio 2026), scala rating-NRA, matrice di pricing 5x3, fasce cap e
-  collar, 34 prodotti con relativo industry grouping. Ogni run registra versioni e
-  checksum.
-- Motore in `src/lib/amount-b/engine.ts`, funzioni pure, con i riferimenti alle celle
-  del workbook nei commenti.
-- 26 golden test: il campione Japan del workbook torna su tutti i valori intermedi.
-- Interfaccia: scheda dello strumento su `/tool/amount-b`, procedura guidata in cinque
-  passi su `/tool/amount-b/nuovo`, precompilata con il campione OCSE.
-- Corretti due errori della discovery: mancava la media dei saldi patrimoniali e il cap
-  della Section 5.2 era indicato come valore unico. Dettaglio in
-  `docs/amount-b-unresolved-rules.md`.
+**(4) Workaround sicuro senza toccare Supabase**
+Sì, e non richiede nessuna modifica a Supabase, che resta LOCKED:
+1. Tu esegui il push di `f352d11` sul branch applicativo e apri la PR: è l'azione che sblocca
+   il gate ufficiale e nessun altro attore può farla al tuo posto.
+2. In parallelo eseguo qui il pre-gate (`npm run typecheck`, `npm run test`, `npm run build`,
+   eslint sui soli file del delta) e ti riporto gli output reali, così sai in anticipo se il
+   gate passerà.
+3. Se il workflow di Quality Gate non esiste ancora, lo aggiungiamo come **unico commit
+   additivo** contenente solo `.github/workflows/quality-gate.yml`: nessun tocco a codice
+   applicativo, branch, database o deployment.
 
-**Documentazione:**
-- `src/lib/amount-b/README.md`
-- `docs/amount-b-ux-architecture.md`
-- `docs/amount-b-migration-plan.md`
-- `docs/amount-b-workbook-inventory.md`
-- `docs/amount-b-calculation-manifest.md`
-- `docs/amount-b-unresolved-rules.md`
-- `docs/amount-b-golden-test-cases.md`
+## Perimetro
 
-### BEPS MLI Database (OECD)
+- Nessuna modifica a codice, branch, database, deployment o configurazioni.
+- Supabase LOCKED: zero migrazioni, zero secret, zero cambi di schema.
+- GitHub resta source of truth: nessuna riscrittura di storia.
 
-**Route:** `/tool/beps-mli`
+## Cosa mi serve da te
 
-**Stato:** Phase 1 (Discovery e documentazione) in corso.
-
-**Obiettivo:** Integrare il BEPS MLI Matching Database OECD con UI migliorata, spiegazioni in italiano e branding coerente con il portale.
-
-**Documentazione:**
-- `docs/beps-mli-integration.md`
-
-**Roadmap:**
-- Phase 1: Discovery e design
-- Phase 2: Backend e dati
-- Phase 3: Frontend UI
-- Phase 4: Rifiniture
-
-### Altri tool
-
-### Ravvedimento spontaneo
-
-**Route:** `/tool/ravvedimento`
-
-**Stato:** Phase 2 implementata (engine + dataset versionati + UI).
-
-**Decisioni fissate:**
-- Convenzione giorni: giorno iniziale escluso, giorno di versamento incluso.
-- Divisore: giorni effettivi dell'anno civile (365/366).
-- Aritmetica in centesimi, arrotondamento per segmento e sul totale.
-- Copertura dataset tassi legali 1997–2025: fuori intervallo il calcolo è bloccato.
-- Nessuna maggiorazione 0,5% automatica; ruleset sanzionatorio versionato e marcato `unverified`.
-- Cause ostative → calcolo bloccato.
-
-- **Osservatorio Transfer Pricing:** https://f7dc1dde-25ee-4227-8806-f31498244695.lovableproject.com/
-- **Company Finder:** `/tool/company-finder`
-- **Portale interpelli:** `/normativa/portale-interpelli`
-
-## Altri task
-
-- Riorganizzazione sezioni "Normativa" e "Attualità²°" nel tool esistente
+Scegli una delle opzioni:
+- **A** — Solo pre-gate: eseguo typecheck, test, build e lint e riporto gli output reali.
+- **B** — Pre-gate più workflow: come A, con un singolo commit additivo che aggiunge
+  `.github/workflows/quality-gate.yml`.
+- **C** — Replica del delta: mi passi la patch di `f352d11` e la riapplico come commit
+  additivo tree-equivalente sopra `716de58`.
