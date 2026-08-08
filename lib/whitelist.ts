@@ -6,7 +6,12 @@ export const WHITELIST: Source[] = [
   {domain:'incometaxindia.gov.in',name:'CBDT India',country:'IN'},{domain:'gov.uk',name:'HMRC / UK Government',country:'UK'},
   {domain:'irs.gov',name:'IRS',country:'US'},{domain:'ato.gov.au',name:'ATO Australia',country:'AU'},
   {domain:'cra-arc.gc.ca',name:'CRA Canada',country:'CA'},{domain:'bfd.de',name:'Bundesfinanzdirektion',country:'DE'},
-  {domain:'finances.gouv.fr',name:'DGFiP France',country:'FR'}
+  {domain:'finances.gouv.fr',name:'DGFiP France',country:'FR'},
+  {domain:'finance.belgium.be',name:'Federal Public Service Finance',country:'BE'},
+  {domain:'bundesfinanzministerium.de',name:'Bundesministerium der Finanzen',country:'DE'},
+  {domain:'mof.gov.cy',name:'Tax Department Cipro',country:'CY'},
+  {domain:'hasil.gov.my',name:'Inland Revenue Board of Malaysia',country:'MY'},
+  {domain:'rijksoverheid.nl',name:'Ministerie van Financien',country:'NL'}
 ];
 export function extractDomain(url:string){try{return new URL(url).hostname.toLowerCase().replace(/^www\./,'')}catch{return ''}}
 export function findSource(domain:string){const d=domain.toLowerCase().replace(/^www\./,'');return WHITELIST.find(s=>d===s.domain||d.endsWith(`.${s.domain}`))??null}
