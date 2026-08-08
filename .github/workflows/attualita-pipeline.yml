@@ -2,33 +2,47 @@ name: Attualità pipeline
 
 on:
   schedule:
-    - cron: '0 */6 * * *'
-    - cron: '5 */6 * * *'
-    - cron: '0 */3 * * *'
+    - cron: '0 */6 * * *'   # scout + generate
+    - cron: '5 */6 * * *'   # publish
+    - cron: '0 */3 * * *'   # monitor
   workflow_dispatch:
 
 jobs:
-  pipeline:
+  scout-generate:
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '0 */6 * * *'
     runs-on: ubuntu-latest
     steps:
-      - name: Decide job
-        id: route
+      - name: Scout
+        env: { SUPABASE_URL: ${{ secrets.SUPABASE_URL }}, SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }} }
         run: |
-          H=$(date -u +%H)
-          M=$(date -u +%M)
-          if [ "$M" = "00" ]; then echo "fn=news-scout" >> "$GITHUB_OUTPUT"; echo "next=news-generate" >> "$GITHUB_OUTPUT";
-          elif [ "$M" = "05" ]; then echo "fn=news-publish" >> "$GITHUB_OUTPUT"; echo "next=news-publish" >> "$GITHUB_OUTPUT";
-          else echo "fn=news-monitor" >> "$GITHUB_OUTPUT"; echo "next=news-monitor" >> "$GITHUB_OUTPUT"; fi
-      - name: Invoke Edge Function
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          curl --fail-with-body --silent --show-error --max-time 120 -X POST \
+            -H "Authorization: Bearer $SERVICE_KEY" -H "apikey: $SERVICE_KEY" \
+            "$SUPABASE_URL/functions/v1/news-scout"
+      - name: Generate drafts
+        env: { SUPABASE_URL: ${{ secrets.SUPABASE_URL }}, SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }} }
         run: |
-          test -n "$SUPABASE_URL"
-          test -n "$SUPABASE_SERVICE_ROLE_KEY"
-          curl --fail-with-body --silent --show-error --max-time 120 \
-            -X POST \
-            -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
-            -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
-            -H "Content-Type: application/json" \
-            "$SUPABASE_URL/functions/v1/${{ steps.route.outputs.fn }}"
+          curl --fail-with-body --silent --show-error --max-time 180 -X POST \
+            -H "Authorization: Bearer $SERVICE_KEY" -H "apikey: $SERVICE_KEY" \
+            "$SUPABASE_URL/functions/v1/news-generate"
+
+  publish:
+    if: github.event_name == 'schedule' && github.event.schedule == '5 */6 * * *'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Publish gated drafts
+        env: { SUPABASE_URL: ${{ secrets.SUPABASE_URL }}, SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }} }
+        run: |
+          curl --fail-with-body --silent --show-error --max-time 180 -X POST \
+            -H "Authorization: Bearer $SERVICE_KEY" -H "apikey: $SERVICE_KEY" \
+            "$SUPABASE_URL/functions/v1/news-publish"
+
+  monitor:
+    if: github.event_name == 'schedule' && github.event.schedule == '0 */3 * * *'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Monitor published sources
+        env: { SUPABASE_URL: ${{ secrets.SUPABASE_URL }}, SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }} }
+        run: |
+          curl --fail-with-body --silent --show-error --max-time 180 -X POST \
+            -H "Authorization: Bearer $SERVICE_KEY" -H "apikey: $SERVICE_KEY" \
+            "$SUPABASE_URL/functions/v1/news-monitor"
