@@ -1,98 +1,86 @@
-# TPBox — Integrazione Attualità, Biblioteca e Admin Monitor (piano additivo)
+# FASE 0 — Riallineamento controllato TPBox / Lovable (solo piano)
 
-## Blocco rilevato prima di ogni modifica: schema mismatch
+## Stato verificato ora (sole letture)
 
-Verificato ora con una query di sola lettura sul database del progetto:
-**lo schema `public` è completamente vuoto — zero tabelle e zero viste.**
+- Questo progetto Lovable è **Lovable Cloud–managed**: il backend collegato è il progetto
+  Supabase gestito dalla piattaforma con ref `ajrcfcxwslbbrallgnsy`.
+- `.env` (auto-generato, non editabile) contiene `VITE_SUPABASE_URL`,
+  `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_SUPABASE_PROJECT_ID`, tutti puntati a
+  `ajrcfcxwslbbrallgnsy`. Nessuna occorrenza di `igtthymjeujkgfpmgoqj` nel repository.
+- `supabase/config.toml` (auto-generato) riporta `project_id = "ajrcfcxwslbbrallgnsy"`.
+- Lo schema `public` del database attuale è vuoto: zero tabelle, zero viste.
+- Il codice non hardcoda mai un ref: legge solo variabili d'ambiente.
+  - Client: `src/integrations/supabase/client.ts` → `import.meta.env.VITE_SUPABASE_URL`
+    + `VITE_SUPABASE_PUBLISHABLE_KEY` (fallback SSR su `SUPABASE_URL` /
+    `SUPABASE_PUBLISHABLE_KEY`).
+  - Server: `src/integrations/supabase/client.server.ts` → `SUPABASE_URL` +
+    `SUPABASE_SERVICE_ROLE_KEY`; `auth-middleware.ts` → `SUPABASE_URL` +
+    `SUPABASE_PUBLISHABLE_KEY`.
+  - Unico altro consumatore: `src/lib/mcp/index.ts` costruisce l'issuer OAuth da
+    `VITE_SUPABASE_PROJECT_ID` — segue automaticamente il ref configurato.
 
-Conseguenze dirette:
-- `v_attualita` **non esiste**.
-- Non esiste alcuna tabella news/pipeline, quindi non esistono le colonne
-  `status`, `gate_result`, `flag_pending_review`, `published_at`, né uno stato `RETRACTED`.
-- Non esiste nessuna tabella per un ruolo redazionale (né `user_roles`).
-- Tutta l'Attualità attuale è servita dal mock server-side:
-  `src/lib/repositories/news.repository.server.ts` su `src/lib/domain/demo-data.ts`,
-  esposto via `getNewsFeed` in `src/lib/portal.functions.ts`, con filtro
-  "solo `PUBLISHED`" già applicato lato server e stato servizio OK/STALE/DEGRADED.
-- `NewsItem` ha già `pdfUrl?`, quindi la Biblioteca è realizzabile subito sui dati esistenti.
-- Non esiste `src/routes/_authenticated/`: il gate per l'area riservata va creato.
+## Il vincolo che decide tutto
 
-Poiché mi hai chiesto di mantenere **Supabase LOCKED**, il piano legge dal percorso
-esistente (published news query) dietro un unico punto di sostituzione, così l'aggancio a
-`v_attualita` diventa una modifica di poche righe quando la vista esisterà.
+Il prefisso `SUPABASE_*` è **riservato alla piattaforma**. Non posso scriverlo né
+sovrascriverlo dagli strumenti di progetto: non è possibile "reindirizzare" questo progetto
+verso `igtthymjeujkgfpmgoqj` scrivendo secret o modificando `.env` / `supabase/config.toml`
+(entrambi auto-generati e rigenerati). Inoltre, su un progetto già Cloud–managed il backend
+gestito non è rimovibile lato agente.
 
-## Cosa cambia per chi usa il portale
+Quindi il riallineamento al progetto canonico **è un'azione di configurazione che deve
+partire da te**, non un cambio di codice. Il lato positivo: il codice non richiede alcuna
+modifica, perché è già interamente env-driven.
 
-- **/attualita** — invariata nell'aspetto e nei filtri (ricerca, area, tema, categoria,
-  paese, solo fonti istituzionali, stati loading/empty/error/stale/degraded). Cambia solo
-  la provenienza dei dati, che passa da un lettore generico a un lettore dichiaratamente
-  "solo contenuti pubblicati".
-- **/biblioteca** — nuova pagina: elenco dei soli contenuti pubblicati che hanno un
-  documento PDF, con ricerca, filtro per area e per anno, e link al documento ufficiale.
-  Voce aggiunta al menu principale.
-- **/admin/monitor** — nuova area riservata, accessibile solo dopo l'accesso. Mostra per
-  ciascun elemento: stato, esito del controllo redazionale, indicatore di revisione
-  necessaria e data di pubblicazione. L'unica azione disponibile è il **ritiro** di un
-  contenuto pubblicato (PUBLISHED → RETRACTED). Nessuna cancellazione, nessuna
-  pubblicazione automatica.
+## Piano operativo
 
-## File e route esatti che toccherei
+### Passo 1 — Collegamento del progetto Supabase canonico (azione tua, in interfaccia)
+Nelle impostazioni del progetto Lovable, collega il progetto Supabase esistente
+`igtthymjeujkgfpmgoqj` tramite l'integrazione Supabase (autorizzazione dell'account che
+possiede quel progetto). Nessun nuovo progetto, nessun nuovo database.
 
-Nuovi:
-- `src/routes/biblioteca.tsx` — pagina Biblioteca con `head()` proprio.
-- `src/components/news/BibliotecaList.tsx` — elenco + filtri (ricerca, area, anno).
-- `src/routes/_authenticated/route.tsx` — gate `ssr: false` con redirect a `/auth`
-  (creato insieme al primo figlio, come richiesto dal router).
-- `src/routes/_authenticated/admin.monitor.tsx` — pannello monitor.
-- `src/components/admin/MonitorTable.tsx` — tabella stati + azione di ritiro.
-- `src/lib/attualita/published.ts` — tipi e mappatura del contratto di lettura pubblica
-  (il punto unico che verrà ripuntato su `v_attualita`).
-- `src/lib/attualita/monitor.functions.ts` — server functions protette:
-  `getMonitorRows` e `retractPublishedItem`, entrambe con `requireSupabaseAuth`.
+Se l'interfaccia non consente il collegamento perché il progetto è già Cloud–managed, la
+scelta è tra due sole strade, entrambe tue:
+- **A** — aprire una richiesta al supporto Lovable per rebindare questo progetto al ref
+  `igtthymjeujkgfpmgoqj` (percorso preferito: preserva repo, cronologia e URL pubblici);
+- **B** — creare un nuovo progetto Lovable collegato da subito a `igtthymjeujkgfpmgoqj` e
+  importarvi questo repository (nessun tocco al database canonico).
 
-Modificati:
-- `src/lib/portal.functions.ts` — aggiunte `getBibliotecaItems` e `getPublishedNewsFeed`
-  (wrapper espliciti "solo pubblicati"); nessuna firma esistente rimossa.
-- `src/lib/repositories/news.repository.server.ts` — aggiunti i lettori dedicati a
-  biblioteca e monitor, riusando il filtro `publishedOnly` già presente.
-- `src/lib/domain/types.ts` — aggiunti i tipi `MonitorRow`, `GateResult` e lo stato
-  `RETRACTED` accanto a quelli esistenti (additivo, nessuna rimozione).
-- `src/components/site/SiteHeader.tsx` — voce di menu `Biblioteca`.
-- `src/routes/attualita.index.tsx` e `src/routes/attualita.$area.tsx` — nessun cambio di
-  UI, solo passaggio al lettore "solo pubblicati".
+Non procedo su nessuna delle due senza tua indicazione esplicita.
 
-Non toccati: Amount B, Ravvedimento, Valora, Interpelli, PATENTSCOPE, Company Finder,
-`src/integrations/**`, `src/start.ts`, `supabase/**`.
+### Passo 2 — Verifica del binding (io, solo letture)
+Appena il collegamento è attivo eseguo, senza modificare nulla:
+1. lettura di `.env` e `supabase/config.toml` per confermare che `VITE_SUPABASE_URL`,
+   `VITE_SUPABASE_PROJECT_ID` e `project_id` riportino `igtthymjeujkgfpmgoqj`;
+2. controllo che il bundle client servito inlini l'URL `igtthymjeujkgfpmgoqj.supabase.co`
+   e nessun altro ref (grep sugli asset del build);
+3. query di sola lettura sul database collegato per confermare che vede lo schema reale
+   TP Box (elenco tabelle/viste non vuoto), quindi che non è più il database vuoto;
+4. verifica lato server che `SUPABASE_URL` risolva allo stesso ref, tramite una server
+   function di diagnostica temporanea **solo se la autorizzi**; altrimenti mi fermo alle
+   verifiche 1–3, che sono già sufficienti a dimostrare il puntamento del client;
+5. controllo che l'issuer OAuth MCP (`https://igtthymjeujkgfpmgoqj.supabase.co/auth/v1`)
+   sia coerente e che l'accesso da `/auth` funzioni contro il progetto canonico.
 
-## Regole editoriali e di sicurezza rispettate
+Criterio di accettazione: nessuna occorrenza residua di `ajrcfcxwslbbrallgnsy` in `.env`,
+`supabase/config.toml` e negli asset del build; schema non vuoto letto dal database
+collegato.
 
-- Lettura pubblica limitata ai soli elementi `PUBLISHED`; le bozze non escono mai.
-- Nessun riferimento a RegFollower, a provider esterni o a dettagli tecnici di
-  acquisizione nell'interfaccia.
-- Nessun secret nel frontend; nessun uso del client service-role; nessun `AUTO_PUBLISH`.
-- Rollback esclusivamente `PUBLISHED → RETRACTED`; nessun `DELETE` in nessun percorso.
-- Nessun fetch esterno dal browser; tutte le letture passano da server functions.
-- Nessun deploy, nessuna pubblicazione, nessuna migrazione in questa fase.
+### Passo 3 — Nessun cambio di codice necessario
+Confermato dalla lettura: nessun ref hardcodato, nessun secret nel frontend. Dopo il
+rebinding il codice funziona invariato. Se dopo il collegamento emergessero disallineamenti
+di schema rispetto a ciò che il frontend si aspetta (per esempio `v_attualita`), li riporto
+come diagnosi, senza scrivere migrazioni.
 
-## Note tecniche
+## Perimetro rispettato
 
-- Il monitor usa `createServerFn` + `requireSupabaseAuth`; il bearer è già attaccato da
-  `attachSupabaseAuth` registrato in `src/start.ts`, quindi non serve altro wiring.
-- Il monitor sta sotto `_authenticated/` con `ssr: false`: nessun gate su route pubbliche,
-  nessun loop di redirect al refresh.
-- Finché lo schema è vuoto, `getMonitorRows` e `retractPublishedItem` operano sul repository
-  esistente e il ritiro non è persistente tra sessioni: il pannello è pienamente funzionale
-  come interfaccia e diventa persistente quando la tabella/vista esisterà. Questo limite
-  sarà indicato in pagina in modo esplicito.
-- Accessibilità: HTML semantico, label esplicite, `aria-live` sugli esiti, focus visibile,
-  `Intl.*` con timezone `Europe/Rome`, nessuna `transition: all`.
-- Quality gate finale: `npm run typecheck`, `npm run test`, `npm run build`, ESLint sui soli
-  file toccati.
+- Nessun nuovo progetto o database.
+- Nessuna migrazione, nessun cambio di schema, nessun GRANT, nessuna RLS.
+- Nessun deploy di Edge Function, nessuna pubblicazione, nessun autopublish.
+- Nessun secret hardcodato, nessuna lettura o esposizione di service-role.
+- Nessuna modifica a codice, branch o configurazioni in questa fase.
 
-## Decisione che mi serve da te
+## Cosa mi serve da te
 
-Il punto bloccante è uno solo: il database è vuoto.
-- **A (predefinita, Supabase LOCKED)** — implemento le tre superfici sul percorso dati
-  attuale, con il seam pronto per `v_attualita`. Zero migrazioni.
-- **B** — prima definiamo insieme lo schema (tabella news + `v_attualita` + ruolo
-  redazionale + RLS/GRANT) e poi collego la UI ai dati reali. Richiede di sbloccare Supabase.
+1. Conferma quale strada segui al Passo 1: collegamento diretto, **A** (supporto) o **B**
+   (nuovo progetto Lovable collegato al ref canonico).
+2. Autorizzi il Passo 2 come sola verifica in lettura appena il binding è attivo?
