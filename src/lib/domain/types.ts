@@ -33,18 +33,10 @@ export type Topic =
   | "Contenzioso";
 export type Language = "it" | "en" | "fr";
 
-export const NEWS_CATEGORIES = [
-  "Transfer Pricing",
-  "VAT",
-  "Pillar Two",
-  "Anti-Avoidance",
-] as const;
+export const NEWS_CATEGORIES = ["Transfer Pricing", "VAT", "Pillar Two", "Anti-Avoidance"] as const;
 export type NewsCategory = (typeof NEWS_CATEGORIES)[number];
 
-export const CATEGORY_COLORS: Record<
-  NewsCategory,
-  { border: string; text: string; bg: string }
-> = {
+export const CATEGORY_COLORS: Record<NewsCategory, { border: string; text: string; bg: string }> = {
   "Transfer Pricing": {
     border: "border-teal-600/50",
     text: "text-teal-700",
@@ -79,13 +71,7 @@ export interface NewsSource {
   note: string;
 }
 
-export type SerializableValue =
-  | string
-  | number
-  | boolean
-  | null
-  | SerializableValue[]
-  | { [key: string]: SerializableValue };
+export type SerializableValue = string | number | boolean | null | SerializableValue[] | { [key: string]: SerializableValue };
 
 export interface NewsItem {
   id: string;
@@ -167,13 +153,7 @@ export interface FinancialYear {
   employees: number;
 }
 
-export type BilancioStatus =
-  | "OK"
-  | "NOT_AUTHORIZED"
-  | "PROVIDER_UNAVAILABLE"
-  | "RATE_LIMITED"
-  | "DEGRADED"
-  | "NOT_FOUND";
+export type BilancioStatus = "OK" | "NOT_AUTHORIZED" | "PROVIDER_UNAVAILABLE" | "RATE_LIMITED" | "DEGRADED" | "NOT_FOUND";
 
 export interface BilancioResult {
   correlationId: string;
