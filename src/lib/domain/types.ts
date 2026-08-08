@@ -71,7 +71,13 @@ export interface NewsSource {
   note: string;
 }
 
-export type SerializableValue = string | number | boolean | null | SerializableValue[] | { [key: string]: SerializableValue };
+export type SerializableValue =
+  | string
+  | number
+  | boolean
+  | null
+  | SerializableValue[]
+  | { [key: string]: SerializableValue };
 
 export interface NewsItem {
   id: string;
@@ -153,7 +159,13 @@ export interface FinancialYear {
   employees: number;
 }
 
-export type BilancioStatus = "OK" | "NOT_AUTHORIZED" | "PROVIDER_UNAVAILABLE" | "RATE_LIMITED" | "DEGRADED" | "NOT_FOUND";
+export type BilancioStatus =
+  | "OK"
+  | "NOT_AUTHORIZED"
+  | "PROVIDER_UNAVAILABLE"
+  | "RATE_LIMITED"
+  | "DEGRADED"
+  | "NOT_FOUND";
 
 export interface BilancioResult {
   correlationId: string;
