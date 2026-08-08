@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
-import type { NewsFilters, NewsItem } from "@/lib/domain/types";
+import type { NewsFeedResult, NewsFilters, NewsItem } from "@/lib/domain/types";
 import { NEWS_CATEGORIES } from "@/lib/domain/types";
 import { getNewsFeed } from "@/lib/portal.functions";
 
@@ -45,6 +45,59 @@ function groupByMonth(items: NewsItem[]): { label: string; items: NewsItem[] }[]
     else groups.set(label, [item]);
   }
   return [...groups.entries()].map(([label, group]) => ({ label, items: group }));
+}
+
+/**
+ * Stato del repository reale: nessun fallback silenzioso ai dati demo.
+ * Quando la sorgente reale non è disponibile la pagina lo dichiara in modo esplicito.
+ */
+function RepoStatusNotice({
+  repoKind,
+  repoStatus,
+  rejectedRows,
+  correlationId,
+  onRetry,
+}: {
+  repoKind: "MOCK" | "REAL";
+  repoStatus: NewsFeedResult["repoStatus"];
+  rejectedRows: number;
+  correlationId: string;
+  onRetry: () => void;
+}) {
+  if (repoKind !== "REAL" || repoStatus === "OK") return null;
+
+  if (repoStatus === "EMPTY") {
+    return (
+      <div role="status" className="mb-6 border border-dashed border-border bg-secondary/40 p-5">
+        <h2 className="font-serif text-xl">Nessun contenuto pubblicato</h2>
+        <p className="mt-2 text-sm text-muted-foreground">
+          L&apos;archivio reale non contiene ancora contenuti pubblicati. Non vengono mostrati
+          contenuti dimostrativi al loro posto.
+        </p>
+      </div>
+    );
+  }
+
+  const detail =
+    repoStatus === "SCHEMA_UNAVAILABLE"
+      ? "L'archivio reale non è ancora disponibile in lettura."
+      : repoStatus === "UNREACHABLE"
+        ? "L'archivio reale non è raggiungibile in questo momento."
+        : `Alcuni contenuti non rispettano il formato atteso e non vengono mostrati (${rejectedRows} elementi scartati).`;
+
+  return (
+    <div role="alert" className="mb-6 border-l-2 border-destructive bg-destructive/5 p-5">
+      <h2 className="font-serif text-xl">Contenuti reali non disponibili</h2>
+      <p className="mt-2 text-sm text-muted-foreground">
+        {detail} Nessun contenuto dimostrativo viene presentato come reale: la sostituzione
+        richiede una decisione esplicita.
+      </p>
+      <p className="mt-2 text-xs text-muted-foreground">Riferimento tecnico: {correlationId}</p>
+      <Button variant="outline" className="mt-4 min-h-11" onClick={onRetry}>
+        Riprova
+      </Button>
+    </div>
+  );
 }
 
 function ServiceNotice({
@@ -116,7 +169,18 @@ export function AttualitaFeed({
   return (
     <>
       <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
-        {data ? <ServiceNotice health={data.health} lastRunAt={data.lastPipelineRunAt} /> : null}
+        {data ? (
+          <RepoStatusNotice
+            repoKind={data.repoKind}
+            repoStatus={data.repoStatus}
+            rejectedRows={data.rejectedRows}
+            correlationId={data.correlationId}
+            onRetry={() => void refetch()}
+          />
+        ) : null}
+        {data && data.repoStatus === "OK" ? (
+          <ServiceNotice health={data.health} lastRunAt={data.lastPipelineRunAt} />
+        ) : null}
 
         <section aria-labelledby="ricerca" className="border border-border bg-card p-5 sm:p-6">
           <h2 id="ricerca" className="font-serif text-xl">
