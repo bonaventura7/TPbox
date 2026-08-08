@@ -1,0 +1,34 @@
+name: Attualità pipeline
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+    - cron: '5 */6 * * *'
+    - cron: '0 */3 * * *'
+  workflow_dispatch:
+
+jobs:
+  pipeline:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Decide job
+        id: route
+        run: |
+          H=$(date -u +%H)
+          M=$(date -u +%M)
+          if [ "$M" = "00" ]; then echo "fn=news-scout" >> "$GITHUB_OUTPUT"; echo "next=news-generate" >> "$GITHUB_OUTPUT";
+          elif [ "$M" = "05" ]; then echo "fn=news-publish" >> "$GITHUB_OUTPUT"; echo "next=news-publish" >> "$GITHUB_OUTPUT";
+          else echo "fn=news-monitor" >> "$GITHUB_OUTPUT"; echo "next=news-monitor" >> "$GITHUB_OUTPUT"; fi
+      - name: Invoke Edge Function
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          test -n "$SUPABASE_URL"
+          test -n "$SUPABASE_SERVICE_ROLE_KEY"
+          curl --fail-with-body --silent --show-error --max-time 120 \
+            -X POST \
+            -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+            -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+            -H "Content-Type: application/json" \
+            "$SUPABASE_URL/functions/v1/${{ steps.route.outputs.fn }}"
