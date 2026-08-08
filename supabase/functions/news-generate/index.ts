@@ -8,8 +8,53 @@ const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
 const CATEGORIES = ['TP', 'VAT', 'Pillar Two', 'Anti-Avoidance'];
 const CATEGORY_DB: Record<string, string> = { TP: 'TP', VAT: 'VAT', 'Pillar Two': 'P2', 'Anti-Avoidance': 'AA' };
 
+type AuthResult =
+  | { ok: true; userId: string; correlationId: string }
+  | { ok: false; response: Response };
+
 function slugify(s: string) { return s.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').slice(0, 70) + '-' + crypto.randomUUID().slice(0, 8); }
-function json(body: unknown, status = 200) { return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } }); }
+function json(body: unknown, status = 200, correlationId?: string) {
+  const headers = new Headers({ 'content-type': 'application/json' });
+  if (correlationId) headers.set('x-correlation-id', correlationId);
+  return new Response(JSON.stringify(body), { status, headers });
+}
+function correlationId(req: Request): string {
+  const supplied = req.headers.get('x-correlation-id');
+  if (!supplied) return crypto.randomUUID();
+  return supplied.slice(0, 128).replace(/[^\x20-\x7E]/g, '');
+}
+
+async function authorizeCaller(req: Request): Promise<AuthResult> {
+  const cid = correlationId(req);
+  const authorization = req.headers.get('authorization') ?? '';
+  if (!authorization.startsWith('Bearer ')) {
+    return { ok: false, response: json({ ok: false, error: 'missing_authorization' }, 401, cid) };
+  }
+
+  const accessToken = authorization.slice('Bearer '.length).trim();
+  if (!accessToken) {
+    return { ok: false, response: json({ ok: false, error: 'missing_authorization' }, 401, cid) };
+  }
+
+  const allowedCallerId = Deno.env.get('NEWS_GENERATE_CALLER_USER_ID');
+  if (!allowedCallerId) {
+    console.error(JSON.stringify({ event: 'news-generate.auth_config_error', correlation_id: cid }));
+    return { ok: false, response: json({ ok: false, error: 'authorization_not_configured' }, 500, cid) };
+  }
+
+  const { data: { user }, error: userError } = await supabase.auth.getUser(accessToken);
+  if (userError || !user) {
+    console.warn(JSON.stringify({ event: 'news-generate.auth_failed', correlation_id: cid }));
+    return { ok: false, response: json({ ok: false, error: 'invalid_identity' }, 401, cid) };
+  }
+
+  if (user.id !== allowedCallerId) {
+    console.warn(JSON.stringify({ event: 'news-generate.auth_forbidden', correlation_id: cid, user_id: user.id }));
+    return { ok: false, response: json({ ok: false, error: 'forbidden' }, 403, cid) };
+  }
+
+  return { ok: true, userId: user.id, correlationId: cid };
+}
 
 async function fetchText(url: string): Promise<string> {
   const r = await fetch(url, { headers: { 'user-agent': 'TPBox-Attualita-Bot/1.0' }, signal: AbortSignal.timeout(45000) });
@@ -42,10 +87,17 @@ async function generate(sourceText: string, sourceDomain: string) {
 }
 
 Deno.serve(async (req: Request) => {
-  const authorization = req.headers.get('authorization') ?? '';
-  if (!SERVICE_KEY || authorization !== `Bearer ${SERVICE_KEY}`) return json({ ok: false, error: 'unauthorized' }, 401);
+  const auth = await authorizeCaller(req);
+  if (!auth.ok) return auth.response;
+  const { correlationId: cid } = auth;
+
+  console.log(JSON.stringify({ event: 'news-generate.start', correlation_id: cid }));
+
   const { data: discoveries, error } = await supabase.from('news_discovery').select('*').eq('status', 'VERIFIED').limit(20);
-  if (error) return json({ ok: false, error: error.message }, 500);
+  if (error) {
+    console.error(JSON.stringify({ event: 'news-generate.discovery_query_failed', correlation_id: cid, error: error.message }));
+    return json({ ok: false, error: 'persistence_failed' }, 500, cid);
+  }
   const { data: norms } = await supabase.from('normative').select('key');
   const known = new Set((norms ?? []).map((x: { key: string }) => x.key.trim().toLowerCase()));
   const created = [];
@@ -62,14 +114,16 @@ Deno.serve(async (req: Request) => {
       const unknown = refs.filter((r: string) => !known.has(r.toLowerCase()));
       if (unknown.length) throw new Error(`riferimenti normativi non presenti nel catalogo: ${unknown.join('; ')}`);
       const { data: dup } = await supabase.from('news_items').select('id').eq('source_url', d.source_url).maybeSingle();
-      if (dup) { await supabase.from('news_discovery').update({ status: 'BLOCKED', gate_result: 'FAIL_DUP', error: 'source già presente in news_items' }).eq('id', d.id); continue; }
+      if (dup) { await supabase.from('news_discovery').update({ status: 'GENERATED', gate_result: 'PASS_DUPLICATE' }).eq('id', d.id); continue; }
       const { error: insertError } = await supabase.from('news_items').insert({ slug: slugify(draft.title), title: draft.title, summary: String(draft.summary ?? '').slice(0, 500), content_markdown: draft.content_markdown ?? '', category, country: draft.country ?? 'INT', source_name: source.name, source_url: d.source_url, pdf_url: d.pdf_url ?? null, normative_references: refs, status: 'DRAFT', fetched_at: new Date().toISOString() });
       if (insertError) throw insertError;
       await supabase.from('news_discovery').update({ status: 'GENERATED', gate_result: 'PASS' }).eq('id', d.id);
       created.push(draft.title);
     } catch (e) {
+      console.error(JSON.stringify({ event: 'news-generate.item_failed', correlation_id: cid, discovery_id: d.id, error: String(e) }));
       await supabase.from('news_discovery').update({ status: 'BLOCKED', gate_result: 'FAIL_UNKNOWN', error: String(e) }).eq('id', d.id);
     }
   }
-  return json({ ok: true, created });
+  console.log(JSON.stringify({ event: 'news-generate.complete', correlation_id: cid, verified_seen: discoveries?.length ?? 0, created: created.length }));
+  return json({ ok: true, created }, 200, cid);
 });
