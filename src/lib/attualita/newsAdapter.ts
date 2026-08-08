@@ -100,6 +100,6 @@ export function mapPublishedNewsRow(row: PublishedNewsRow): NewsItem {
     workflowState: mapWorkflowState(row.status),
     isDemo: false,
     category: mapCategory(row.category),
-    country: COUNTRY_NAMES[countryCode] ?? (countryCode || undefined),
+    country: COUNTRY_NAMES[countryCode] ?? countryCode,
   };
 }
