@@ -41,11 +41,30 @@ export const NEWS_CATEGORIES = [
 ] as const;
 export type NewsCategory = (typeof NEWS_CATEGORIES)[number];
 
-export const CATEGORY_COLORS: Record<NewsCategory, { border: string; text: string; bg: string }> = {
-  "Transfer Pricing": { border: "border-teal-600/50", text: "text-teal-700", bg: "bg-teal-50" },
-  VAT: { border: "border-amber-500/50", text: "text-amber-700", bg: "bg-amber-50" },
-  "Pillar Two": { border: "border-blue-500/50", text: "text-blue-700", bg: "bg-blue-50" },
-  "Anti-Avoidance": { border: "border-red-500/50", text: "text-red-700", bg: "bg-red-50" },
+export const CATEGORY_COLORS: Record<
+  NewsCategory,
+  { border: string; text: string; bg: string }
+> = {
+  "Transfer Pricing": {
+    border: "border-teal-600/50",
+    text: "text-teal-700",
+    bg: "bg-teal-50",
+  },
+  VAT: {
+    border: "border-amber-500/50",
+    text: "text-amber-700",
+    bg: "bg-amber-50",
+  },
+  "Pillar Two": {
+    border: "border-blue-500/50",
+    text: "text-blue-700",
+    bg: "bg-blue-50",
+  },
+  "Anti-Avoidance": {
+    border: "border-red-500/50",
+    text: "text-red-700",
+    bg: "bg-red-50",
+  },
 };
 
 export interface NewsSource {
