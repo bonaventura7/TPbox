@@ -65,8 +65,7 @@ export async function listNewsFeed(filters: NewsFilters): Promise<NewsFeedResult
       filters.institutionalOnly,
   );
   const lastPipelineRunAt = items.reduce<string | null>(
-    (latest, item) =>
-      !latest || item.lastVerifiedAt > latest ? item.lastVerifiedAt : latest,
+    (latest, item) => (!latest || item.lastVerifiedAt > latest ? item.lastVerifiedAt : latest),
     null,
   );
 
@@ -86,7 +85,9 @@ export async function listNewsFeed(filters: NewsFilters): Promise<NewsFeedResult
     archive: filtered,
     totalPublished: items.length,
     draftsPending: draftsPending ?? 0,
-    availableCountries: [...new Set(items.map((item) => item.country).filter(Boolean) as string[])].sort(),
+    availableCountries: [
+      ...new Set(items.map((item) => item.country).filter(Boolean) as string[]),
+    ].sort(),
   };
 }
 
