@@ -67,12 +67,20 @@ function createPublicClient() {
   });
 }
 
-interface FilterableQuery<T> {
-  eq(column: string, value: string): T;
-  or(filter: string): T;
+/**
+ * Vista minimale del query builder: evita l'inferenza profonda dei tipi PostgREST
+ * mantenendo esplicito il solo insieme di operazioni usate.
+ */
+export interface ReadQuery {
+  eq(column: string, value: string): ReadQuery;
+  or(filter: string): ReadQuery;
+  limit(count: number): PromiseLike<{
+    data: unknown[] | null;
+    error: { code?: string; message?: string } | null;
+  }>;
 }
 
-function applyFilters<T extends FilterableQuery<T>>(query: T, filters: NewsFilters): T {
+export function applyFilters(query: ReadQuery, filters: NewsFilters): ReadQuery {
   let q = query;
   if (filters.geo !== "TUTTE") q = q.eq("geo", filters.geo);
   if (filters.topic !== "TUTTI") q = q.eq("topic", filters.topic);
@@ -108,20 +116,20 @@ async function readAttualita(filters: NewsFilters): Promise<NewsFeedResult> {
     return emptyRealResult({ correlationId, status: "UNREACHABLE", generatedAt });
   }
 
-  let status: RepoStatus = "OK";
+  const state: { status: RepoStatus } = { status: "OK" };
   let rows: unknown[] = [];
 
   try {
     rows = await withTimeout(async () =>
       retryIdempotent(async () => {
-        const { data, error } = await applyFilters(
-          client.from(PUBLIC_VIEWS.attualita).select("*"),
-          filters,
-        ).limit(500);
+        const base = client
+          .from(PUBLIC_VIEWS.attualita)
+          .select("*") as unknown as ReadQuery;
+        const { data, error } = await applyFilters(base, filters).limit(500);
         if (error) {
           const classified = classifyReadError(error);
           if (classified === "SCHEMA_UNAVAILABLE") {
-            status = classified;
+            state.status = classified;
             return [];
           }
           throw new Error(error.message);
@@ -143,7 +151,7 @@ async function readAttualita(filters: NewsFilters): Promise<NewsFeedResult> {
     return emptyRealResult({ correlationId, status: "UNREACHABLE", generatedAt });
   }
 
-  if (status === "SCHEMA_UNAVAILABLE") {
+  if (state.status === "SCHEMA_UNAVAILABLE") {
     audit({
       correlationId,
       action: "news.real.list",
@@ -152,7 +160,7 @@ async function readAttualita(filters: NewsFilters): Promise<NewsFeedResult> {
       outcome: "ERROR",
       detail: `vista ${PUBLIC_VIEWS.attualita} non disponibile`,
     });
-    return emptyRealResult({ correlationId, status, generatedAt });
+    return emptyRealResult({ correlationId, status: state.status, generatedAt });
   }
 
   const { items, rejectedRows } = mapRows(rows);
