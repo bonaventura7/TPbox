@@ -58,7 +58,13 @@ function matches(item: NewsItem, filters: NewsFilters): boolean {
   return true;
 }
 
-export async function listNewsFeed(filters: NewsFilters): Promise<NewsFeedResult> {
+/** Contratto storico del mock: i campi diagnostici sono aggiunti dall'adattatore. */
+export type MockNewsFeedResult = Omit<
+  NewsFeedResult,
+  "repoKind" | "repoStatus" | "rejectedRows"
+>;
+
+export async function listNewsFeed(filters: NewsFilters): Promise<MockNewsFeedResult> {
   const correlationId = newCorrelationId();
   const now = new Date();
 

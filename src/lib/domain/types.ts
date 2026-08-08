@@ -82,7 +82,12 @@ export interface NewsItem {
   topic: Topic;
   originalUrl: string;
   workflowState: WorkflowState;
-  isDemo: true;
+  /**
+   * true per i dati dimostrativi, false per i contenuti letti dal database reale.
+   * Modifica minima rispetto al piano: il letterale `true` rendeva impossibile
+   * tipizzare le righe reali senza duplicare il modello di dominio.
+   */
+  isDemo: boolean;
   /** Macro-categoria editoriale (Transfer Pricing, VAT, Pillar Two, Anti-Avoidance). */
   category?: NewsCategory;
   /** Paese specifico a cui si riferisce la notizia (es. "India", "Germany"). */
@@ -117,6 +122,12 @@ export interface NewsFeedResult {
   draftsPending: number;
   /** Lista paesi distinti disponibili per il filtro (derivata dai dati). */
   availableCountries: string[];
+  /** Origine effettiva dei dati: nessuna ambiguità tra demo e database reale. */
+  repoKind: "MOCK" | "REAL";
+  /** Stato diagnostico del repository: mai fallback silenzioso da REAL a MOCK. */
+  repoStatus: "OK" | "SCHEMA_UNAVAILABLE" | "UNREACHABLE" | "UNEXPECTED_SHAPE" | "EMPTY";
+  /** Righe reali scartate perché non conformi al contratto atteso. */
+  rejectedRows: number;
 }
 
 export interface CompanyCandidate {
