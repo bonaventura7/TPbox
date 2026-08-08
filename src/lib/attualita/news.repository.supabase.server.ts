@@ -64,22 +64,12 @@ export async function listNewsFeed(filters: NewsFilters): Promise<NewsFeedResult
   };
 }
 
+/**
+ * Source catalogue is intentionally deferred until the Supabase schema exposes
+ * verified source URLs and the corresponding domain metadata. Returning an
+ * empty catalogue is safer than querying columns that are not part of the
+ * deployed schema or fabricating URLs/tier/kind values.
+ */
 export async function listSources(): Promise<NewsSource[]> {
-  const client = getSupabaseServerClient();
-  const { data, error } = await client
-    .from("news_sources")
-    .select("id,name,acquisition_mode,tier,kind,feed_url,site_url,geo,note")
-    .order("name");
-  if (error) throw new Error(`News sources unavailable: ${error.message}`);
-  return (data ?? []).map((row) => ({
-    id: String(row.id),
-    name: String(row.name),
-    acquisitionMode: row.acquisition_mode,
-    tier: row.tier,
-    kind: row.kind,
-    feedUrl: row.feed_url ?? null,
-    siteUrl: String(row.site_url),
-    geo: row.geo,
-    note: row.note ?? "",
-  }));
+  return [];
 }
