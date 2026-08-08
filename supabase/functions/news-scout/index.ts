@@ -1,61 +1,15 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
+import { authorizeCaller, jsonResponse } from '../_shared/auth.ts';
 import { canonicalUrl, extractDomain, findSource } from '../_shared/whitelist.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
+const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const FEED = Deno.env.get('REGFOLLOWER_FEED') ?? 'https://regfollower.com/feed/';
 const UA = 'TPBox-Attualita-Bot/1.0';
-const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
+const authClient = createClient(SUPABASE_URL, ANON_KEY);
 
 type FeedItem = { id: string; title: string; raw: string; link: string };
-
-type AuthResult =
-  | { ok: true; userId: string; correlationId: string }
-  | { ok: false; response: Response };
-
-function json(body: unknown, status = 200, correlationId?: string) {
-  const headers = new Headers({ 'content-type': 'application/json' });
-  if (correlationId) headers.set('x-correlation-id', correlationId);
-  return new Response(JSON.stringify(body), { status, headers });
-}
-
-function correlationId(req: Request): string {
-  const supplied = req.headers.get('x-correlation-id');
-  if (!supplied) return crypto.randomUUID();
-  return supplied.slice(0, 128).replace(/[^\x20-\x7E]/g, '');
-}
-
-async function authorizeCaller(req: Request): Promise<AuthResult> {
-  const cid = correlationId(req);
-  const authorization = req.headers.get('authorization') ?? '';
-  if (!authorization.startsWith('Bearer ')) {
-    return { ok: false, response: json({ ok: false, error: 'missing_authorization' }, 401, cid) };
-  }
-
-  const accessToken = authorization.slice('Bearer '.length).trim();
-  if (!accessToken) {
-    return { ok: false, response: json({ ok: false, error: 'missing_authorization' }, 401, cid) };
-  }
-
-  const allowedCallerId = Deno.env.get('NEWS_SCOUT_CALLER_USER_ID');
-  if (!allowedCallerId) {
-    console.error(JSON.stringify({ event: 'news-scout.auth_config_error', correlation_id: cid }));
-    return { ok: false, response: json({ ok: false, error: 'authorization_not_configured' }, 500, cid) };
-  }
-
-  const { data: { user }, error: userError } = await supabase.auth.getUser(accessToken);
-  if (userError || !user) {
-    console.warn(JSON.stringify({ event: 'news-scout.auth_failed', correlation_id: cid }));
-    return { ok: false, response: json({ ok: false, error: 'invalid_identity' }, 401, cid) };
-  }
-
-  if (user.id !== allowedCallerId) {
-    console.warn(JSON.stringify({ event: 'news-scout.auth_forbidden', correlation_id: cid, user_id: user.id }));
-    return { ok: false, response: json({ ok: false, error: 'forbidden' }, 403, cid) };
-  }
-
-  return { ok: true, userId: user.id, correlationId: cid };
-}
 
 function stripHtml(s: string) {
   return s.replace(/<script[\s\S]*?<\/script>/gi, ' ').replace(/<style[\s\S]*?<\/style>/gi, ' ').replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/\s+/g, ' ').trim();
@@ -90,10 +44,12 @@ async function fetchStatus(url: string): Promise<number> {
 }
 
 Deno.serve(async (req: Request) => {
-  const auth = await authorizeCaller(req);
+  const auth = await authorizeCaller(req, authClient, Deno.env.get('NEWS_SCOUT_CALLER_USER_ID'), 'news-scout');
   if (!auth.ok) return auth.response;
   const { correlationId: cid } = auth;
 
+  // Service-role client is created only after caller authorization has passed.
+  const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
   console.log(JSON.stringify({ event: 'news-scout.start', correlation_id: cid }));
 
   let xml: string;
@@ -103,7 +59,7 @@ Deno.serve(async (req: Request) => {
     xml = await response.text();
   } catch (error) {
     console.error(JSON.stringify({ event: 'news-scout.feed_failed', correlation_id: cid, error: String(error) }));
-    return json({ ok: false, error: 'upstream_fetch_failed' }, 502, cid);
+    return jsonResponse({ ok: false, error: 'upstream_fetch_failed' }, 502, cid);
   }
 
   const items = parseFeed(xml);
@@ -128,5 +84,5 @@ Deno.serve(async (req: Request) => {
   }
 
   console.log(JSON.stringify({ event: 'news-scout.complete', correlation_id: cid, discovered: items.length, verified, blocked }));
-  return json({ ok: true, discovered: items.length, verified, blocked, results }, 200, cid);
+  return jsonResponse({ ok: true, discovered: items.length, verified, blocked, results }, 200, cid);
 });

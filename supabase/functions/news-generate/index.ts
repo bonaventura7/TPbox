@@ -1,60 +1,16 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
+import { authorizeCaller, jsonResponse } from '../_shared/auth.ts';
 import { extractDomain, findSource } from '../_shared/whitelist.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
+const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY')!;
-const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
+const authClient = createClient(SUPABASE_URL, ANON_KEY);
 const CATEGORIES = ['TP', 'VAT', 'Pillar Two', 'Anti-Avoidance'];
 const CATEGORY_DB: Record<string, string> = { TP: 'TP', VAT: 'VAT', 'Pillar Two': 'P2', 'Anti-Avoidance': 'AA' };
 
-type AuthResult =
-  | { ok: true; userId: string; correlationId: string }
-  | { ok: false; response: Response };
-
 function slugify(s: string) { return s.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').slice(0, 70) + '-' + crypto.randomUUID().slice(0, 8); }
-function json(body: unknown, status = 200, correlationId?: string) {
-  const headers = new Headers({ 'content-type': 'application/json' });
-  if (correlationId) headers.set('x-correlation-id', correlationId);
-  return new Response(JSON.stringify(body), { status, headers });
-}
-function correlationId(req: Request): string {
-  const supplied = req.headers.get('x-correlation-id');
-  if (!supplied) return crypto.randomUUID();
-  return supplied.slice(0, 128).replace(/[^\x20-\x7E]/g, '');
-}
-
-async function authorizeCaller(req: Request): Promise<AuthResult> {
-  const cid = correlationId(req);
-  const authorization = req.headers.get('authorization') ?? '';
-  if (!authorization.startsWith('Bearer ')) {
-    return { ok: false, response: json({ ok: false, error: 'missing_authorization' }, 401, cid) };
-  }
-
-  const accessToken = authorization.slice('Bearer '.length).trim();
-  if (!accessToken) {
-    return { ok: false, response: json({ ok: false, error: 'missing_authorization' }, 401, cid) };
-  }
-
-  const allowedCallerId = Deno.env.get('NEWS_GENERATE_CALLER_USER_ID');
-  if (!allowedCallerId) {
-    console.error(JSON.stringify({ event: 'news-generate.auth_config_error', correlation_id: cid }));
-    return { ok: false, response: json({ ok: false, error: 'authorization_not_configured' }, 500, cid) };
-  }
-
-  const { data: { user }, error: userError } = await supabase.auth.getUser(accessToken);
-  if (userError || !user) {
-    console.warn(JSON.stringify({ event: 'news-generate.auth_failed', correlation_id: cid }));
-    return { ok: false, response: json({ ok: false, error: 'invalid_identity' }, 401, cid) };
-  }
-
-  if (user.id !== allowedCallerId) {
-    console.warn(JSON.stringify({ event: 'news-generate.auth_forbidden', correlation_id: cid, user_id: user.id }));
-    return { ok: false, response: json({ ok: false, error: 'forbidden' }, 403, cid) };
-  }
-
-  return { ok: true, userId: user.id, correlationId: cid };
-}
 
 async function fetchText(url: string): Promise<string> {
   const r = await fetch(url, { headers: { 'user-agent': 'TPBox-Attualita-Bot/1.0' }, signal: AbortSignal.timeout(45000) });
@@ -87,16 +43,18 @@ async function generate(sourceText: string, sourceDomain: string) {
 }
 
 Deno.serve(async (req: Request) => {
-  const auth = await authorizeCaller(req);
+  const auth = await authorizeCaller(req, authClient, Deno.env.get('NEWS_GENERATE_CALLER_USER_ID'), 'news-generate');
   if (!auth.ok) return auth.response;
   const { correlationId: cid } = auth;
 
+  // Service-role client is created only after caller authorization has passed.
+  const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
   console.log(JSON.stringify({ event: 'news-generate.start', correlation_id: cid }));
 
   const { data: discoveries, error } = await supabase.from('news_discovery').select('*').eq('status', 'VERIFIED').limit(20);
   if (error) {
     console.error(JSON.stringify({ event: 'news-generate.discovery_query_failed', correlation_id: cid, error: error.message }));
-    return json({ ok: false, error: 'persistence_failed' }, 500, cid);
+    return jsonResponse({ ok: false, error: 'persistence_failed' }, 500, cid);
   }
   const { data: norms } = await supabase.from('normative').select('key');
   const known = new Set((norms ?? []).map((x: { key: string }) => x.key.trim().toLowerCase()));
@@ -125,5 +83,5 @@ Deno.serve(async (req: Request) => {
     }
   }
   console.log(JSON.stringify({ event: 'news-generate.complete', correlation_id: cid, verified_seen: discoveries?.length ?? 0, created: created.length }));
-  return json({ ok: true, created }, 200, cid);
+  return jsonResponse({ ok: true, created }, 200, cid);
 });
