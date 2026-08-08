@@ -60,6 +60,14 @@ export interface NewsSource {
   note: string;
 }
 
+export type SerializableValue =
+  | string
+  | number
+  | boolean
+  | null
+  | SerializableValue[]
+  | { [key: string]: SerializableValue };
+
 export interface NewsItem {
   id: string;
   title: string;
@@ -83,7 +91,7 @@ export interface NewsItem {
   disclaimer?: string;
   titleIt?: string;
   content?: string;
-  references?: unknown;
+  references?: SerializableValue;
 }
 
 export interface NewsFilters {
