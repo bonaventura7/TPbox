@@ -7,22 +7,53 @@ on:
     - cron: '0 */3 * * *'   # monitor
   workflow_dispatch:
 
+env:
+  SCOUT_BOT_EMAIL: ${{ vars.SCOUT_BOT_EMAIL }}
+  GENERATE_BOT_EMAIL: ${{ vars.GENERATE_BOT_EMAIL }}
+
 jobs:
   scout-generate:
     if: github.event_name == 'workflow_dispatch' || github.event.schedule == '0 */6 * * *'
     runs-on: ubuntu-latest
     steps:
       - name: Scout
-        env: { SUPABASE_URL: ${{ secrets.SUPABASE_URL }}, SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }} }
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SCOUT_BOT_PASSWORD: ${{ secrets.SCOUT_BOT_PASSWORD }}
         run: |
+          set -euo pipefail
+          test -n "$SCOUT_BOT_EMAIL"
+          RESP=$(curl -sS --fail-with-body --max-time 30 -X POST "$SUPABASE_URL/auth/v1/token?grant_type=password" \
+            -H "apikey: $SUPABASE_ANON_KEY" \
+            -H "Content-Type: application/json" \
+            -d "$(jq -n --arg email "$SCOUT_BOT_EMAIL" --arg password "$SCOUT_BOT_PASSWORD" '{email:$email,password:$password}')")
+          TOKEN=$(jq -er '.access_token' <<<"$RESP")
+          echo "::add-mask::$TOKEN"
           curl --fail-with-body --silent --show-error --max-time 120 -X POST \
-            -H "Authorization: Bearer $SERVICE_KEY" -H "apikey: $SERVICE_KEY" \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "apikey: $SUPABASE_ANON_KEY" \
+            -H "X-Correlation-ID: ghaction-scout-$(date -u +%Y%m%dT%H%M%SZ)" \
             "$SUPABASE_URL/functions/v1/news-scout"
+
       - name: Generate drafts
-        env: { SUPABASE_URL: ${{ secrets.SUPABASE_URL }}, SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }} }
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          GENERATE_BOT_PASSWORD: ${{ secrets.GENERATE_BOT_PASSWORD }}
         run: |
+          set -euo pipefail
+          test -n "$GENERATE_BOT_EMAIL"
+          RESP=$(curl -sS --fail-with-body --max-time 30 -X POST "$SUPABASE_URL/auth/v1/token?grant_type=password" \
+            -H "apikey: $SUPABASE_ANON_KEY" \
+            -H "Content-Type: application/json" \
+            -d "$(jq -n --arg email "$GENERATE_BOT_EMAIL" --arg password "$GENERATE_BOT_PASSWORD" '{email:$email,password:$password}')")
+          TOKEN=$(jq -er '.access_token' <<<"$RESP")
+          echo "::add-mask::$TOKEN"
           curl --fail-with-body --silent --show-error --max-time 180 -X POST \
-            -H "Authorization: Bearer $SERVICE_KEY" -H "apikey: $SERVICE_KEY" \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "apikey: $SUPABASE_ANON_KEY" \
+            -H "X-Correlation-ID: ghaction-generate-$(date -u +%Y%m%dT%H%M%SZ)" \
             "$SUPABASE_URL/functions/v1/news-generate"
 
   publish:

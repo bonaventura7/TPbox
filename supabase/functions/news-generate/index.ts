@@ -1,11 +1,12 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { authorizeCaller, jsonResponse } from '../_shared/auth.ts';
+import { generateJson } from '../_shared/llm-provider.ts';
+import { redactSecret } from '../_shared/redact.ts';
 import { extractDomain, findSource } from '../_shared/whitelist.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY')!;
 const authClient = createClient(SUPABASE_URL, ANON_KEY);
 const CATEGORIES = ['TP', 'VAT', 'Pillar Two', 'Anti-Avoidance'];
 const CATEGORY_DB: Record<string, string> = { TP: 'TP', VAT: 'VAT', 'Pillar Two': 'P2', 'Anti-Avoidance': 'AA' };
@@ -37,9 +38,21 @@ async function fetchText(url: string): Promise<string> {
 
 async function generate(sourceText: string, sourceDomain: string) {
   const system = `Sei un redattore fiscale italiano esperto di transfer pricing e fiscalità internazionale.\nScrivi un articolo originale in italiano, esclusivamente come parafrasi della fonte primaria fornita. Non inventare fatti, date, numeri, enti o riferimenti.\nCategoria obbligatoria: TP, VAT, Pillar Two oppure Anti-Avoidance.\nEstrai solo riferimenti normativi esplicitamente presenti nella fonte.\nRispondi SOLO JSON con title, summary, content_markdown, category, country, normative_references. La fonte primaria è ${sourceDomain}.`;
-  const r = await fetch('https://api.openai.com/v1/chat/completions', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${OPENAI_API_KEY}` }, body: JSON.stringify({ model: 'gpt-4o-mini', temperature: 0.2, response_format: { type: 'json_object' }, messages: [{ role: 'system', content: system }, { role: 'user', content: sourceText }] }), signal: AbortSignal.timeout(60000) });
-  if (!r.ok) throw new Error(`LLM HTTP ${r.status}`);
-  const data = await r.json(); return JSON.parse(data.choices?.[0]?.message?.content ?? '{}');
+  const { value } = await generateJson(
+    [
+      { role: 'system', content: system },
+      { role: 'user', content: sourceText },
+    ],
+    {
+      OPENROUTER_API_KEY: Deno.env.get('OPENROUTER_API_KEY'),
+      LLM_MODEL: Deno.env.get('LLM_MODEL'),
+      LLM_MODEL_FALLBACK: Deno.env.get('LLM_MODEL_FALLBACK'),
+      LLM_ENDPOINT: Deno.env.get('LLM_ENDPOINT'),
+      LLM_TIMEOUT_MS: Deno.env.get('LLM_TIMEOUT_MS'),
+      LLM_MAX_RETRIES: Deno.env.get('LLM_MAX_RETRIES'),
+    },
+  );
+  return value as Record<string, unknown>;
 }
 
 Deno.serve(async (req: Request) => {
@@ -53,7 +66,7 @@ Deno.serve(async (req: Request) => {
 
   const { data: discoveries, error } = await supabase.from('news_discovery').select('*').eq('status', 'VERIFIED').limit(20);
   if (error) {
-    console.error(JSON.stringify({ event: 'news-generate.discovery_query_failed', correlation_id: cid, error: error.message }));
+    console.error(JSON.stringify({ event: 'news-generate.discovery_query_failed', correlation_id: cid, error: redactSecret(error.message) }));
     return jsonResponse({ ok: false, error: 'persistence_failed' }, 500, cid);
   }
   const { data: norms } = await supabase.from('normative').select('key');
@@ -66,20 +79,21 @@ Deno.serve(async (req: Request) => {
       const source = findSource(domain);
       if (!source) throw new Error(`dominio non whitelistato: ${domain}`);
       const draft = await generate(sourceText, domain);
-      if (!CATEGORIES.includes(draft.category)) throw new Error(`categoria non valida: ${draft.category}`);
-      const category = CATEGORY_DB[draft.category];
+      if (!CATEGORIES.includes(String(draft.category))) throw new Error(`categoria non valida: ${String(draft.category)}`);
+      const category = CATEGORY_DB[String(draft.category)];
       const refs = Array.isArray(draft.normative_references) ? draft.normative_references.filter((x: unknown) => typeof x === 'string').map((x: string) => x.trim()) : [];
       const unknown = refs.filter((r: string) => !known.has(r.toLowerCase()));
       if (unknown.length) throw new Error(`riferimenti normativi non presenti nel catalogo: ${unknown.join('; ')}`);
       const { data: dup } = await supabase.from('news_items').select('id').eq('source_url', d.source_url).maybeSingle();
       if (dup) { await supabase.from('news_discovery').update({ status: 'GENERATED', gate_result: 'PASS_DUPLICATE' }).eq('id', d.id); continue; }
-      const { error: insertError } = await supabase.from('news_items').insert({ slug: slugify(draft.title), title: draft.title, summary: String(draft.summary ?? '').slice(0, 500), content_markdown: draft.content_markdown ?? '', category, country: draft.country ?? 'INT', source_name: source.name, source_url: d.source_url, pdf_url: d.pdf_url ?? null, normative_references: refs, status: 'DRAFT', fetched_at: new Date().toISOString() });
+      const { error: insertError } = await supabase.from('news_items').insert({ slug: slugify(String(draft.title)), title: String(draft.title), summary: String(draft.summary ?? '').slice(0, 500), content_markdown: String(draft.content_markdown ?? ''), category, country: String(draft.country ?? 'INT'), source_name: source.name, source_url: d.source_url, pdf_url: d.pdf_url ?? null, normative_references: refs, status: 'DRAFT', fetched_at: new Date().toISOString() });
       if (insertError) throw insertError;
       await supabase.from('news_discovery').update({ status: 'GENERATED', gate_result: 'PASS' }).eq('id', d.id);
-      created.push(draft.title);
+      created.push(String(draft.title));
     } catch (e) {
-      console.error(JSON.stringify({ event: 'news-generate.item_failed', correlation_id: cid, discovery_id: d.id, error: String(e) }));
-      await supabase.from('news_discovery').update({ status: 'BLOCKED', gate_result: 'FAIL_UNKNOWN', error: String(e) }).eq('id', d.id);
+      const safeError = redactSecret(e instanceof Error ? e.message : String(e));
+      console.error(JSON.stringify({ event: 'news-generate.item_failed', correlation_id: cid, discovery_id: d.id, error: safeError }));
+      await supabase.from('news_discovery').update({ status: 'BLOCKED', gate_result: 'FAIL_UNKNOWN', error: safeError }).eq('id', d.id);
     }
   }
   console.log(JSON.stringify({ event: 'news-generate.complete', correlation_id: cid, verified_seen: discoveries?.length ?? 0, created: created.length }));
