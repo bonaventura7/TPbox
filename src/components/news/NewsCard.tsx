@@ -84,6 +84,23 @@ export function NewsMeta({ item }: { item: NewsItem }) {
         <dt className="shrink-0 text-muted-foreground">Tema</dt>
         <dd className="font-medium">{item.topic}</dd>
       </div>
+      {/*
+        Chi risponde del contenuto, visibile al lettore. Il database impedisce già a un
+        articolo di diventare pubblico senza revisore, ma quel vincolo il lettore non lo
+        vede: qui diventa leggibile. "Assistito da AI" compare solo quando è vero, e in
+        ogni caso la firma è di una persona.
+      */}
+      {item.reviewedBy ? (
+        <div className="flex gap-2">
+          <dt className="shrink-0 text-muted-foreground">A cura di</dt>
+          <dd className="font-medium">
+            {item.reviewedBy}
+            {item.authorType === "AI_ASSISTED" ? (
+              <span className="text-muted-foreground"> · bozza assistita da AI</span>
+            ) : null}
+          </dd>
+        </div>
+      ) : null}
       <div className="flex gap-2">
         <dt className="shrink-0 text-muted-foreground">Ultima verifica</dt>
         <dd className="font-medium">{formatDateTime(item.lastVerifiedAt)}</dd>
@@ -131,7 +148,13 @@ export function NewsCard({
           <span className="border border-petrol/50 px-2 py-0.5 text-petrol">{item.geo}</span>
         )}
         <span className="text-muted-foreground">{item.topic}</span>
-        <DemoBadge />
+        {/*
+          Il badge era incondizionato: corretto finché ogni articolo era dimostrativo, ma
+          dal collegamento al database avrebbe marcato "Dato demo" anche gli articoli
+          reali. Etichettare come finto un contenuto verificato è lo stesso errore
+          dell'etichetta mancante, rovesciato.
+        */}
+        {item.isDemo ? <DemoBadge /> : null}
       </div>
 
       {/* Titolo */}
