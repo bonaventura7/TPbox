@@ -1,0 +1,42 @@
+name: tmp-smoke-generate-v1
+
+on:
+  workflow_dispatch:
+
+env:
+  FUNC_URL: "https://igtthymjeujkgfpmgoqj.supabase.co/functions/v1/news-generate"
+  AUTH_URL: "https://igtthymjeujkgfpmgoqj.supabase.co/auth/v1/token"
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: "A.1 | Retrieve generate-bot JWT"
+        id: jwt_gen
+        run: |
+          GTOKEN=$(curl -sS -X POST "${{ env.AUTH_URL }}?grant_type=password" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"email\":\"generate-bot@news.local\",\"password\":\"${{ secrets.GENERATE_BOT_PASSWORD }}\"}" \
+            | jq -er '.access_token // empty' 2>/dev/null)
+          [ -z "$GTOKEN" ] && exit 1
+          echo "::add-mask::$GTOKEN"
+          echo "GTOKEN=$GTOKEN" >> "$GITHUB_ENV"
+
+      - name: "A.2 | Test 401"
+        run: |
+          code=$(curl -sS -o /dev/null -w "%{http_code}" -X POST "${{ env.FUNC_URL }}" -H "Content-Type: application/json" -d '{}')
+          [ "$code" = "401" ] || exit 1
+
+      - name: "A.4 | Test 2xx"
+        run: |
+          code=$(curl -sS -o /dev/null -w "%{http_code}" -X POST "${{ env.FUNC_URL }}" \
+            -H "Authorization: Bearer $GTOKEN" -H "Content-Type: application/json" -d '{}')
+          [ "$code" -ge 200 ] && [ "$code" -lt 300 ] || exit 1
+
+      - name: "✅ Complete"
+        run: echo "Smoke test passed!"
