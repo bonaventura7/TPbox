@@ -5,6 +5,26 @@ export interface GateInput { sourceUrl: string; pdfUrl: string | null; bodyText:
 export interface GateContext { checkHttp(url: string): Promise<number>; checkPdf(url: string): Promise<{status:number;contentType:string;size:number}>; isDuplicate(url:string):Promise<boolean>; }
 export interface GateDetail { result: GateResult; checks: Record<string,string>; reason?: string; }
 
+/**
+ * Canonical form of a normative reference, used on both sides of the catalogue lookup.
+ * Absorbs the spelling variance that carries no legal meaning — punctuation and the
+ * articolo/comma abbreviations — so that "art. 110 c. 7 TUIR", "articolo 110, comma 7,
+ * TUIR" and "art. 110 co. 7 TUIR" collapse to the same key. Anything beyond that is a
+ * genuinely different reference and must not match.
+ *
+ * Callers building `knownNormativeKeys` MUST pass every catalogue key through this
+ * function, otherwise the comparison is asymmetric and every lookup fails.
+ */
+export function normalizeRef(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[.,;:()]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\barticolo\b/g, 'art')
+    .replace(/\b(comma|co|c)\b/g, 'c');
+}
+
 export async function runSourceGate(input: GateInput, ctx: GateContext): Promise<GateDetail> {
   const checks: Record<string,string> = {};
   const domain = extractDomain(input.sourceUrl);
@@ -26,7 +46,7 @@ export async function runSourceGate(input: GateInput, ctx: GateContext): Promise
     checks.pdf = `ok (${pdf.size}b)`;
   } else checks.pdf = 'skipped';
 
-  const unknown = input.references.filter(r => !input.knownNormativeKeys.has(r.trim().toLowerCase()));
+  const unknown = input.references.filter(r => !input.knownNormativeKeys.has(normalizeRef(r)));
   if (unknown.length) return { result:'FAIL_REF', checks, reason:`riferimenti non validati: ${unknown.join('; ')}` };
   checks.refs = `ok (${input.references.length})`;
 

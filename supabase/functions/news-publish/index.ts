@@ -1,12 +1,16 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
+import { authorizeCaller, jsonResponse } from '../_shared/auth.ts';
 import { canonicalUrl } from '../_shared/whitelist.ts';
-import { runSourceGate, isPass } from '../_shared/source-gate.ts';
+import { normalizeRef, runSourceGate, isPass } from '../_shared/source-gate.ts';
 
 const SUPABASE_URL=Deno.env.get('SUPABASE_URL')!;
+const ANON_KEY=Deno.env.get('SUPABASE_ANON_KEY')!;
 const SERVICE_KEY=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const AUTO_PUBLISH=Deno.env.get('AUTO_PUBLISH_ENABLED')==='true';
 const UA='TPBox-Attualita-Bot/1.0';
-const supabase=createClient(SUPABASE_URL,SERVICE_KEY);
+const authClient=createClient(SUPABASE_URL,ANON_KEY);
+
+type SupabaseClient=ReturnType<typeof createClient>;
 
 async function http(url:string){
   const h={'user-agent':UA};
@@ -14,19 +18,25 @@ async function http(url:string){
   if(r) return r;
   return fetch(url,{headers:h,signal:AbortSignal.timeout(20000)});
 }
-const ctx={
+function gateContext(supabase:SupabaseClient){return{
   async checkHttp(url:string){return (await http(url)).status;},
   async checkPdf(url:string){const r=await http(url);return {status:r.status,contentType:r.headers.get('content-type')??'',size:Number(r.headers.get('content-length')??0)};},
   async isDuplicate(url:string){const {data}=await supabase.from('news_items').select('id').eq('source_url',canonicalUrl(url)).eq('status','PUBLISHED').limit(1);return (data??[]).length>0;}
-};
-function json(body:unknown,status=200){return new Response(JSON.stringify(body),{status,headers:{'content-type':'application/json'}})}
+};}
 
-Deno.serve(async()=>{
-  if(!AUTO_PUBLISH)return json({ok:true,published:0,blocked:0,kill_switch:true,note:'AUTO_PUBLISH_ENABLED=false — nessun articolo pubblicato'});
+Deno.serve(async(req:Request)=>{
+  const auth=await authorizeCaller(req,authClient,Deno.env.get('NEWS_PUBLISH_CALLER_USER_ID'),'news-publish');
+  if(!auth.ok)return auth.response;
+  const {correlationId:cid}=auth;
+  if(!AUTO_PUBLISH)return jsonResponse({ok:true,published:0,blocked:0,kill_switch:true,note:'AUTO_PUBLISH_ENABLED=false — nessun articolo pubblicato'},200,cid);
+
+  // Service-role client is created only after caller authorization has passed.
+  const supabase=createClient(SUPABASE_URL,SERVICE_KEY);
+  const ctx=gateContext(supabase);
   const {data:items,error}=await supabase.from('news_items').select('*').eq('status','DRAFT').limit(20);
-  if(error)return json({ok:false,error:error.message},500);
+  if(error)return jsonResponse({ok:false,error:error.message},500,cid);
   const {data:norms}=await supabase.from('normative').select('key');
-  const known=new Set((norms??[]).map((x:{key:string})=>x.key.trim().toLowerCase()));
+  const known=new Set((norms??[]).map((x:{key:string})=>normalizeRef(x.key)));
   let published=0,blocked=0; const details=[];
   for(const it of items??[]){
     const gate=await runSourceGate({sourceUrl:it.source_url,pdfUrl:it.pdf_url??null,bodyText:it.content_markdown??it.summary??'',references:Array.isArray(it.normative_references)?it.normative_references:[],knownNormativeKeys:known},ctx);
@@ -40,5 +50,5 @@ Deno.serve(async()=>{
       blocked++;details.push({id:it.id,result:'BLOCKED',gate:gate.result,reason:gate.reason});
     }
   }
-  return json({ok:true,published,blocked,details});
+  return jsonResponse({ok:true,published,blocked,details},200,cid);
 });

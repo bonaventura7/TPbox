@@ -54,6 +54,9 @@ verify_jwt = true
 [functions.news-generate]
 verify_jwt = true
 
+[functions.news-publish]
+verify_jwt = true
+
 [functions.news-monitor]
 verify_jwt = true
 
