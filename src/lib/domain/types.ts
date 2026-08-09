@@ -82,7 +82,18 @@ export interface NewsItem {
   topic: Topic;
   originalUrl: string;
   workflowState: WorkflowState;
-  isDemo: true;
+  /**
+   * true solo per i contenuti dimostrativi. Era tipizzato sulla costante `true`, il che
+   * rendeva impossibile rappresentare un articolo reale: nessun repository collegato al
+   * database poteva restituire qualcosa che compilasse.
+   */
+  isDemo: boolean;
+  /** Chi risponde del contenuto. Nessun articolo raggiunge il pubblico senza. */
+  reviewedBy?: string;
+  /** Redazione umana, oppure bozza generata e poi revisionata da una persona. */
+  authorType?: "HUMAN" | "AI_ASSISTED";
+  /** Quando una persona ha verificato la fonte primaria. Nulla lo deduce. */
+  primarySourceVerifiedAt?: string;
   /** Macro-categoria editoriale (Transfer Pricing, VAT, Pillar Two, Anti-Avoidance). */
   category?: NewsCategory;
   /** Paese specifico a cui si riferisce la notizia (es. "India", "Germany"). */
