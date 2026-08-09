@@ -1,0 +1,40 @@
+export const COMPANY_REGISTRY_ALLOWED_HOSTS = {
+  AT: {
+    register: ["www.justiz.gv.at"],
+    information: ["www.justiz.gv.at"],
+  },
+  BE: {
+    register: ["kbopub.economie.fgov.be"],
+    information: ["economie.fgov.be"],
+  },
+  BG: { register: ["portal.registryagency.bg"], information: ["portal.registryagency.bg"] },
+  HR: { register: ["sudreg.pravosudje.hr"], information: ["sudreg.pravosudje.hr"] },
+  CY: { register: ["www.gov.cy"], information: ["www.gov.cy"] },
+  CZ: { register: ["or.justice.cz"], information: ["or.justice.cz"] },
+  DK: { register: ["datacvr.virk.dk"], information: ["datacvr.virk.dk"] },
+  EE: { register: ["ariregister.rik.ee"], information: ["ariregister.rik.ee"] },
+  FI: { register: ["www.prh.fi"], information: ["www.prh.fi"] },
+  FR: { register: ["www.infogreffe.com"], information: ["www.infogreffe.com"] },
+  DE: {
+    register: ["www.handelsregister.de"],
+    information: ["www.unternehmensregister.de"],
+  },
+  GR: { register: ["www.businessportal.gr"], information: ["www.gov.gr"] },
+  HU: { register: ["occsz.e-cegjegyzek.hu"], information: ["occsz.e-cegjegyzek.hu"] },
+  IE: { register: ["www.cro.ie"], information: ["www.cro.ie"] },
+  IT: { register: ["italianbusinessregister.it"], information: ["italianbusinessregister.it"] },
+  LV: { register: ["www.ur.gov.lv"], information: ["www.ur.gov.lv"] },
+  LT: { register: ["www.registrucentras.lt"], information: ["www.registrucentras.lt"] },
+  LU: { register: ["www.lbr.lu"], information: ["www.lbr.lu"] },
+  MT: { register: ["mbr.mt"], information: ["mbr.mt"] },
+  NL: { register: ["www.kvk.nl"], information: ["www.kvk.nl"] },
+  PL: { register: ["ekrs.ms.gov.pl"], information: ["ekrs.ms.gov.pl"] },
+  PT: { register: ["irn.justica.gov.pt"], information: ["irn.justica.gov.pt"] },
+  RO: { register: ["www.onrc.ro"], information: ["www.onrc.ro"] },
+  SK: { register: ["www.orsr.sk"], information: ["www.orsr.sk"] },
+  SI: { register: ["www.ajpes.si"], information: ["www.ajpes.si"] },
+  ES: { register: ["www.registradores.org"], information: ["www.registradores.org"] },
+  SE: { register: ["bolagsverket.se"], information: ["bolagsverket.se"] },
+} as const;
+
+export type CompanyRegistryCountryCode = keyof typeof COMPANY_REGISTRY_ALLOWED_HOSTS;

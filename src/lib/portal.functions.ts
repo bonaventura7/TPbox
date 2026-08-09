@@ -36,16 +36,12 @@ export const getSources = createServerFn({ method: "GET" }).handler(async () => 
   return getNewsRepo().getSources();
 });
 
-export const searchCompanies = createServerFn({ method: "POST" })
-  .inputValidator((data: unknown) =>
-    z
-      .object({ query: z.string().max(160), country: z.string().max(2).default("") })
-      .parse(data),
-  )
-  .handler(async ({ data }) => {
-    const { searchCompanies: run } = await import("./repositories/tools.repository.server");
-    return run(data);
-  });
+export const getCompanyRegistrySources = createServerFn({ method: "GET" }).handler(async () => {
+  const { listVerifiedCompanyRegistrySources } = await import(
+    "./company-registry/repository.server"
+  );
+  return listVerifiedCompanyRegistrySources();
+});
 
 export const getBilancio = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) =>
@@ -66,7 +62,6 @@ export const getBilancio = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     const { fetchBilancio } = await import("./repositories/tools.repository.server");
-    // Il ruolo effettivo sarà letto dalla sessione autenticata (USER/EDITOR/ADMIN/PRO).
     return fetchBilancio({
       companyId: data.companyId,
       role: data.simulate === "NOT_AUTHORIZED" ? "USER" : "PRO",
@@ -83,9 +78,7 @@ export const getInterpelliArchive = createServerFn({ method: "GET" }).handler(as
 });
 
 export const getInterpello = createServerFn({ method: "GET" })
-  .inputValidator((data: unknown) =>
-    z.object({ id: z.string().min(3).max(64) }).parse(data),
-  )
+  .inputValidator((data: unknown) => z.object({ id: z.string().min(3).max(64) }).parse(data))
   .handler(async ({ data }) => {
     const { getInterpelloById } = await import(
       "./repositories/agenzia-interpelli.repository.server"
@@ -105,9 +98,7 @@ const patentQuerySchema = z.object({
   technologyArea: z.string().max(80).default(""),
   yearFrom: z.number().int().min(1980).max(2100).nullable().default(null),
   yearTo: z.number().int().min(1980).max(2100).nullable().default(null),
-  sort: z
-    .enum(["RELEVANZA", "DATA_DESC", "DATA_ASC", "FAMIGLIA_DESC"])
-    .default("RELEVANZA"),
+  sort: z.enum(["RELEVANZA", "DATA_DESC", "DATA_ASC", "FAMIGLIA_DESC"]).default("RELEVANZA"),
   page: z.number().int().min(1).max(200).default(1),
   pageSize: z.number().int().min(5).max(50).default(10),
 });
@@ -115,16 +106,12 @@ const patentQuerySchema = z.object({
 export const searchPatents = createServerFn({ method: "GET" })
   .inputValidator((data: unknown) => patentQuerySchema.parse(data ?? {}))
   .handler(async ({ data }) => {
-    const { searchPatents: run } = await import(
-      "./repositories/patents.repository.server"
-    );
+    const { searchPatents: run } = await import("./repositories/patents.repository.server");
     return run(data);
   });
 
 export const getPatent = createServerFn({ method: "GET" })
-  .inputValidator((data: unknown) =>
-    z.object({ id: z.string().min(3).max(64) }).parse(data),
-  )
+  .inputValidator((data: unknown) => z.object({ id: z.string().min(3).max(64) }).parse(data))
   .handler(async ({ data }) => {
     const { getPatentById } = await import("./repositories/patents.repository.server");
     return getPatentById(data.id);

@@ -57,7 +57,10 @@ export function BilancioPanel({
   const data = mutation.data;
 
   return (
-    <section aria-labelledby="bilancio" className="mt-8 border border-border bg-card p-5 sm:p-6">
+    <section
+      aria-labelledby="bilancio"
+      className="mt-8 border border-border bg-card p-5 sm:p-6"
+    >
       <div className="flex flex-wrap items-center gap-3">
         <h2 id="bilancio" className="font-serif text-xl">
           Bilancio della società
@@ -70,8 +73,8 @@ export function BilancioPanel({
       </div>
       <p className="mt-3 text-sm text-muted-foreground">
         {legalName} · identificativo interno{" "}
-        <span className="font-mono text-xs text-foreground">{companyId}</span>. L'accesso
-        all'area PRO è valutato lato server; in questa anteprima è simulato.
+        <span className="font-mono text-xs text-foreground">{companyId}</span>. L'accesso all'area
+        PRO è valutato lato server; in questa anteprima è simulato.
       </p>
 
       <fieldset className="mt-5">
