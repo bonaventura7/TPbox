@@ -20,7 +20,7 @@ import { getCompanyRegistrySources } from "@/lib/portal.functions";
 
 const TITLE = "Company Finder UE";
 const DESCRIPTION =
-  "Trova il registro ufficiale competente per una società dell’Unione europea. Il tool non mostra risultati societari simulati e non interroga registri esterni dal browser.";
+  "Trova il registro ufficiale competente per una società dell'Unione europea. Il tool non mostra risultati societari simulati e non interroga registri esterni dal browser.";
 
 export const Route = createFileRoute("/tool/company-finder")({
   head: () => ({
@@ -99,7 +99,7 @@ function CompanyFinderPage() {
         >
           <h2 className="font-serif text-xl">1. Seleziona Paese e identifica la società</h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            La denominazione o l’identificativo servono per guidarti alla ricerca ufficiale. Non
+            La denominazione o l'identificativo servono per guidarti alla ricerca ufficiale. Non
             vengono inviati a registri esterni da questa pagina.
           </p>
 
@@ -134,7 +134,7 @@ function CompanyFinderPage() {
                   role="alert"
                   className="mt-2 text-xs text-destructive"
                 >
-                  Seleziona uno Stato membro dell’Unione europea.
+                  Seleziona uno Stato membro dell'Unione europea.
                 </p>
               ) : null}
             </div>

@@ -48,7 +48,15 @@ export const getBilancio = createServerFn({ method: "POST" })
     z
       .object({
         companyId: z.string().min(3).max(64),
-        simulate: z.enum(["OK", "NOT_AUTHORIZED", "PROVIDER_UNAVAILABLE", "RATE_LIMITED", "DEGRADED"]).default("OK"),
+        simulate: z
+          .enum([
+            "OK",
+            "NOT_AUTHORIZED",
+            "PROVIDER_UNAVAILABLE",
+            "RATE_LIMITED",
+            "DEGRADED",
+          ])
+          .default("OK"),
       })
       .parse(data),
   )
@@ -63,14 +71,18 @@ export const getBilancio = createServerFn({ method: "POST" })
 
 /** Archivio interpelli: l'acquisizione è solo server-side, il browser non contatta fonti esterne. */
 export const getInterpelliArchive = createServerFn({ method: "GET" }).handler(async () => {
-  const { listInterpelliArchive } = await import("./repositories/agenzia-interpelli.repository.server");
+  const { listInterpelliArchive } = await import(
+    "./repositories/agenzia-interpelli.repository.server"
+  );
   return listInterpelliArchive();
 });
 
 export const getInterpello = createServerFn({ method: "GET" })
   .inputValidator((data: unknown) => z.object({ id: z.string().min(3).max(64) }).parse(data))
   .handler(async ({ data }) => {
-    const { getInterpelloById } = await import("./repositories/agenzia-interpelli.repository.server");
+    const { getInterpelloById } = await import(
+      "./repositories/agenzia-interpelli.repository.server"
+    );
     return getInterpelloById(data.id);
   });
 

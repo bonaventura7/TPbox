@@ -82,7 +82,10 @@ export function validateVerifiedSource(source: CompanyRegistrySource): string[] 
     errors.push("REGISTER_HOST_MISMATCH");
   }
   if (
-    !hostnameMatchesDeclaredHost(source.official_information_url, source.official_information_host)
+    !hostnameMatchesDeclaredHost(
+      source.official_information_url,
+      source.official_information_host,
+    )
   ) {
     errors.push("INFO_HOST_MISMATCH");
   }
