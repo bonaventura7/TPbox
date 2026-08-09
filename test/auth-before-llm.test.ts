@@ -6,7 +6,7 @@ const source = readFileSync(new URL('../supabase/functions/news-generate/index.t
 describe('news-generate authorization ordering', () => {
   it('authorizes the caller before the first LLM invocation', () => {
     const authIndex = source.indexOf('await authorizeCaller(');
-    const llmIndex = source.indexOf('await generateJson(');
+    const llmIndex = source.indexOf('const draft = await generate(');
     const serviceClientIndex = source.indexOf('createClient(SUPABASE_URL, SERVICE_KEY)');
 
     expect(authIndex).toBeGreaterThanOrEqual(0);
