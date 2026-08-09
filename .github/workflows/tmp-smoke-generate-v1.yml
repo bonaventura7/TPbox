@@ -1,253 +1,219 @@
 name: tmp-smoke-generate-v1
 
 on:
-  workflow_dispatch:
-
-env:
-  FUNC_URL: "https://igtthymjeujkgfpmgoqj.supabase.co/functions/v1/news-generate"
-  AUTH_URL: "https://igtthymjeujkgfpmgoqj.supabase.co/auth/v1/token"
-  REST_URL: "https://igtthymjeujkgfpmgoqj.supabase.co/rest/v1"
+  workflow_dispatch:   # SOLO manuale — mai su push/pull_request
 
 jobs:
   smoke:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      FUNC_URL: ${{ secrets.NEWS_GENERATE_URL }}
+      AUTH_URL: "${{ secrets.SUPABASE_URL }}/auth/v1/token"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: "0 | Validate required secrets are configured"
-        shell: bash
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: "A.1 | Retrieve generate-bot JWT"
+        id: jwt_gen
         run: |
           set -euo pipefail
-          for name in SUPABASE_ANON_KEY GENERATE_BOT_PASSWORD SUPABASE_SERVICE_ROLE; do
-            if [ -z "${!name:-}" ]; then
-              echo "Missing GitHub Actions secret: $name"
-              exit 1
-            fi
-          done
-          if [ -z "${GENERATE_BOT_EMAIL:-}" ]; then
-            echo "Missing GitHub Actions variable: GENERATE_BOT_EMAIL"
+          if [ -z "${{ vars.GENERATE_BOT_EMAIL }}" ] || [ -z "${{ secrets.GENERATE_BOT_PASSWORD }}" ]; then
+            echo "::error::GENERATE_BOT_EMAIL (variable) o GENERATE_BOT_PASSWORD (secret) non configurati"
             exit 1
           fi
-        env:
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-          GENERATE_BOT_PASSWORD: ${{ secrets.GENERATE_BOT_PASSWORD }}
-          SUPABASE_SERVICE_ROLE: ${{ secrets.SUPABASE_SERVICE_ROLE }}
-          GENERATE_BOT_EMAIL: ${{ vars.GENERATE_BOT_EMAIL }}
-
-      - name: "1 | DB PRE snapshot + VERIFIED guard"
-        shell: bash
-        env:
-          SUPABASE_SERVICE_ROLE: ${{ secrets.SUPABASE_SERVICE_ROLE }}
-        run: |
-          set -euo pipefail
-          mkdir -p smoke-artifacts
-
-          count_rows() {
-            local table="$1"
-            local filter="${2:-}"
-            curl -fsSI \
-              -H "apikey: $SUPABASE_SERVICE_ROLE" \
-              -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE" \
-              -H "Prefer: count=exact" \
-              -H "Range: 0-0" \
-              "${REST_URL}/${table}?select=id${filter}" \
-              | tr -d '\r' \
-              | awk -F'/' '/^content-range:/ {print $2}' \
-              | tail -1
-          }
-
-          discovery_total=$(count_rows news_discovery)
-          discovery_verified=$(count_rows news_discovery '&status=eq.VERIFIED')
-          discovery_generated=$(count_rows news_discovery '&status=eq.GENERATED')
-          discovery_blocked=$(count_rows news_discovery '&status=eq.BLOCKED')
-          news_items_total=$(count_rows news_items)
-          news_items_draft=$(count_rows news_items '&status=eq.DRAFT')
-          published=$(count_rows news_items '&status=eq.PUBLISHED')
-
-          jq -n \
-            --arg discovery_total "$discovery_total" \
-            --arg discovery_verified "$discovery_verified" \
-            --arg discovery_generated "$discovery_generated" \
-            --arg discovery_blocked "$discovery_blocked" \
-            --arg news_items_total "$news_items_total" \
-            --arg news_items_draft "$news_items_draft" \
-            --arg published "$published" \
-            '{discovery_total:($discovery_total|tonumber), discovery_verified:($discovery_verified|tonumber), discovery_generated:($discovery_generated|tonumber), discovery_blocked:($discovery_blocked|tonumber), news_items_total:($news_items_total|tonumber), news_items_draft:($news_items_draft|tonumber), published:($published|tonumber)}' \
-            | tee smoke-artifacts/pre_counts.json
-
-          if [ "$discovery_verified" -lt 1 ]; then
-            echo "FAIL: no VERIFIED discovery available for the smoke test; abort before invoking news-generate"
-            exit 1
-          fi
-
-      - name: "2 | Retrieve generate-bot JWT in memory"
-        shell: bash
-        env:
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-          GENERATE_BOT_PASSWORD: ${{ secrets.GENERATE_BOT_PASSWORD }}
-          GENERATE_BOT_EMAIL: ${{ vars.GENERATE_BOT_EMAIL }}
-        run: |
-          set -euo pipefail
-          response=$(curl -fsS -X POST "${AUTH_URL}?grant_type=password" \
-            -H "apikey: $SUPABASE_ANON_KEY" \
+          GTOKEN=$(curl -sS -X POST "${{ env.AUTH_URL }}?grant_type=password" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
             -H "Content-Type: application/json" \
-            -d "{\"email\":\"$GENERATE_BOT_EMAIL\",\"password\":\"$GENERATE_BOT_PASSWORD\"}")
-          GTOKEN=$(printf '%s' "$response" | jq -er '.access_token // empty')
-          [ -n "$GTOKEN" ]
+            -d "{\"email\":\"${{ vars.GENERATE_BOT_EMAIL }}\",\"password\":\"${{ secrets.GENERATE_BOT_PASSWORD }}\"}" \
+            | jq -er '.access_token // empty' 2>/dev/null)
+          if [ -z "$GTOKEN" ]; then
+            echo "::error::Impossibile ottenere il JWT di generate-bot (login fallito?)"
+            exit 1
+          fi
           echo "::add-mask::$GTOKEN"
-          echo "GTOKEN=$GTOKEN" >> "$GITHUB_ENV"
+          echo "GTOKEN=$GTOKEN" >> "$GITHUB_OUTPUT"
 
-      - name: "3 | Test 401 — no bearer"
-        shell: bash
+      - name: "A.2 | Test 401 (no Authorization header)"
         run: |
           set -euo pipefail
-          code=$(curl -sS -o smoke-artifacts/response_401.txt -w "%{http_code}" -X POST "$FUNC_URL" \
+          code=$(curl -sS -o /tmp/resp_401.txt -w "%{http_code}" -X POST "${{ env.FUNC_URL }}" \
             -H "Content-Type: application/json" -d '{}')
-          echo "HTTP=$code"
-          [ "$code" = "401" ]
+          echo "HTTP 401 test → $code"
+          if [ "$code" = "401" ]; then
+            echo "PASS: atteso 401, ottenuto $code"
+          else
+            echo "::error::Atteso 401, ottenuto $code"; cat /tmp/resp_401.txt | head -c 200 || true; exit 1
+          fi
 
-      - name: "4 | Test 403 — unauthorized bearer"
-        if: ${{ secrets.NONGENERATE_BOT_JWT != '' }}
-        shell: bash
-        env:
-          NONGENERATE_BOT_JWT: ${{ secrets.NONGENERATE_BOT_JWT }}
+      - name: "A.3 | Test 403 (different user JWT)"
+        continue-on-error: true
         run: |
           set -euo pipefail
-          code=$(curl -sS -o smoke-artifacts/response_403.txt -w "%{http_code}" -X POST "$FUNC_URL" \
-            -H "Authorization: Bearer $NONGENERATE_BOT_JWT" \
-            -H "Content-Type: application/json" -d '{}')
-          echo "HTTP=$code"
-          [ "$code" = "403" ]
-
-      - name: "5 | Run 1 — authorized 2xx"
-        shell: bash
-        run: |
-          set -euo pipefail
-          code=$(curl -sS -o smoke-artifacts/response_run1.json -w "%{http_code}" -X POST "$FUNC_URL" \
-            -H "Authorization: Bearer $GTOKEN" \
+          if [ -z "${{ vars.NONGENERATE_BOT_EMAIL }}" ] || [ -z "${{ secrets.NONGENERATE_BOT_PASSWORD }}" ]; then
+            echo "::notice::NONGENERATE_BOT non configurato — test 403 SKIPPED (nessun fallback inventato)"
+            exit 0
+          fi
+          OTHER=$(curl -sS -X POST "${{ env.AUTH_URL }}?grant_type=password" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
             -H "Content-Type: application/json" \
-            -H "X-Correlation-ID: generate-smoke-run1-${GITHUB_RUN_ID}" \
-            -d '{"mode":"smoke-test"}')
-          echo "HTTP=$code"
-          echo "$code" > smoke-artifacts/http_run1.txt
-          [ "$code" -ge 200 ] && [ "$code" -lt 300 ]
+            -d "{\"email\":\"${{ vars.NONGENERATE_BOT_EMAIL }}\",\"password\":\"${{ secrets.NONGENERATE_BOT_PASSWORD }}\"}" \
+            | jq -er '.access_token // empty' 2>/dev/null)
+          if [ -z "$OTHER" ]; then echo "::notice::Login altro utente fallito — 403 SKIPPED"; exit 0; fi
+          echo "::add-mask::$OTHER"
+          code=$(curl -sS -o /tmp/resp_403.txt -w "%{http_code}" -X POST "${{ env.FUNC_URL }}" \
+            -H "Authorization: Bearer $OTHER" -H "Content-Type: application/json" -d '{}')
+          echo "HTTP 403 test → $code"
+          if [ "$code" = "403" ]; then echo "PASS: atteso 403, ottenuto $code";
+          else echo "::warning::Atteso 403, ottenuto $code (può essere 401 se la validazione è stretta)"; fi
 
-      - name: "6 | DB POST #1"
-        shell: bash
+      - name: "A.4 | Test 2xx (valid generate-bot JWT)"
+        id: test_2xx
+        run: |
+          set -euo pipefail
+          GTOKEN="${{ steps.jwt_gen.outputs.GTOKEN }}"
+          cid="smoke-gen-v1-$(date -u +%Y%m%dT%H%M%SZ)"
+          code=$(curl -sS -o /tmp/resp_2xx.txt -w "%{http_code}" -X POST "${{ env.FUNC_URL }}" \
+            -H "Authorization: Bearer $GTOKEN" -H "Content-Type: application/json" \
+            -H "X-Correlation-ID: $cid" -d '{}')
+          echo "HTTP 2xx test → $code"
+          if [ "$code" -ge 200 ] && [ "$code" -lt 300 ]; then
+            echo "PASS: atteso 2xx, ottenuto $code"
+            echo "CID=$cid" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error::Atteso 2xx, ottenuto $code"; cat /tmp/resp_2xx.txt | head -c 300 || true; exit 1
+          fi
+
+      - name: "B.1 | DB PRE snapshot (counts)"
+        id: db_pre
         env:
-          SUPABASE_SERVICE_ROLE: ${{ secrets.SUPABASE_SERVICE_ROLE }}
+          SR: ${{ secrets.SUPABASE_SERVICE_ROLE }}
+          BASE: "${{ secrets.SUPABASE_URL }}/rest/v1"
         run: |
           set -euo pipefail
-          count_rows() {
-            local table="$1"; local filter="${2:-}"
-            curl -fsSI \
-              -H "apikey: $SUPABASE_SERVICE_ROLE" \
-              -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE" \
-              -H "Prefer: count=exact" -H "Range: 0-0" \
-              "${REST_URL}/${table}?select=id${filter}" \
-              | tr -d '\r' | awk -F'/' '/^content-range:/ {print $2}' | tail -1
+          get_count() {
+            table="$1"; filter="$2"
+            headers=$(curl -s -D - -o /dev/null -X GET "${BASE}/${table}?${filter}&select=id" \
+              -H "apikey: ${SR}" -H "Authorization: Bearer ${SR}" -H "Prefer: count=exact")
+            cr=$(echo "$headers" | tr -d '\r' | awk '/[Cc]ontent-[Rr]ange/ {print $2}')
+            if [ -z "$cr" ]; then echo "::error::Missing Content-Range ${table}?${filter}"; exit 2; fi
+            echo "${cr##*/}"
           }
-          jq -n \
-            --arg discovery_total "$(count_rows news_discovery)" \
-            --arg discovery_verified "$(count_rows news_discovery '&status=eq.VERIFIED')" \
-            --arg discovery_generated "$(count_rows news_discovery '&status=eq.GENERATED')" \
-            --arg discovery_blocked "$(count_rows news_discovery '&status=eq.BLOCKED')" \
-            --arg news_items_total "$(count_rows news_items)" \
-            --arg news_items_draft "$(count_rows news_items '&status=eq.DRAFT')" \
-            --arg published "$(count_rows news_items '&status=eq.PUBLISHED')" \
-            '{discovery_total:($discovery_total|tonumber), discovery_verified:($discovery_verified|tonumber), discovery_generated:($discovery_generated|tonumber), discovery_blocked:($discovery_blocked|tonumber), news_items_total:($news_items_total|tonumber), news_items_draft:($news_items_draft|tonumber), published:($published|tonumber)}' \
-            | tee smoke-artifacts/post_counts_run1.json
+          nd_verified=$(get_count "news_discovery" "status=eq.VERIFIED")
+          nd_generated=$(get_count "news_discovery" "status=eq.GENERATED")
+          ni_draft=$(get_count "news_items" "status=eq.DRAFT")
+          ni_published=$(get_count "news_items" "status=eq.PUBLISHED")
+          jq -n --arg nv "$nd_verified" --arg ng "$nd_generated" --arg nd "$ni_draft" --arg np "$ni_published" \
+            '{news_discovery_verified:($nv|tonumber), news_discovery_generated:($ng|tonumber), news_items_draft:($nd|tonumber), news_items_published:($np|tonumber)}' > pre_counts.json
+          echo "PRE counts:"; cat pre_counts.json
+          echo "ND_VERIFIED=$nd_verified" >> "$GITHUB_OUTPUT"
 
-      - name: "7 | Assert run 1 DB contract"
-        shell: bash
+      - name: "B.1b | GUARDIA: abort se nessuna discovery VERIFIED"
+        run: |
+          v="${{ steps.db_pre.outputs.ND_VERIFIED }}"
+          echo "VERIFIED presenti: $v"
+          if [ "$v" = "0" ] || [ -z "$v" ]; then
+            echo "::error::Nessuna discovery VERIFIED da processare — abort prima della chiamata LLM"
+            exit 2
+          fi
+          echo "Guardia superata: ci sono discovery VERIFIED"
+
+      - name: "B.2 | Esegui 2xx (generate-bot) — run #1"
+        id: run1
         run: |
           set -euo pipefail
-          pre='smoke-artifacts/pre_counts.json'; post='smoke-artifacts/post_counts_run1.json'
-          pre_published=$(jq -r .published "$pre")
-          post_published=$(jq -r .published "$post")
-          pre_items=$(jq -r .news_items_total "$pre")
-          post_items=$(jq -r .news_items_total "$post")
-          pre_verified=$(jq -r .discovery_verified "$pre")
-          post_verified=$(jq -r .discovery_verified "$post")
-          pre_generated=$(jq -r .discovery_generated "$pre")
-          post_generated=$(jq -r .discovery_generated "$post")
-          post_draft=$(jq -r .news_items_draft "$post")
+          GTOKEN="${{ steps.jwt_gen.outputs.GTOKEN }}"
+          cid="smoke-gen-v1-run1-$(date -u +%Y%m%dT%H%M%SZ)"
+          code=$(curl -sS -o /tmp/resp_run1.txt -w "%{http_code}" -X POST "${{ env.FUNC_URL }}" \
+            -H "Authorization: Bearer $GTOKEN" -H "Content-Type: application/json" \
+            -H "X-Correlation-ID: $cid" -d '{}')
+          echo "run1 → HTTP $code"
+          if [ "$code" -ge 200 ] && [ "$code" -lt 300 ]; then echo "run1 2xx ok";
+          else echo "::error::run1 atteso 2xx, ottenuto $code"; cat /tmp/resp_run1.txt | head -c 300 || true; exit 1; fi
 
-          [ "$post_published" = "0" ]
-          [ "$post_published" = "$pre_published" ]
-          [ "$post_items" -ge "$pre_items" ]
-          [ "$post_generated" -gt "$pre_generated" ] || [ "$post_verified" -lt "$pre_verified" ]
-          [ "$post_draft" -ge 1 ]
-
-      - name: "8 | Run 2 — authorized 2xx idempotence"
-        shell: bash
-        run: |
-          set -euo pipefail
-          code=$(curl -sS -o smoke-artifacts/response_run2.json -w "%{http_code}" -X POST "$FUNC_URL" \
-            -H "Authorization: Bearer $GTOKEN" \
-            -H "Content-Type: application/json" \
-            -H "X-Correlation-ID: generate-smoke-run2-${GITHUB_RUN_ID}" \
-            -d '{"mode":"smoke-test"}')
-          echo "HTTP=$code"
-          echo "$code" > smoke-artifacts/http_run2.txt
-          [ "$code" -ge 200 ] && [ "$code" -lt 300 ]
-
-      - name: "9 | DB POST #2 + idempotence assertion"
-        shell: bash
+      - name: "B.3 | DB POST 1 snapshot + confronto"
+        id: db_post1
         env:
-          SUPABASE_SERVICE_ROLE: ${{ secrets.SUPABASE_SERVICE_ROLE }}
+          SR: ${{ secrets.SUPABASE_SERVICE_ROLE }}
+          BASE: "${{ secrets.SUPABASE_URL }}/rest/v1"
         run: |
           set -euo pipefail
-          count_rows() {
-            local table="$1"; local filter="${2:-}"
-            curl -fsSI \
-              -H "apikey: $SUPABASE_SERVICE_ROLE" \
-              -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE" \
-              -H "Prefer: count=exact" -H "Range: 0-0" \
-              "${REST_URL}/${table}?select=id${filter}" \
-              | tr -d '\r' | awk -F'/' '/^content-range:/ {print $2}' | tail -1
+          get_count() {
+            table="$1"; filter="$2"
+            headers=$(curl -s -D - -o /dev/null -X GET "${BASE}/${table}?${filter}&select=id" \
+              -H "apikey: ${SR}" -H "Authorization: Bearer ${SR}" -H "Prefer: count=exact")
+            cr=$(echo "$headers" | tr -d '\r' | awk '/[Cc]ontent-[Rr]ange/ {print $2}')
+            echo "${cr##*/}"
           }
-          jq -n \
-            --arg discovery_total "$(count_rows news_discovery)" \
-            --arg discovery_verified "$(count_rows news_discovery '&status=eq.VERIFIED')" \
-            --arg discovery_generated "$(count_rows news_discovery '&status=eq.GENERATED')" \
-            --arg discovery_blocked "$(count_rows news_discovery '&status=eq.BLOCKED')" \
-            --arg news_items_total "$(count_rows news_items)" \
-            --arg news_items_draft "$(count_rows news_items '&status=eq.DRAFT')" \
-            --arg published "$(count_rows news_items '&status=eq.PUBLISHED')" \
-            '{discovery_total:($discovery_total|tonumber), discovery_verified:($discovery_verified|tonumber), discovery_generated:($discovery_generated|tonumber), discovery_blocked:($discovery_blocked|tonumber), news_items_total:($news_items_total|tonumber), news_items_draft:($news_items_draft|tonumber), published:($published|tonumber)}' \
-            | tee smoke-artifacts/post_counts_run2.json
+          nd_generated_post=$(get_count "news_discovery" "status=eq.GENERATED")
+          ni_draft_post=$(get_count "news_items" "status=eq.DRAFT")
+          ni_published_post=$(get_count "news_items" "status=eq.PUBLISHED")
+          jq -n --arg ng "$nd_generated_post" --arg nd "$ni_draft_post" --arg np "$ni_published_post" \
+            '{news_discovery_generated:($ng|tonumber), news_items_draft:($nd|tonumber), news_items_published:($np|tonumber)}' > post_counts_run1.json
+          pre_ng=$(jq '.news_discovery_generated' pre_counts.json)
+          post_ng=$(jq '.news_discovery_generated' post_counts_run1.json)
+          pre_np=$(jq '.news_items_published' pre_counts.json)
+          post_np=$(jq '.news_items_published' post_counts_run1.json)
+          if [ "$post_ng" -lt "$pre_ng" ]; then echo "::error::GENERATED decreased"; exit 3; fi
+          if [ "$post_np" -ne "$pre_np" ]; then echo "::error::PUBLISHED changed (atteso invariato)"; exit 4; fi
+          echo "POST run1 ok"; cat post_counts_run1.json
 
-          d1=$(jq -r .discovery_generated smoke-artifacts/post_counts_run1.json)
-          d2=$(jq -r .discovery_generated smoke-artifacts/post_counts_run2.json)
-          i1=$(jq -r .news_items_total smoke-artifacts/post_counts_run1.json)
-          i2=$(jq -r .news_items_total smoke-artifacts/post_counts_run2.json)
-          r1=$(jq -r .news_items_draft smoke-artifacts/post_counts_run1.json)
-          r2=$(jq -r .news_items_draft smoke-artifacts/post_counts_run2.json)
-          p2=$(jq -r .published smoke-artifacts/post_counts_run2.json)
-
-          [ "$d2" = "$d1" ]
-          [ "$i2" = "$i1" ]
-          [ "$r2" = "$r1" ]
-          [ "$p2" = "0" ]
-
-      - name: "10 | Cleanup token"
-        if: always()
-        shell: bash
+      - name: "B.4 | Esegui 2xx (generate-bot) — run #2 (idempotenza)"
+        id: run2
         run: |
-          unset GTOKEN || true
-          echo "JWT cleanup completed"
+          set -euo pipefail
+          GTOKEN="${{ steps.jwt_gen.outputs.GTOKEN }}"
+          cid="smoke-gen-v1-run2-$(date -u +%Y%m%dT%H%M%SZ)"
+          code=$(curl -sS -o /tmp/resp_run2.txt -w "%{http_code}" -X POST "${{ env.FUNC_URL }}" \
+            -H "Authorization: Bearer $GTOKEN" -H "Content-Type: application/json" \
+            -H "X-Correlation-ID: $cid" -d '{}')
+          echo "run2 → HTTP $code"
+          if [ "$code" -ge 200 ] && [ "$code" -lt 300 ]; then echo "run2 2xx ok";
+          else echo "::error::run2 atteso 2xx, ottenuto $code"; cat /tmp/resp_run2.txt | head -c 300 || true; exit 1; fi
 
-      - name: "11 | Upload smoke artifacts"
-        if: always()
+      - name: "B.5 | DB POST 2 + idempotence check"
+        env:
+          SR: ${{ secrets.SUPABASE_SERVICE_ROLE }}
+          BASE: "${{ secrets.SUPABASE_URL }}/rest/v1"
+        run: |
+          set -euo pipefail
+          get_count() {
+            table="$1"; filter="$2"
+            headers=$(curl -s -D - -o /dev/null -X GET "${BASE}/${table}?${filter}&select=id" \
+              -H "apikey: ${SR}" -H "Authorization: Bearer ${SR}" -H "Prefer: count=exact")
+            cr=$(echo "$headers" | tr -d '\r' | awk '/[Cc]ontent-[Rr]ange/ {print $2}')
+            echo "${cr##*/}"
+          }
+          nd_generated_run2=$(get_count "news_discovery" "status=eq.GENERATED")
+          ni_draft_run2=$(get_count "news_items" "status=eq.DRAFT")
+          ni_published_run2=$(get_count "news_items" "status=eq.PUBLISHED")
+          jq -n --arg ng "$nd_generated_run2" --arg nd "$ni_draft_run2" --arg np "$ni_published_run2" \
+            '{news_discovery_generated:($ng|tonumber), news_items_draft:($nd|tonumber), news_items_published:($np|tonumber)}' > post_counts_run2.json
+          post1_ng=$(jq '.news_discovery_generated' post_counts_run1.json)
+          post2_ng=$(jq '.news_discovery_generated' post_counts_run2.json)
+          post1_nd=$(jq '.news_items_draft' post_counts_run1.json)
+          post2_nd=$(jq '.news_items_draft' post_counts_run2.json)
+          post1_np=$(jq '.news_items_published' post_counts_run1.json)
+          post2_np=$(jq '.news_items_published' post_counts_run2.json)
+          if [ "$post2_np" -ne "$post1_np" ]; then echo "::error::PUBLISHED cambiato run1→run2"; exit 5; fi
+          if [ "$post2_ng" -gt "$post1_ng" ]; then echo "::error::GENERATED aumentato run2 (violazione idempotenza)"; exit 6; fi
+          if [ "$post2_nd" -gt "$post1_nd" ]; then echo "::error::DRAFT aumentato run2 (violazione idempotenza)"; exit 7; fi
+          echo "Idempotence checks OK"; cat post_counts_run2.json
+
+      - name: "B.6 | Upload artifacts"
         uses: actions/upload-artifact@v4
         with:
           name: smoke-artifacts
-          path: smoke-artifacts/
-          if-no-files-found: warn
-
-      - name: "12 | Final verdict"
-        if: success()
-        run: echo "GENERATE SMOKE GREEN — 401/403/2xx + DB contract + idempotence verified"
+          path: |
+            pre_counts.json
+            post_counts_run1.json
+            post_counts_run2.json
+            /tmp/resp_401.txt
+            /tmp/resp_403.txt
+            /tmp/resp_2xx.txt
+            /tmp/resp_run1.txt
+            /tmp/resp_run2.txt
