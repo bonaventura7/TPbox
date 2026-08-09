@@ -26,11 +26,16 @@ jobs:
               exit 1
             fi
           done
+          if [ -z "${GENERATE_BOT_EMAIL:-}" ]; then
+            echo "Missing GitHub Actions variable: GENERATE_BOT_EMAIL"
+            exit 1
+          fi
         env:
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           GENERATE_BOT_PASSWORD: ${{ secrets.GENERATE_BOT_PASSWORD }}
           SUPABASE_SERVICE_ROLE: ${{ secrets.SUPABASE_SERVICE_ROLE }}
           NONGENERATE_BOT_JWT: ${{ secrets.NONGENERATE_BOT_JWT }}
+          GENERATE_BOT_EMAIL: ${{ vars.GENERATE_BOT_EMAIL }}
 
       - name: "1 | DB PRE snapshot"
         shell: bash
@@ -72,18 +77,19 @@ jobs:
             --arg published "$published" \
             '{discovery_total:($discovery_total|tonumber), discovery_verified:($discovery_verified|tonumber), discovery_generated:($discovery_generated|tonumber), discovery_blocked:($discovery_blocked|tonumber), news_items_total:($news_items_total|tonumber), news_items_draft:($news_items_draft|tonumber), published:($published|tonumber)}' \
             | tee smoke-artifacts/pre_counts.json
-        
+
       - name: "2 | Retrieve generate-bot JWT in memory"
         shell: bash
         env:
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           GENERATE_BOT_PASSWORD: ${{ secrets.GENERATE_BOT_PASSWORD }}
+          GENERATE_BOT_EMAIL: ${{ vars.GENERATE_BOT_EMAIL }}
         run: |
           set -euo pipefail
           response=$(curl -fsS -X POST "${AUTH_URL}?grant_type=password" \
             -H "apikey: $SUPABASE_ANON_KEY" \
             -H "Content-Type: application/json" \
-            -d "{\"email\":\"generate-bot@news.local\",\"password\":\"$GENERATE_BOT_PASSWORD\"}")
+            -d "{\"email\":\"$GENERATE_BOT_EMAIL\",\"password\":\"$GENERATE_BOT_PASSWORD\"}")
           GTOKEN=$(printf '%s' "$response" | jq -er '.access_token // empty')
           [ -n "$GTOKEN" ]
           echo "::add-mask::$GTOKEN"
