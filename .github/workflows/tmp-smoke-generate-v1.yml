@@ -1,0 +1,179 @@
+name: tmp-smoke-generate-v1
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "preflight = no generative call; full = smoke + DB gates"
+        required: false
+        default: preflight
+        type: choice
+        options:
+          - preflight
+          - full
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+      SERVICE_ROLE: ${{ secrets.SUPABASE_SERVICE_ROLE }}
+      FUNC_URL: ${{ secrets.NEWS_GENERATE_URL }}
+      GENERATE_BOT_EMAIL: ${{ vars.GENERATE_BOT_EMAIL }}
+      GENERATE_BOT_PASSWORD: ${{ secrets.GENERATE_BOT_PASSWORD }}
+      NONGENERATE_BOT_EMAIL: ${{ vars.NONGENERATE_BOT_EMAIL }}
+      NONGENERATE_BOT_PASSWORD: ${{ secrets.NONGENERATE_BOT_PASSWORD }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: 0.1 | Preflight configuration matrix
+        run: |
+          set -euo pipefail
+          check() {
+            local name="$1" value="$2"
+            if [ -n "$value" ]; then echo "$name: OK (len=${#value})"; else echo "::error::$name: ASSENTE"; return 1; fi
+          }
+          check SUPABASE_URL "$SUPABASE_URL"
+          check SUPABASE_ANON_KEY "$SUPABASE_ANON_KEY"
+          check SUPABASE_SERVICE_ROLE "$SERVICE_ROLE"
+          check NEWS_GENERATE_URL "$FUNC_URL"
+          check GENERATE_BOT_EMAIL "$GENERATE_BOT_EMAIL"
+          check GENERATE_BOT_PASSWORD "$GENERATE_BOT_PASSWORD"
+          curl -fsS --max-time 10 -o /dev/null "$SUPABASE_URL/rest/v1/" || { echo "::error::Supabase REST non raggiungibile"; exit 1; }
+          curl -fsS --max-time 10 -o /dev/null "$SUPABASE_URL/auth/v1/settings" -H "apikey: $SUPABASE_ANON_KEY" || { echo "::error::Supabase Auth non raggiungibile"; exit 1; }
+          echo "Preflight configuration/endpoints: PASS"
+
+      - name: 0.2 | Login generate-bot (preflight, no generative call)
+        id: jwt
+        run: |
+          set -euo pipefail
+          payload="$(jq -n --arg email "$GENERATE_BOT_EMAIL" --arg password "$GENERATE_BOT_PASSWORD" '{email:$email,password:$password}')"
+          response="$(curl -sS --max-time 15 -X POST "$SUPABASE_URL/auth/v1/token?grant_type=password" -H "apikey: $SUPABASE_ANON_KEY" -H "Content-Type: application/json" -d "$payload")"
+          token="$(printf '%s' "$response" | jq -er '.access_token // empty')" || { echo "::error::Login generate-bot fallito"; exit 1; }
+          echo "::add-mask::$token"
+          printf 'GTOKEN=%s\n' "$token" >> "$GITHUB_OUTPUT"
+          echo "generate-bot login: PASS"
+
+      - name: 0.3 | Preflight gate
+        if: ${{ inputs.mode == 'preflight' }}
+        run: |
+          echo "PRELIGHT PASS: nessuna chiamata a news-generate eseguita."
+
+      - name: 1.1 | DB PRE snapshot
+        if: ${{ inputs.mode == 'full' }}
+        id: db_pre
+        run: |
+          set -euo pipefail
+          get_count() {
+            local table="$1" filter="$2" headers range
+            headers="$(curl -sS --max-time 15 -D - -o /dev/null "$SUPABASE_URL/rest/v1/$table?$filter&select=id" -H "apikey: $SERVICE_ROLE" -H "Authorization: Bearer $SERVICE_ROLE" -H "Prefer: count=exact")"
+            range="$(printf '%s\n' "$headers" | tr -d '\r' | awk 'BEGIN{IGNORECASE=1}/^content-range:/{print $2; exit}')"
+            [ -n "$range" ] || { echo "::error::Content-Range mancante per $table"; return 1; }
+            printf '%s\n' "${range##*/}"
+          }
+          verified="$(get_count news_discovery 'status=eq.VERIFIED')"
+          generated="$(get_count news_discovery 'status=eq.GENERATED')"
+          draft="$(get_count news_items 'status=eq.DRAFT')"
+          published="$(get_count news_items 'status=eq.PUBLISHED')"
+          jq -n --argjson v "$verified" --argjson g "$generated" --argjson d "$draft" --argjson p "$published" '{verified:$v,generated:$g,draft:$d,published:$p}' > pre_counts.json
+          cat pre_counts.json
+          echo "VERIFIED=$verified" >> "$GITHUB_OUTPUT"
+
+      - name: 1.2 | Guard: at least one VERIFIED
+        if: ${{ inputs.mode == 'full' }}
+        run: |
+          set -euo pipefail
+          v='${{ steps.db_pre.outputs.VERIFIED }}'
+          if [ "$v" -lt 1 ]; then echo "::error::Nessuna discovery VERIFIED: stop prima di qualsiasi chiamata generativa"; exit 2; fi
+          echo "VERIFIED=$v: guard PASS"
+
+      - name: 2.1 | Test 401
+        if: ${{ inputs.mode == 'full' }}
+        run: |
+          set -euo pipefail
+          code="$(curl -sS --max-time 20 -o /tmp/resp_401.txt -w '%{http_code}' -X POST "$FUNC_URL" -H 'Content-Type: application/json' -d '{}')"
+          echo "HTTP=$code"
+          [ "$code" = 401 ] || { echo "::error::Atteso 401, ottenuto $code"; exit 1; }
+
+      - name: 2.2 | Test 403 (only when non-authorized bot is configured)
+        if: ${{ inputs.mode == 'full' }}
+        run: |
+          set -euo pipefail
+          if [ -z "$NONGENERATE_BOT_EMAIL" ] || [ -z "$NONGENERATE_BOT_PASSWORD" ]; then
+            echo "403: SKIP (NONGENERATE_BOT non configurato)"
+            exit 0
+          fi
+          payload="$(jq -n --arg email "$NONGENERATE_BOT_EMAIL" --arg password "$NONGENERATE_BOT_PASSWORD" '{email:$email,password:$password}')"
+          other="$(curl -sS --max-time 15 -X POST "$SUPABASE_URL/auth/v1/token?grant_type=password" -H "apikey: $SUPABASE_ANON_KEY" -H 'Content-Type: application/json' -d "$payload" | jq -er '.access_token // empty')" || { echo "::error::Login non-authorized bot fallito"; exit 1; }
+          echo "::add-mask::$other"
+          code="$(curl -sS --max-time 20 -o /tmp/resp_403.txt -w '%{http_code}' -X POST "$FUNC_URL" -H "Authorization: Bearer $other" -H 'Content-Type: application/json' -d '{}')"
+          echo "HTTP=$code"
+          [ "$code" = 403 ] || { echo "::error::Atteso 403, ottenuto $code"; exit 1; }
+
+      - name: 2.3 | Test 2xx run #1
+        if: ${{ inputs.mode == 'full' }}
+        id: run1
+        run: |
+          set -euo pipefail
+          token='${{ steps.jwt.outputs.GTOKEN }}'
+          cid="smoke-gen-v1-run1-$(date -u +%Y%m%dT%H%M%SZ)"
+          code="$(curl -sS --max-time 120 -o /tmp/resp_run1.txt -w '%{http_code}' -X POST "$FUNC_URL" -H "Authorization: Bearer $token" -H 'Content-Type: application/json' -H "X-Correlation-ID: $cid" -d '{}')"
+          echo "HTTP=$code CID=$cid"
+          [ "$code" -ge 200 ] && [ "$code" -lt 300 ] || { echo "::error::Atteso 2xx, ottenuto $code"; exit 1; }
+
+      - name: 3.1 | DB POST #1
+        if: ${{ inputs.mode == 'full' }}
+        run: |
+          set -euo pipefail
+          get_count() { local t="$1" f="$2" h r; h="$(curl -sS --max-time 15 -D - -o /dev/null "$SUPABASE_URL/rest/v1/$t?$f&select=id" -H "apikey: $SERVICE_ROLE" -H "Authorization: Bearer $SERVICE_ROLE" -H 'Prefer: count=exact')"; r="$(printf '%s\n' "$h" | tr -d '\r' | awk 'BEGIN{IGNORECASE=1}/^content-range:/{print $2; exit}')"; [ -n "$r" ] || return 1; printf '%s\n' "${r##*/}"; }
+          generated="$(get_count news_discovery 'status=eq.GENERATED')"; draft="$(get_count news_items 'status=eq.DRAFT')"; published="$(get_count news_items 'status=eq.PUBLISHED')"
+          jq -n --argjson g "$generated" --argjson d "$draft" --argjson p "$published" '{generated:$g,draft:$d,published:$p}' > post_counts_run1.json
+          cat post_counts_run1.json
+          pre_published="$(jq '.published' pre_counts.json)"
+          [ "$published" -eq "$pre_published" ] || { echo "::error::PUBLISHED modificato"; exit 1; }
+          pre_generated="$(jq '.generated' pre_counts.json)"
+          [ "$generated" -gt "$pre_generated" ] || { echo "::error::Nessuna discovery passata a GENERATED"; exit 1; }
+          [ "$draft" -gt "$(jq '.draft' pre_counts.json)" ] || { echo "::error::Nessuna nuova DRAFT rilevata"; exit 1; }
+
+      - name: 3.2 | Test 2xx run #2 (idempotenza)
+        if: ${{ inputs.mode == 'full' }}
+        run: |
+          set -euo pipefail
+          token='${{ steps.jwt.outputs.GTOKEN }}'
+          code="$(curl -sS --max-time 120 -o /tmp/resp_run2.txt -w '%{http_code}' -X POST "$FUNC_URL" -H "Authorization: Bearer $token" -H 'Content-Type: application/json' -H "X-Correlation-ID: smoke-gen-v1-run2-$(date -u +%Y%m%dT%H%M%SZ)" -d '{}')"
+          echo "HTTP=$code"
+          [ "$code" -ge 200 ] && [ "$code" -lt 300 ] || { echo "::error::run2 non-2xx"; exit 1; }
+
+      - name: 3.3 | DB POST #2 + idempotenza
+        if: ${{ inputs.mode == 'full' }}
+        run: |
+          set -euo pipefail
+          get_count() { local t="$1" f="$2" h r; h="$(curl -sS --max-time 15 -D - -o /dev/null "$SUPABASE_URL/rest/v1/$t?$f&select=id" -H "apikey: $SERVICE_ROLE" -H "Authorization: Bearer $SERVICE_ROLE" -H 'Prefer: count=exact')"; r="$(printf '%s\n' "$h" | tr -d '\r' | awk 'BEGIN{IGNORECASE=1}/^content-range:/{print $2; exit}')"; [ -n "$r" ] || return 1; printf '%s\n' "${r##*/}"; }
+          generated="$(get_count news_discovery 'status=eq.GENERATED')"; draft="$(get_count news_items 'status=eq.DRAFT')"; published="$(get_count news_items 'status=eq.PUBLISHED')"
+          jq -n --argjson g "$generated" --argjson d "$draft" --argjson p "$published" '{generated:$g,draft:$d,published:$p}' > post_counts_run2.json
+          cat post_counts_run2.json
+          [ "$generated" -eq "$(jq '.generated' post_counts_run1.json)" ] || { echo "::error::GENERATED aumentato al run2"; exit 1; }
+          [ "$draft" -eq "$(jq '.draft' post_counts_run1.json)" ] || { echo "::error::DRAFT aumentate al run2"; exit 1; }
+          [ "$published" -eq "$(jq '.published' post_counts_run1.json)" ] || { echo "::error::PUBLISHED cambiato al run2"; exit 1; }
+
+      - name: 4.1 | Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-artifacts
+          path: |
+            pre_counts.json
+            post_counts_run1.json
+            post_counts_run2.json
+            /tmp/resp_401.txt
+            /tmp/resp_403.txt
+            /tmp/resp_run1.txt
+            /tmp/resp_run2.txt
+          if-no-files-found: ignore
+          retention-days: 7
