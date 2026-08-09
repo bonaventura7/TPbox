@@ -7,6 +7,11 @@ import { Label } from "@/components/ui/label";
 import { PageHeader } from "@/components/site/SectionPage";
 import { lovable } from "@/integrations/lovable/index";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  SUPABASE_CONFIG_MISSING_MESSAGE,
+  supabaseClientConfigured,
+  warnSupabaseConfigMissing,
+} from "@/integrations/supabase/config";
 
 const TITLE = "Accedi all'Osservatorio";
 const DESCRIPTION =
@@ -38,6 +43,7 @@ function AuthPage() {
   const { next } = Route.useSearch();
   const navigate = useNavigate();
   const target = safeNext(next || "/tool");
+  const configured = supabaseClientConfigured();
 
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
@@ -47,14 +53,23 @@ function AuthPage() {
   const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!configured) {
+      warnSupabaseConfigMissing("/auth");
+      return;
+    }
     let active = true;
-    void supabase.auth.getSession().then(({ data }) => {
-      if (active && data.session) window.location.href = target;
-    });
+    void supabase.auth
+      .getSession()
+      .then(({ data }) => {
+        if (active && data.session) window.location.href = target;
+      })
+      .catch((error: unknown) => {
+        console.error(error);
+      });
     return () => {
       active = false;
     };
-  }, [target]);
+  }, [target, configured]);
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -110,6 +125,17 @@ function AuthPage() {
     <>
       <PageHeader eyebrow="Area riservata" title={TITLE} intro={DESCRIPTION} />
       <div className="mx-auto max-w-md px-4 py-10 sm:px-6 sm:py-14">
+        {!configured ? (
+          <div className="border border-border bg-card p-6">
+            <p role="status" className="text-sm text-foreground">
+              {SUPABASE_CONFIG_MISSING_MESSAGE}
+            </p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              L'accesso tornerà disponibile al ripristino della configurazione del backend. Le
+              sezioni pubbliche del portale restano consultabili.
+            </p>
+          </div>
+        ) : (
         <div className="border border-border bg-card p-6">
           <form onSubmit={onSubmit} className="space-y-4">
             <div className="space-y-2">
