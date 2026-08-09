@@ -5,6 +5,14 @@ import type { NewsItem } from "@/lib/domain/types";
 import { CATEGORY_COLORS } from "@/lib/domain/types";
 import { cn } from "@/lib/utils";
 
+/**
+ * View-model locale della card: reviewedBy non fa parte del contratto NewsItem
+ * corrente e resta opzionale finché il data wiring reale non lo espone.
+ */
+type NewsCardItem = NewsItem & {
+  reviewedBy?: string | null;
+};
+
 const LANG_LABEL: Record<NewsItem["language"], string> = {
   it: "Italiano",
   en: "Inglese",
@@ -54,7 +62,9 @@ function formatDateTime(value: string): string {
   });
 }
 
-export function NewsMeta({ item }: { item: NewsItem }) {
+export function NewsMeta({ item }: { item: NewsCardItem }) {
+  const reviewer = item.reviewedBy?.trim() ?? "";
+
   return (
     <dl className="mt-4 grid gap-x-6 gap-y-2 text-xs sm:grid-cols-2">
       <div className="flex min-w-0 gap-2">
@@ -84,6 +94,12 @@ export function NewsMeta({ item }: { item: NewsItem }) {
         <dt className="shrink-0 text-muted-foreground">Tema</dt>
         <dd className="font-medium">{item.topic}</dd>
       </div>
+      {reviewer ? (
+        <div className="flex gap-2">
+          <dt className="shrink-0 text-muted-foreground">A cura di</dt>
+          <dd className="font-medium">{reviewer}</dd>
+        </div>
+      ) : null}
       <div className="flex gap-2">
         <dt className="shrink-0 text-muted-foreground">Ultima verifica</dt>
         <dd className="font-medium">{formatDateTime(item.lastVerifiedAt)}</dd>
@@ -96,7 +112,7 @@ export function NewsCard({
   item,
   variant = "list",
 }: {
-  item: NewsItem;
+  item: NewsCardItem;
   variant?: "list" | "featured" | "compact";
 }) {
   const featured = variant === "featured";
@@ -131,7 +147,7 @@ export function NewsCard({
           <span className="border border-petrol/50 px-2 py-0.5 text-petrol">{item.geo}</span>
         )}
         <span className="text-muted-foreground">{item.topic}</span>
-        <DemoBadge />
+        {item.isDemo ? <DemoBadge /> : null}
       </div>
 
       {/* Titolo */}
