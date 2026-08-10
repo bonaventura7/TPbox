@@ -14,10 +14,345 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      news_discovery: {
+        Row: {
+          created_at: string
+          error: string | null
+          feed_item_id: string | null
+          gate_result: string | null
+          id: string
+          pdf_path: string | null
+          pdf_url: string | null
+          scouted_at: string
+          source_domain: string
+          source_url: string
+          status: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          error?: string | null
+          feed_item_id?: string | null
+          gate_result?: string | null
+          id?: string
+          pdf_path?: string | null
+          pdf_url?: string | null
+          scouted_at?: string
+          source_domain: string
+          source_url: string
+          status?: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          error?: string | null
+          feed_item_id?: string | null
+          gate_result?: string | null
+          id?: string
+          pdf_path?: string | null
+          pdf_url?: string | null
+          scouted_at?: string
+          source_domain?: string
+          source_url?: string
+          status?: string
+          title?: string
+        }
+        Relationships: []
+      }
+      news_gate_log: {
+        Row: {
+          checked_at: string
+          details: Json
+          gate_result: string
+          id: string
+          news_id: string | null
+        }
+        Insert: {
+          checked_at?: string
+          details?: Json
+          gate_result: string
+          id?: string
+          news_id?: string | null
+        }
+        Update: {
+          checked_at?: string
+          details?: Json
+          gate_result?: string
+          id?: string
+          news_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "news_gate_log_news_id_fkey"
+            columns: ["news_id"]
+            isOneToOne: false
+            referencedRelation: "news_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "news_gate_log_news_id_fkey"
+            columns: ["news_id"]
+            isOneToOne: false
+            referencedRelation: "v_attualita"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "news_gate_log_news_id_fkey"
+            columns: ["news_id"]
+            isOneToOne: false
+            referencedRelation: "v_biblioteca"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      news_items: {
+        Row: {
+          author_type: string
+          category: string | null
+          content_markdown: string | null
+          country: string | null
+          created_at: string
+          fetched_at: string | null
+          geo: string
+          id: string
+          language: string
+          normative_references: Json
+          pdf_url: string | null
+          primary_source_verified_at: string | null
+          published_at: string | null
+          reviewed_by: string | null
+          slug: string
+          source_kind: string
+          source_name: string | null
+          source_tier: string
+          source_url: string | null
+          status: string
+          summary: string | null
+          title: string
+          topic: string
+          updated_at: string
+        }
+        Insert: {
+          author_type?: string
+          category?: string | null
+          content_markdown?: string | null
+          country?: string | null
+          created_at?: string
+          fetched_at?: string | null
+          geo?: string
+          id?: string
+          language?: string
+          normative_references?: Json
+          pdf_url?: string | null
+          primary_source_verified_at?: string | null
+          published_at?: string | null
+          reviewed_by?: string | null
+          slug: string
+          source_kind?: string
+          source_name?: string | null
+          source_tier?: string
+          source_url?: string | null
+          status?: string
+          summary?: string | null
+          title: string
+          topic?: string
+          updated_at?: string
+        }
+        Update: {
+          author_type?: string
+          category?: string | null
+          content_markdown?: string | null
+          country?: string | null
+          created_at?: string
+          fetched_at?: string | null
+          geo?: string
+          id?: string
+          language?: string
+          normative_references?: Json
+          pdf_url?: string | null
+          primary_source_verified_at?: string | null
+          published_at?: string | null
+          reviewed_by?: string | null
+          slug?: string
+          source_kind?: string
+          source_name?: string | null
+          source_tier?: string
+          source_url?: string | null
+          status?: string
+          summary?: string | null
+          title?: string
+          topic?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      news_sources: {
+        Row: {
+          category: string
+          country: string | null
+          created_at: string
+          enabled: boolean
+          feed_url: string | null
+          id: string
+          name: string
+          watch_type: string
+        }
+        Insert: {
+          category: string
+          country?: string | null
+          created_at?: string
+          enabled?: boolean
+          feed_url?: string | null
+          id?: string
+          name: string
+          watch_type?: string
+        }
+        Update: {
+          category?: string
+          country?: string | null
+          created_at?: string
+          enabled?: boolean
+          feed_url?: string | null
+          id?: string
+          name?: string
+          watch_type?: string
+        }
+        Relationships: []
+      }
+      normative: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          key: string
+          url_official: string | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          key: string
+          url_official?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          key?: string
+          url_official?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
-      [_ in never]: never
+      v_attualita: {
+        Row: {
+          author_type: string | null
+          category: string | null
+          content_markdown: string | null
+          country: string | null
+          created_at: string | null
+          geo: string | null
+          id: string | null
+          language: string | null
+          normative_references: Json | null
+          pdf_url: string | null
+          primary_source_verified_at: string | null
+          published_at: string | null
+          reviewed_by: string | null
+          slug: string | null
+          source_kind: string | null
+          source_name: string | null
+          source_tier: string | null
+          source_url: string | null
+          summary: string | null
+          title: string | null
+          topic: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          author_type?: string | null
+          category?: string | null
+          content_markdown?: string | null
+          country?: string | null
+          created_at?: string | null
+          geo?: string | null
+          id?: string | null
+          language?: string | null
+          normative_references?: Json | null
+          pdf_url?: string | null
+          primary_source_verified_at?: string | null
+          published_at?: string | null
+          reviewed_by?: string | null
+          slug?: string | null
+          source_kind?: string | null
+          source_name?: string | null
+          source_tier?: string | null
+          source_url?: string | null
+          summary?: string | null
+          title?: string | null
+          topic?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          author_type?: string | null
+          category?: string | null
+          content_markdown?: string | null
+          country?: string | null
+          created_at?: string | null
+          geo?: string | null
+          id?: string | null
+          language?: string | null
+          normative_references?: Json | null
+          pdf_url?: string | null
+          primary_source_verified_at?: string | null
+          published_at?: string | null
+          reviewed_by?: string | null
+          slug?: string | null
+          source_kind?: string | null
+          source_name?: string | null
+          source_tier?: string | null
+          source_url?: string | null
+          summary?: string | null
+          title?: string | null
+          topic?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      v_biblioteca: {
+        Row: {
+          category: string | null
+          country: string | null
+          id: string | null
+          pdf_url: string | null
+          published_at: string | null
+          source_name: string | null
+          source_url: string | null
+          title: string | null
+        }
+        Insert: {
+          category?: string | null
+          country?: string | null
+          id?: string | null
+          pdf_url?: string | null
+          published_at?: string | null
+          source_name?: string | null
+          source_url?: string | null
+          title?: string | null
+        }
+        Update: {
+          category?: string | null
+          country?: string | null
+          id?: string | null
+          pdf_url?: string | null
+          published_at?: string | null
+          source_name?: string | null
+          source_url?: string | null
+          title?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       [_ in never]: never
