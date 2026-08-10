@@ -1,51 +1,39 @@
-# Blank screen preview: client Supabase senza env — diagnosi e correzione minima
+# Stato binding Supabase e percorso UI corretto (solo verifica, nessuna modifica)
 
-## Causa precisa
+## Stato attuale accertato
 
-1. **Dove nasce il client**: `src/integrations/supabase/client.ts` (auto-generato) esporta `supabase` come `Proxy` lazy. Alla **prima property access** chiama `createSupabaseClient()`, che **lancia** `Error: Missing Supabase environment variable(s): SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY` se le env mancano.
-2. **Come legge le env**: `import.meta.env['VITE_SUPABASE_URL'] || process.env['SUPABASE_URL']` (idem per la publishable key). In browser i valori `VITE_*` devono essere inlined a build time; se il build non li riceve, il fallback `process.env` non esiste lato client e la funzione lancia.
-3. **Configurazione esistente**: `.env` in repo contiene già `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_PROJECT_ID` e le tre varianti `VITE_*` (auto-gestite da Lovable Cloud, non modificabili a mano). Non esiste `.env.example`. `supabase/config.toml` è auto-generato.
-4. **Import che innesca l'errore a runtime**: `src/components/site/AuthMenu.tsx` importa `supabase` e nel primo `useEffect` chiama `supabase.auth.getSession()`. `AuthMenu` è dentro `SiteHeader`, montato in `__root.tsx` → **ogni pagina**. Il throw avviene durante l'effetto di hydration, senza error boundary utile → schermata bianca. Altri consumer (`routes/auth.tsx`, `routes/.lovable.oauth.consent.tsx`) sono pagine isolate, non globali.
+- Progetto backend collegato: **`ajrcfcxwslbbrallgnsy`** (`https://ajrcfcxwslbbrallgnsy.supabase.co`), **Managed by Lovable: true** → è un backend **Lovable Cloud gestito**, non un progetto Supabase esterno collegato tramite integrazione.
+- Variabili attualmente generate in `.env` (file auto-generato dalla piattaforma, sei variabili, tutte riferite ad `ajrcfcxwslbbrallgnsy`):
+  `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_PROJECT_ID`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_SUPABASE_PROJECT_ID`.
+- `VITE_USE_REAL_REPO`: **assente** → Attualità resta in modalità demo/mock. Non toccato.
+- Nessuna modifica eseguita: nessun disconnect, nessun deploy, nessun cambio env, nessun cambio DB.
 
-Quindi il blank screen globale è causato **solo** dal punto d'ingresso globale (`AuthMenu`), non dal resto dell'app: tutte le route sono altrimenti autonome dal client Supabase.
+## Cosa è gestibile da UI e cosa no
 
-## Obiettivo della correzione
+| Elemento | Gestibile dall'utente | Dove |
+|---|---|---|
+| Secret runtime applicativi (chiavi API proprie) | Sì | Project Settings → Secrets, oppure vista Cloud → Secrets |
+| `SUPABASE_URL` / `SUPABASE_PUBLISHABLE_KEY` / `SUPABASE_PROJECT_ID` e le tre `VITE_*` | **No** | Sono a prefisso riservato: derivate dal binding, rigenerate dalla piattaforma. Non editabili né da UI né da codice |
+| Progetto backend collegato (il binding stesso) | Solo tramite il flusso connettori | Sidebar → **Connectors** → Lovable Cloud / Supabase |
+| Riparazione del binding esistente (senza cambiarlo) | Sì, lato agente | operazione di rebind dei secret gestiti (non cambia progetto) |
 
-- URL + publishable key restano config frontend legittima (nessun secret).
-- Nessun hardcode di URL/chiave, nessun uso di service-role nel bundle.
-- Nessun fallback silenzioso: se la config manca, l'app resta usabile ma segnala esplicitamente lo stato di configurazione mancante.
+## Flussi disponibili nel progetto oggi
 
-## Correzione minima proposta (additiva, reversibile)
+1. **Rebind non distruttivo dei secret** del binding attuale: rigenera/riallinea `SUPABASE_*` per lo stesso progetto `ajrcfcxwslbbrallgnsy`. Utile solo se le env risultano mancanti o non valide. **Non** permette di puntare a un altro project ref.
+2. **Cambio di backend verso un progetto Supabase esterno** (`igtthymjeujkgfpmgoqj`): richiede che il progetto **non** sia su backend Lovable Cloud gestito. Qui lo è. Il passaggio da Cloud gestito a Supabase esterno passa necessariamente dal flusso Connectors e comporta la disconnessione di Cloud, che è **irreversibile e distruttiva** (elimina database, storage e functions del backend gestito). Nessun percorso non distruttivo per riassegnare il binding esiste in questa configurazione.
+3. **Alternativa non distruttiva** se serve leggere il DB canonico senza toccare il binding: consumare `igtthymjeujkgfpmgoqj` come **origine dati esterna** attraverso variabili applicative dedicate (nomi non riservati, es. `VITE_TPBOX_SUPABASE_URL` + publishable key, e lato server la sua service key nei Secrets), lasciando intatto il client generato e il backend gestito. Questa è una modifica di codice, quindi fuori dal perimetro "solo verifica" e da approvare separatamente.
 
-1. **Nuovo `src/integrations/supabase/config.ts`** (client-safe, non auto-generato):
-   - `supabaseClientConfigured(): boolean` → true solo se `import.meta.env.VITE_SUPABASE_URL` e `VITE_SUPABASE_PUBLISHABLE_KEY` sono stringhe non vuote.
-   - Nessun accesso a `process.env` lato client, nessun valore letterale di fallback.
-2. **`src/components/site/AuthMenu.tsx`**: prima di toccare `supabase`, verifica `supabaseClientConfigured()`.
-   - Se non configurato: nessuna chiamata al client (quindi nessun throw), rendering di un affordance inerte — link "Accedi" verso `/auth` più `title`/`aria-label` che indicano "accesso non disponibile: configurazione backend mancante". Log `console.error` una sola volta con messaggio diagnostico chiaro.
-   - Se configurato: comportamento attuale, invariato.
-   - In più: `getSession()` e `signOut()` avvolti in try/catch che imposta uno stato d'errore visibile nell'header invece di propagare.
-3. **`src/routes/auth.tsx`**: se non configurato, mostra un messaggio esplicito ("Accesso temporaneamente non disponibile: configurazione backend assente") al posto del form, invece di lanciare. Nessun cambio di design oltre al blocco di stato.
+## Percorso UI corretto da seguire (lato utente)
 
-Non si tocca `client.ts` (auto-generato), non si tocca `.env`, `supabase/config.toml`, il database, né il deployment.
+- Ispezione backend attuale: **Cloud** (nav progetto → Cloud) → Overview / Database / Users / Secrets.
+- Secret applicativi: **Project Settings → Secrets**.
+- Gestione binding/connettori: **sidebar root → Connectors → Lovable Cloud**.
+- Attenzione: in Connectors, "Disable Cloud" agisce sui progetti futuri; la rimozione di Cloud da **questo** progetto (Cloud → Advanced → Disconnect) è irreversibile e cancella i dati del backend gestito.
 
-## File coinvolti
+## Conclusione operativa
 
-| File | Azione |
-|---|---|
-| `src/integrations/supabase/config.ts` | nuovo, guard di configurazione |
-| `src/components/site/AuthMenu.tsx` | guard + try/catch, nessun throw globale |
-| `src/routes/auth.tsx` | stato "configurazione assente" al posto del form |
-| `src/integrations/supabase/config.test.ts` | nuovo, test unitari sul guard |
+Non esiste oggi un modo non distruttivo, dentro questo progetto, per spostare il binding gestito su `igtthymjeujkgfpmgoqj`. Le due strade reali sono: (a) accettare la disconnessione irreversibile di Lovable Cloud e collegare il progetto esterno via Connectors; (b) tenere il binding gestito e accedere al progetto canonico come origine dati esterna con variabili non riservate. Nessuna delle due è stata avviata.
 
-## Test di verifica
+## Decisione richiesta
 
-1. `npm run typecheck` pulito.
-2. `npm run test`: suite esistente verde + nuovi test sul guard (env presenti → true; assenti/stringa vuota → false).
-3. `npm run build` completato; verifica che negli asset generati l'URL e la publishable key risultino inlined (e che **nessuna** service-role key compaia nel bundle: grep su `SERVICE_ROLE` e `sb_secret_` → zero risultati).
-4. Smoke HTTP: `GET /`, `/attualita`, `/tool`, `/auth` → 200.
-5. Verifica in browser di `/`: header renderizzato, zero errori in console.
-6. Prova negativa: build con `VITE_SUPABASE_*` assenti → `/` renderizza comunque (nessuna schermata bianca) e mostra lo stato "accesso non disponibile" con errore diagnostico in console.
-
-## Nota sul binding
-
-Se in preview le `VITE_*` risultano assenti a runtime nonostante il `.env`, la causa a monte è il binding Supabase di Lovable Cloud: si risolve con un rebind dei secret gestiti + rebuild (operazione separata, senza modifiche al codice). Il guard qui proposto evita che quel caso produca uno schermo bianco.
+Confermare se procedere con (a), con (b), o restare fermi allo stato attuale.
