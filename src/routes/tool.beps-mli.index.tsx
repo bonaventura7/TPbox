@@ -2,6 +2,9 @@ import { createFileRoute } from '@tanstack/react-router'
 import { LinkCard } from '../components/ui/link-card'
 import { ExternalLink, Search, BarChart3, Globe } from 'lucide-react'
 import { loadJurisdictions, getMatchingOutcome, loadAggregateStats } from '../lib/beps-mli/api'
+import { REPO_URL, canonicalUrl } from '../lib/platform/site'
+
+const CANONICAL = canonicalUrl('/tool/beps-mli')
 
 export const Route = createFileRoute('/tool/beps-mli/')({
   head: () => ({
@@ -11,10 +14,10 @@ export const Route = createFileRoute('/tool/beps-mli/')({
       { property: 'og:title', content: 'BEPS MLI Database: impatto sui trattati — Osservatorio Transfer Pricing' },
       { property: 'og:description', content: "Database interattivo per analizzare l'impatto del BEPS Multilateral Instrument sui trattati fiscali bilaterali." },
       { property: 'og:type', content: 'website' },
-      { property: 'og:url', content: 'https://transfer-guide-italia.lovable.app/tool/beps-mli' },
+      { property: 'og:url', content: CANONICAL },
       { name: 'twitter:card', content: 'summary_large_image' },
     ],
-    links: [{ rel: 'canonical', href: 'https://transfer-guide-italia.lovable.app/tool/beps-mli' }],
+    links: [{ rel: 'canonical', href: CANONICAL }],
   }),
   component: RouteComponent,
 })
@@ -158,7 +161,7 @@ function RouteComponent() {
                 Architettura completa di integrazione, componenti UI, API layer e roadmap.
               </p>
               <a
-                href="https://github.com/bonaventura7/transfer-guide-italia/blob/main/docs/beps-mli-integration.md"
+                href={`${REPO_URL}/blob/main/docs/beps-mli-integration.md`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="mt-2 inline-flex items-center text-sm text-primary hover:underline"

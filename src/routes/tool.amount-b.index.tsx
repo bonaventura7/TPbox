@@ -8,6 +8,7 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { ArrowRight, ExternalLink } from "lucide-react";
 
+import { REPO_URL, canonicalUrl } from "../lib/platform/site";
 import {
   WORKBOOK_VERSION,
   DATASET_LABELS,
@@ -18,7 +19,7 @@ import {
 const TITLE = "Amount B (Pillar One): calcolo guidato — Osservatorio Transfer Pricing";
 const DESCRIPTION =
   "Calcolo dell'Approccio Semplificato e Razionalizzato del Pillar One OCSE: criterio quantitativo di scoping, matrice di pricing, cross-check sui costi operativi e data availability mechanism.";
-const CANONICAL = "https://transfer-guide-italia.lovable.app/tool/amount-b";
+const CANONICAL = canonicalUrl("/tool/amount-b");
 
 export const Route = createFileRoute("/tool/amount-b/")({
   head: () => ({
@@ -152,7 +153,7 @@ function AmountBIndex() {
           </li>
           <li>
             <a
-              href="https://github.com/bonaventura7/transfer-guide-italia/blob/main/docs/amount-b-calculation-manifest.md"
+              href={`${REPO_URL}/blob/main/docs/amount-b-calculation-manifest.md`}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 text-petrol hover:underline"
