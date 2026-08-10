@@ -1,0 +1,22 @@
+name: Guardrail CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+jobs:
+  source-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Run source-gate, authorization-gate and LLM tests
+        run: npx vitest run test/source-gate.test.ts test/auth-policy.test.ts test/llm-provider.test.ts test/auth-before-llm.test.ts

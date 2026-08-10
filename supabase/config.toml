@@ -1,4 +1,4 @@
-project_id = "ajrcfcxwslbbrallgnsy"
+project_id = "igtthymjeujkgfpmgoqj"
 
 [api]
 enabled = true
@@ -48,7 +48,16 @@ enabled = true
 policy = "per_worker"
 inspector_port = 8083
 
+[functions.news-scout]
+verify_jwt = true
+
+[functions.news-generate]
+verify_jwt = true
+
 [functions.news-monitor]
+verify_jwt = true
+
+[functions.news-publish]
 verify_jwt = true
 
 [analytics]
