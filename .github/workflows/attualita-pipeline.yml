@@ -63,10 +63,21 @@ jobs:
       - name: Publish gated drafts
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          PUBLISH_BOT_EMAIL: ${{ vars.PUBLISH_BOT_EMAIL }}
+          PUBLISH_BOT_PASSWORD: ${{ secrets.PUBLISH_BOT_PASSWORD }}
+          AUTO_PUBLISH_ENABLED: ${{ vars.AUTO_PUBLISH_ENABLED }}
         run: |
+          set -euo pipefail
+          test -n "$PUBLISH_BOT_EMAIL"
+          RESP=$(curl -sS --fail-with-body --max-time 30 -X POST "$SUPABASE_URL/auth/v1/token?grant_type=password" \
+            -H "apikey: $SUPABASE_ANON_KEY" \
+            -H "Content-Type: application/json" \
+            -d "$(jq -n --arg email "$PUBLISH_BOT_EMAIL" --arg password "$PUBLISH_BOT_PASSWORD" '{email:$email,password:$password}')")
+          TOKEN=$(jq -er '.access_token' <<<"$RESP")
+          echo "::add-mask::$TOKEN"
           curl --fail-with-body --silent --show-error --max-time 180 -X POST \
-            -H "Authorization: Bearer $SERVICE_KEY" -H "apikey: $SERVICE_KEY" \
+            -H "Authorization: Bearer $TOKEN" -H "apikey: $SUPABASE_ANON_KEY" \
             "$SUPABASE_URL/functions/v1/news-publish"
 
   monitor:
