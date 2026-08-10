@@ -25,18 +25,35 @@ import {
  */
 const breaker = new CircuitBreaker();
 
-const STALE_AFTER_HOURS = 36;
-const LAST_PIPELINE_RUN_AT = "2026-08-04T07:20:00Z";
-
-function computeHealth(now: Date): ServiceHealth {
+/**
+ * Il dataset dimostrativo è un'istantanea, non l'esito di una pipeline: qui non
+ * c'è nulla che possa invecchiare. La versione precedente confrontava l'orologio
+ * con una data scritta a mano e da un certo giorno in poi dichiarava per sempre
+ * «Contenuti non recenti: l'ultimo aggiornamento della pipeline redazionale
+ * risale a un intervallo superiore alle 36 ore». Era telemetria inventata, su un
+ * portale la cui promessa è la verificabilità della fonte. Lo stato di freschezza
+ * appartiene al repository reale, dove nasce da un fatto.
+ *
+ * DEGRADED resta, perché descrive una proprietà vera della configurazione demo:
+ * una fonte primaria disattivata.
+ */
+function computeHealth(): ServiceHealth {
   if (!breaker.canPass()) return "DEGRADED";
   const disabledPrimary = DEMO_SOURCES.some(
     (source) => source.tier === "PRIMARY" && source.acquisitionMode === "DISABLED",
   );
-  if (disabledPrimary) return "DEGRADED";
-  const hours =
-    (now.getTime() - new Date(LAST_PIPELINE_RUN_AT).getTime()) / 3_600_000;
-  return hours > STALE_AFTER_HOURS ? "STALE" : "OK";
+  return disabledPrimary ? "DEGRADED" : "OK";
+}
+
+/**
+ * Ultima verifica redazionale presente nei dati demo: derivata, non dichiarata.
+ * Se il dataset cambia, questa segue.
+ */
+function lastVerifiedInDemoData(): string {
+  const verified = publishedOnly(DEMO_NEWS)
+    .map((item) => item.lastVerifiedAt)
+    .sort();
+  return verified.at(-1) ?? new Date(0).toISOString();
 }
 
 /** Solo gli elementi PUBLISHED sono visibili al pubblico: nessuna bozza esce automaticamente. */
@@ -99,8 +116,8 @@ export async function listNewsFeed(filters: NewsFilters): Promise<MockNewsFeedRe
   return {
     correlationId,
     generatedAt: now.toISOString(),
-    health: computeHealth(now),
-    lastPipelineRunAt: LAST_PIPELINE_RUN_AT,
+    health: computeHealth(),
+    lastPipelineRunAt: lastVerifiedInDemoData(),
     featured: isFiltering ? null : (items[0] ?? null),
     latest: isFiltering ? [] : items.slice(1, 4),
     archive: filtered,

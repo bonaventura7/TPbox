@@ -2,6 +2,9 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { loadJurisdictions } from '../lib/beps-mli/api'
 import { useState } from 'react'
 import { Search, ArrowRightLeft, CalendarDays } from 'lucide-react'
+import { canonicalUrl } from '../lib/platform/site'
+
+const CANONICAL = canonicalUrl('/tool/beps-mli/ricerca')
 
 export const Route = createFileRoute('/tool/beps-mli/ricerca')({
   head: () => ({
@@ -11,10 +14,10 @@ export const Route = createFileRoute('/tool/beps-mli/ricerca')({
       { property: 'og:title', content: 'Ricerca BEPS MLI tra due giurisdizioni — Osservatorio Transfer Pricing' },
       { property: 'og:description', content: 'Analizza come il BEPS MLI modifica un trattato fiscale tra due paesi, con focus su Italia e controparti.' },
       { property: 'og:type', content: 'website' },
-      { property: 'og:url', content: 'https://transfer-guide-italia.lovable.app/tool/beps-mli/ricerca' },
+      { property: 'og:url', content: CANONICAL },
       { name: 'twitter:card', content: 'summary_large_image' },
     ],
-    links: [{ rel: 'canonical', href: 'https://transfer-guide-italia.lovable.app/tool/beps-mli/ricerca' }],
+    links: [{ rel: 'canonical', href: CANONICAL }],
   }),
   component: RouteComponent,
 })

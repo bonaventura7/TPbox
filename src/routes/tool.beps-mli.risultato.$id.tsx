@@ -1,6 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { getMatchingOutcome, loadJurisdictions } from '../lib/beps-mli/api'
 import type { JurisdictionCode } from '../lib/beps-mli/types'
+import { canonicalUrl } from '../lib/platform/site'
+
+const CANONICAL = canonicalUrl('/tool/beps-mli/risultato')
 
 export const Route = createFileRoute('/tool/beps-mli/risultato/$id')({
   head: () => ({
@@ -10,10 +13,10 @@ export const Route = createFileRoute('/tool/beps-mli/risultato/$id')({
       { property: 'og:title', content: 'Risultato analisi BEPS MLI — Osservatorio Transfer Pricing' },
       { property: 'og:description', content: 'Matching outcome BEPS MLI per un trattato bilaterale a una data di riferimento, con dati dimostrativi.' },
       { property: 'og:type', content: 'website' },
-      { property: 'og:url', content: 'https://transfer-guide-italia.lovable.app/tool/beps-mli/risultato' },
+      { property: 'og:url', content: CANONICAL },
       { name: 'twitter:card', content: 'summary_large_image' },
     ],
-    links: [{ rel: 'canonical', href: 'https://transfer-guide-italia.lovable.app/tool/beps-mli/risultato' }],
+    links: [{ rel: 'canonical', href: CANONICAL }],
   }),
   component: RouteComponent,
 })
