@@ -13,6 +13,19 @@ export default defineConfig({
     // nitro/vite builds from this
     server: { entry: "server" },
   },
+  // Su Vercel (VERCEL=1) Nitro deve usare il preset "vercel" (Build Output API v3).
+  // Il default del config e' cloudflare: su Vercel ogni route risponderebbe 404.
+  // La condizione mantiene invariato il comportamento su Lovable/Cloudflare.
+  nitro: process.env.VERCEL
+    ? {
+        preset: "vercel",
+        output: {
+          dir: ".vercel/output",
+          serverDir: ".vercel/output/functions/__server.func",
+          publicDir: ".vercel/output/static",
+        },
+      }
+    : false,
   vite: {
     plugins: [mcpPlugin()],
   },
