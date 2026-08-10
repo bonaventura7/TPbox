@@ -37,7 +37,7 @@ async function fetchText(url: string): Promise<string> {
   if (!r.ok) throw new Error(`source HTTP ${r.status}`);
   const ct = (r.headers.get('content-type') ?? '').toLowerCase();
   if (ct.includes('pdf') || /\.pdf(?:$|\?)/i.test(url)) {
-    const { getDocument } = await import('https://deno.land/x/pdfjs@3.11.174/build/pdf.mjs');
+    const { getDocument } = await import('npm:pdfjs-dist@4.4.168/legacy/build/pdf.mjs');
     const bytes = new Uint8Array(await r.arrayBuffer());
     const pdf = await getDocument({ data: bytes }).promise;
     let text = '';
