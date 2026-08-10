@@ -54,4 +54,4 @@ export const WHITELIST: Source[] = [
 export function extractDomain(url:string){try{return new URL(url).hostname.toLowerCase().replace(/^www\./,'')}catch{return ''}}
 export function findSource(domain:string){const d=domain.toLowerCase().replace(/^www\./,'');return WHITELIST.find(s=>d===s.domain||d.endsWith(`.${s.domain}`))??null}
 export function isAllowedHost(domain:string){return !!findSource(domain)}
-export function canonicalUrl(url:string){try{const u=new URL(url);u.hash='';for(const k of ['utm_source','utm_medium','utm_campaign','utm_term','utm_content'])u.searchParams.delete(k);u.pathname=u.pathname.replace(/\/+$/'','');return u.toString()}catch{return ''}}
+export function canonicalUrl(url:string){try{const u=new URL(url);u.hash='';for(const k of ['utm_source','utm_medium','utm_campaign','utm_term','utm_content'])u.searchParams.delete(k);u.pathname=u.pathname.replace(/\/+$/,'');return u.toString()}catch{return ''}}
