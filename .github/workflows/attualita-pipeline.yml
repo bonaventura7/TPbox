@@ -50,10 +50,12 @@ jobs:
             -d "$(jq -n --arg email "$GENERATE_BOT_EMAIL" --arg password "$GENERATE_BOT_PASSWORD" '{email:$email,password:$password}')")
           TOKEN=$(jq -er '.access_token' <<<"$RESP")
           echo "::add-mask::$TOKEN"
-          curl --fail-with-body --silent --show-error --max-time 180 -X POST \
+          curl --fail-with-body --silent --show-error --max-time 125 -X POST \
             -H "Authorization: Bearer $TOKEN" \
             -H "apikey: $SUPABASE_ANON_KEY" \
+            -H "Content-Type: application/json" \
             -H "X-Correlation-ID: ghaction-generate-$(date -u +%Y%m%dT%H%M%SZ)" \
+            -d '{"batch_size":1,"time_budget_seconds":110}' \
             "$SUPABASE_URL/functions/v1/news-generate"
 
   publish:
