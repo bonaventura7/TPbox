@@ -37,7 +37,8 @@ async function fetchText(url: string): Promise<string> {
 }
 
 async function generate(sourceText: string, sourceDomain: string) {
-  const system = `Sei un redattore fiscale italiano esperto di transfer pricing e fiscalità internazionale.\nScrivi un articolo originale in italiano, esclusivamente come parafrasi della fonte primaria fornita. Non inventare fatti, date, numeri, enti o riferimenti.\nCategoria obbligatoria: TP, VAT, Pillar Two oppure Anti-Avoidance.\nEstrai solo riferimenti normativi esplicitamente presenti nella fonte.\nRispondi SOLO JSON con title, summary, content_markdown, category, country, normative_references. La fonte primaria è ${sourceDomain}.`;
+  const system = `Sei un redattore fiscale italiano esperto di transfer pricing e fiscalità internazionale.
+Scrivi un articolo originale in italiano, esclusivamente come parafrasi della fonte pr[...]`;
   const { value } = await generateJson(
     [
       { role: 'system', content: system },
@@ -64,7 +65,7 @@ Deno.serve(async (req: Request) => {
   const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
   console.log(JSON.stringify({ event: 'news-generate.start', correlation_id: cid }));
 
-  const { data: discoveries, error } = await supabase.from('news_discovery').select('*').eq('status', 'VERIFIED').limit(20);
+  const { data: discoveries, error } = await supabase.from('news_discovery').select('*').eq('status', 'VERIFIED').limit(3);
   if (error) {
     console.error(JSON.stringify({ event: 'news-generate.discovery_query_failed', correlation_id: cid, error: redactSecret(error.message) }));
     return jsonResponse({ ok: false, error: 'persistence_failed' }, 500, cid);
@@ -86,7 +87,7 @@ Deno.serve(async (req: Request) => {
       if (unknown.length) throw new Error(`riferimenti normativi non presenti nel catalogo: ${unknown.join('; ')}`);
       const { data: dup } = await supabase.from('news_items').select('id').eq('source_url', d.source_url).maybeSingle();
       if (dup) { await supabase.from('news_discovery').update({ status: 'GENERATED', gate_result: 'PASS_DUPLICATE' }).eq('id', d.id); continue; }
-      const { error: insertError } = await supabase.from('news_items').insert({ slug: slugify(String(draft.title)), title: String(draft.title), summary: String(draft.summary ?? '').slice(0, 500), content_markdown: String(draft.content_markdown ?? ''), category, country: String(draft.country ?? 'INT'), source_name: source.name, source_url: d.source_url, pdf_url: d.pdf_url ?? null, normative_references: refs, status: 'DRAFT', fetched_at: new Date().toISOString() });
+      const { error: insertError } = await supabase.from('news_items').insert({ slug: slugify(String(draft.title)), title: String(draft.title), summary: String(draft.summary ?? '').slice(0, 500), [...]
       if (insertError) throw insertError;
       await supabase.from('news_discovery').update({ status: 'GENERATED', gate_result: 'PASS' }).eq('id', d.id);
       created.push(String(draft.title));
