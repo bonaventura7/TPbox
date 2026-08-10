@@ -11,6 +11,25 @@ const authClient = createClient(SUPABASE_URL, ANON_KEY);
 const CATEGORIES = ['TP', 'VAT', 'Pillar Two', 'Anti-Avoidance'];
 const CATEGORY_DB: Record<string, string> = { TP: 'TP', VAT: 'VAT', 'Pillar Two': 'P2', 'Anti-Avoidance': 'AA' };
 
+// ============================================================================
+// INCIDENT 504 IDLE_TIMEOUT — budget di tempo e batch ridotto.
+// Il worker Supabase interrompe la richiesta dopo 150s di inattività.
+// Questa funzione ora:
+//   - accetta batch_size (default 1, max 5) e time_budget_seconds (default 110, max 110)
+//   - esce prima del limite server restituendo 200 (completato) o 202 (parziale)
+//   - fa checkpoint dopo ogni articolo (stato aggiornato nel DB) => riavvio sicuro
+//   - è idempotente: il check `maybeSingle` su source_url evita duplicati al retry
+// ============================================================================
+const DEFAULT_BATCH_SIZE = 1;
+const MAX_BATCH_SIZE = 5;
+const DEFAULT_TIME_BUDGET_MS = 110_000;
+const MIN_TIME_BUDGET_MS = 10_000;
+const SAFETY_MARGIN_MS = 15_000; // esci prima del limite server
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max);
+}
+
 function slugify(s: string) { return s.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').slice(0, 70) + '-' + crypto.randomUUID().slice(0, 8); }
 
 async function fetchText(url: string): Promise<string> {
@@ -37,8 +56,7 @@ async function fetchText(url: string): Promise<string> {
 }
 
 async function generate(sourceText: string, sourceDomain: string) {
-  const system = `Sei un redattore fiscale italiano esperto di transfer pricing e fiscalità internazionale.
-Scrivi un articolo originale in italiano, esclusivamente come parafrasi della fonte pr[...]`;
+  const system = `Sei un redattore fiscale italiano esperto di transfer pricing e fiscalità internazionale.\nScrivi un articolo originale in italiano, esclusivamente come parafrasi della fonte primaria fornita. Non inventare fatti, date, numeri, enti o riferimenti.\nCategoria obbligatoria: TP, VAT, Pillar Two oppure Anti-Avoidance.\nEstrai solo riferimenti normativi esplicitamente presenti nella fonte.\nRispondi SOLO JSON con title, summary, content_markdown, category, country, normative_references. La fonte primaria è ${sourceDomain}.`;
   const { value } = await generateJson(
     [
       { role: 'system', content: system },
@@ -61,19 +79,40 @@ Deno.serve(async (req: Request) => {
   if (!auth.ok) return auth.response;
   const { correlationId: cid } = auth;
 
-  // Service-role client is created only after caller authorization has passed.
-  const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
-  console.log(JSON.stringify({ event: 'news-generate.start', correlation_id: cid }));
+  let batchSize = DEFAULT_BATCH_SIZE;
+  let timeBudgetMs = DEFAULT_TIME_BUDGET_MS;
+  try {
+    const body = await req.json().catch(() => ({}));
+    batchSize = clamp(Number(body.batch_size ?? DEFAULT_BATCH_SIZE), 1, MAX_BATCH_SIZE);
+    const requested = Number(body.time_budget_seconds ?? 110) * 1000;
+    timeBudgetMs = clamp(requested, MIN_TIME_BUDGET_MS, DEFAULT_TIME_BUDGET_MS);
+  } catch {
+    // corpo assente o non-JSON: default
+  }
 
-  const { data: discoveries, error } = await supabase.from('news_discovery').select('*').eq('status', 'VERIFIED').limit(3);
+  const startedAt = Date.now();
+
+  const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
+  console.log(JSON.stringify({ event: 'news-generate.start', correlation_id: cid, batch_size: batchSize, time_budget_ms: timeBudgetMs }));
+
+  const { data: discoveries, error } = await supabase.from('news_discovery').select('*').eq('status', 'VERIFIED').limit(batchSize);
   if (error) {
     console.error(JSON.stringify({ event: 'news-generate.discovery_query_failed', correlation_id: cid, error: redactSecret(error.message) }));
     return jsonResponse({ ok: false, error: 'persistence_failed' }, 500, cid);
   }
   const { data: norms } = await supabase.from('normative').select('key');
   const known = new Set((norms ?? []).map((x: { key: string }) => x.key.trim().toLowerCase()));
-  const created = [];
+  const created: string[] = [];
+  let blocked = 0;
+  let remaining = 0;
+
   for (const d of discoveries ?? []) {
+    const elapsedMs = Date.now() - startedAt;
+    if (elapsedMs + SAFETY_MARGIN_MS > timeBudgetMs) {
+      remaining += 1;
+      console.warn(JSON.stringify({ event: 'news-generate.budget_exhausted', correlation_id: cid, elapsed_ms: elapsedMs, budget_ms: timeBudgetMs }));
+      break;
+    }
     try {
       const sourceText = await fetchText(d.source_url);
       const domain = extractDomain(d.source_url);
@@ -87,16 +126,20 @@ Deno.serve(async (req: Request) => {
       if (unknown.length) throw new Error(`riferimenti normativi non presenti nel catalogo: ${unknown.join('; ')}`);
       const { data: dup } = await supabase.from('news_items').select('id').eq('source_url', d.source_url).maybeSingle();
       if (dup) { await supabase.from('news_discovery').update({ status: 'GENERATED', gate_result: 'PASS_DUPLICATE' }).eq('id', d.id); continue; }
-      const { error: insertError } = await supabase.from('news_items').insert({ slug: slugify(String(draft.title)), title: String(draft.title), summary: String(draft.summary ?? '').slice(0, 500), [...]
+      const { error: insertError } = await supabase.from('news_items').insert({ slug: slugify(String(draft.title)), title: String(draft.title), summary: String(draft.summary ?? '').slice(0, 500), content_markdown: String(draft.content_markdown ?? ''), category, country: String(draft.country ?? 'INT'), source_name: source.name, source_url: d.source_url, pdf_url: d.pdf_url ?? null, normative_references: refs, status: 'DRAFT', fetched_at: new Date().toISOString() });
       if (insertError) throw insertError;
       await supabase.from('news_discovery').update({ status: 'GENERATED', gate_result: 'PASS' }).eq('id', d.id);
       created.push(String(draft.title));
     } catch (e) {
+      blocked += 1;
       const safeError = redactSecret(e instanceof Error ? e.message : String(e));
       console.error(JSON.stringify({ event: 'news-generate.item_failed', correlation_id: cid, discovery_id: d.id, error: safeError }));
       await supabase.from('news_discovery').update({ status: 'BLOCKED', gate_result: 'FAIL_UNKNOWN', error: safeError }).eq('id', d.id);
     }
   }
-  console.log(JSON.stringify({ event: 'news-generate.complete', correlation_id: cid, verified_seen: discoveries?.length ?? 0, created: created.length }));
-  return jsonResponse({ ok: true, created }, 200, cid);
+
+  const elapsedMs = Date.now() - startedAt;
+  const partial = remaining > 0;
+  console.log(JSON.stringify({ event: 'news-generate.complete', correlation_id: cid, verified_seen: discoveries?.length ?? 0, created: created.length, blocked, remaining, elapsed_ms: elapsedMs, partial }));
+  return jsonResponse({ ok: true, created, blocked, remaining, status: partial ? 'partial' : 'completed', elapsed_ms: elapsedMs }, partial ? 202 : 200, cid);
 });
