@@ -57,5 +57,8 @@ verify_jwt = true
 [functions.news-monitor]
 verify_jwt = true
 
+[functions.news-publish]
+verify_jwt = true
+
 [analytics]
 enabled = false
