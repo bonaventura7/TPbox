@@ -1,4 +1,4 @@
-import { canonicalUrl, extractDomain, isAllowedHost } from './whitelist.ts';
+import { canonicalUrl, extractDomain, isAllowedHost, isSpecificPrimaryUrl } from './whitelist.ts';
 
 export type GateResult = 'PASS'|'FAIL_DOMAIN'|'FAIL_HTTP'|'FAIL_DUP'|'FAIL_PDF'|'FAIL_REF'|'FAIL_EMPTY'|'FAIL_UNKNOWN';
 export interface GateInput { sourceUrl: string; pdfUrl: string | null; bodyText: string; references: string[]; knownNormativeKeys: Set<string>; }
@@ -9,6 +9,7 @@ export async function runSourceGate(input: GateInput, ctx: GateContext): Promise
   const checks: Record<string,string> = {};
   const domain = extractDomain(input.sourceUrl);
   if (!domain || !isAllowedHost(domain)) return { result:'FAIL_DOMAIN', checks, reason:`dominio non ammesso: ${domain || '(vuoto)'}` };
+  if (!isSpecificPrimaryUrl(input.sourceUrl)) return { result:'FAIL_DOMAIN', checks, reason:'homepage istituzionale generica' };
   checks.domain = `ok (${domain})`;
 
   const status = await ctx.checkHttp(input.sourceUrl);
