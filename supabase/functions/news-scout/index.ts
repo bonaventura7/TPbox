@@ -49,10 +49,13 @@ Deno.serve(async (req: Request) => {
     const { data: existing } = await supabase.from('news_discovery').select('id').eq('source_url', primary).maybeSingle();
     if (existing) { results.push({ title: item.title, status: 'DUPLICATE' }); continue; }
     const http = await fetchStatus(primary).catch(() => 0);
-    const status = http >= 200 && http < 300 ? 'VERIFIED' : 'BLOCKED';
-    if (status === 'VERIFIED') verified++; else blocked++;
-    const gate_result = status === 'VERIFIED' ? 'PASS' : 'FAIL_HTTP';
-    const { error } = await supabase.from('news_discovery').insert({ feed_item_id: item.id, title: item.title, source_url: primary, source_domain: domain, status, gate_result, error: http ? null : `HTTP ${http}` });
+    const ok = http >= 200 && http < 300;
+    const status = ok ? 'VERIFIED' : 'BLOCKED';
+    if (ok) verified++; else blocked++;
+    const gate_result = ok ? 'PASS' : 'FAIL_HTTP';
+    // Fix: l'errore HTTP va registrato SEMPRE quando non-2xx; null solo quando ok.
+    const errorDetail = ok ? null : (http > 0 ? `HTTP ${http}` : 'network error (HTTP 0)');
+    const { error } = await supabase.from('news_discovery').insert({ feed_item_id: item.id, title: item.title, source_url: primary, source_domain: domain, status, gate_result, error: errorDetail });
     if (error) results.push({ title: item.title, status: 'ERROR', error: error.message });
     else results.push({ title: item.title, status, source: source.name });
   }
