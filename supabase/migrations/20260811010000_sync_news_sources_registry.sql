@@ -1,0 +1,73 @@
+-- Keep the database source-name foreign key synchronized with the Edge whitelist.
+-- Rows are disabled: this migration neither enables feeds nor expands allowed domains.
+WITH added AS (
+  INSERT INTO public.news_sources (
+    name,
+    category,
+    country,
+    feed_url,
+    watch_type,
+    enabled
+  )
+  VALUES
+    ('OECD', 'TP', 'INT', NULL, 'HTML_WATCH', false),
+    ('OECD iLibrary', 'TP', 'INT', NULL, 'HTML_WATCH', false),
+    ('European Commission', 'P2', 'EU', NULL, 'HTML_WATCH', false),
+    ('Agenzia delle Entrate', 'TP', 'IT', NULL, 'HTML_WATCH', false),
+    ('MEF', 'P2', 'IT', NULL, 'HTML_WATCH', false),
+    ('Normattiva', 'AA', 'IT', NULL, 'HTML_WATCH', false),
+    ('CBDT India', 'TP', 'IN', NULL, 'HTML_WATCH', false),
+    ('HMRC / UK Government', 'TP', 'UK', NULL, 'HTML_WATCH', false),
+    ('IRS', 'AA', 'US', NULL, 'HTML_WATCH', false),
+    ('ATO Australia', 'VAT', 'AU', NULL, 'HTML_WATCH', false),
+    ('CRA Canada', 'TP', 'CA', NULL, 'HTML_WATCH', false),
+    ('Bundesfinanzdirektion', 'P2', 'DE', NULL, 'HTML_WATCH', false),
+    ('DGFiP France', 'TP', 'FR', NULL, 'HTML_WATCH', false),
+    ('Federal Public Service Finance', 'P2', 'BE', NULL, 'HTML_WATCH', false),
+    ('Bundesministerium der Finanzen', 'P2', 'DE', NULL, 'HTML_WATCH', false),
+    ('Tax Department Cipro', 'VAT', 'CY', NULL, 'HTML_WATCH', false),
+    ('Inland Revenue Board of Malaysia', 'TP', 'MY', NULL, 'HTML_WATCH', false),
+    ('Ministerie van Financien', 'P2', 'NL', NULL, 'HTML_WATCH', false),
+    ('EUR-Lex (UE)', 'AA', 'EU', NULL, 'HTML_WATCH', false),
+    ('European Commission Finance', 'P2', 'EU', NULL, 'HTML_WATCH', false),
+    ('EU Taxation & Customs', 'VAT', 'EU', NULL, 'HTML_WATCH', false),
+    ('General Dept of Taxation Vietnam', 'TP', 'VN', NULL, 'HTML_WATCH', false),
+    ('CURIA (Corte UE)', 'AA', 'EU', NULL, 'HTML_WATCH', false),
+    ('Ministerul Finantelor Romania', 'P2', 'RO', NULL, 'HTML_WATCH', false),
+    ('Servicio de Impuestos Internos Chile', 'TP', 'CL', NULL, 'HTML_WATCH', false),
+    ('SIN Bolivia', 'TP', 'BO', NULL, 'HTML_WATCH', false),
+    ('SUNAT Peru', 'TP', 'PE', NULL, 'HTML_WATCH', false),
+    ('SARS South Africa', 'TP', 'ZA', NULL, 'HTML_WATCH', false),
+    ('RRA Rwanda', 'TP', 'RW', NULL, 'HTML_WATCH', false),
+    ('MIF Montenegro', 'P2', 'ME', NULL, 'HTML_WATCH', false),
+    ('IRAS Singapore', 'TP', 'SG', NULL, 'HTML_WATCH', false),
+    ('Government of Canada', 'P2', 'CA', NULL, 'HTML_WATCH', false),
+    ('NTS Korea', 'TP', 'KR', NULL, 'HTML_WATCH', false),
+    ('NAV Hungary', 'TP', 'HU', NULL, 'HTML_WATCH', false),
+    ('FTS Russia', 'TP', 'RU', NULL, 'HTML_WATCH', false),
+    ('MRA Malawi', 'VAT', 'MW', NULL, 'HTML_WATCH', false),
+    ('MOF Taiwan', 'TP', 'TW', NULL, 'HTML_WATCH', false),
+    ('MOF Kuwait', 'P2', 'KW', NULL, 'HTML_WATCH', false),
+    ('NBR Bahrain', 'VAT', 'BH', NULL, 'HTML_WATCH', false),
+    ('CFR Malta', 'P2', 'MT', NULL, 'HTML_WATCH', false),
+    ('PURS Serbia', 'TP', 'RS', NULL, 'HTML_WATCH', false),
+    ('NTA Japan', 'TP', 'JP', NULL, 'HTML_WATCH', false),
+    ('IRD New Zealand', 'TP', 'NZ', NULL, 'HTML_WATCH', false),
+    ('FTA UAE', 'P2', 'AE', NULL, 'HTML_WATCH', false),
+    ('Receita Federal Brazil', 'TP', 'BR', NULL, 'HTML_WATCH', false),
+    ('DGI Panama', 'TP', 'PA', NULL, 'HTML_WATCH', false),
+    ('ARCA Argentina', 'TP', 'AR', NULL, 'HTML_WATCH', false),
+    ('VMI Lithuania', 'TP', 'LT', NULL, 'HTML_WATCH', false),
+    ('DIAN Colombia', 'TP', 'CO', NULL, 'HTML_WATCH', false),
+    ('STS Moldova', 'TP', 'MD', NULL, 'HTML_WATCH', false),
+    ('ACD Luxembourg', 'P2', 'LU', NULL, 'HTML_WATCH', false),
+    ('MFDGI Algeria', 'TP', 'DZ', NULL, 'HTML_WATCH', false),
+    ('KRA Kenya', 'TP', 'KE', NULL, 'HTML_WATCH', false),
+    ('Belastingdienst Netherlands', 'TP', 'NL', NULL, 'HTML_WATCH', false),
+    ('HMRC UK', 'TP', 'UK', NULL, 'HTML_WATCH', false),
+    ('Government of Poland', 'VAT', 'PL', NULL, 'HTML_WATCH', false)
+  ON CONFLICT (name) DO NOTHING
+  RETURNING name
+)
+SELECT COUNT(*) AS source_registry_added
+FROM added;
