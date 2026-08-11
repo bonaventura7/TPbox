@@ -40,7 +40,7 @@ jobs:
       ART: ${{ github.workspace }}/smoke-artifacts
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-      SR: ${{ secrets.SUPABASE_SERVICE_ROLE }}
+      SR: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       NEWS_GENERATE_URL: ${{ secrets.NEWS_GENERATE_URL }}
       # Accetta l'identita' del bot sia come repository variable sia come secret:
       # elimina la classe di errore "l'ho messo come secret invece che come variable".
