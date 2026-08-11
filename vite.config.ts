@@ -16,7 +16,7 @@ export default defineConfig({
   // Su Vercel (VERCEL=1) Nitro deve usare il preset "vercel" (Build Output API v3).
   // Il default del config e' cloudflare: su Vercel ogni route risponderebbe 404.
   // La condizione mantiene invariato il comportamento su Lovable/Cloudflare.
-  nitro: process.env.VERCEL
+  nitro: process.env['VERCEL']
     ? {
         preset: "vercel",
         output: {
