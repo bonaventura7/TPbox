@@ -29,7 +29,9 @@ export const newsRowSchema = z
   .object({
     id: z.union([z.string(), z.number()]),
     title: z.string().min(1),
-    summary: z.string().default(""),
+    // La vista pubblica può esporre summary NULL: si normalizza a stringa vuota,
+    // senza inventare contenuto.
+    summary: z.string().nullable().optional(),
     source_id: z.string().optional(),
     sourceId: z.string().optional(),
     source_name: z.string().optional(),
@@ -42,11 +44,16 @@ export const newsRowSchema = z
     originalDate: z.string().optional(),
     last_verified_at: z.string().optional(),
     lastVerifiedAt: z.string().optional(),
+    // Verifica della fonte primaria: campo reale della vista pubblica.
+    primary_source_verified_at: z.string().optional().nullable(),
     language: z.enum(["it", "en", "fr"]).optional(),
     geo: geoSchema,
     topic: topicSchema,
     original_url: z.string().url().optional(),
     originalUrl: z.string().url().optional(),
+    // Nome effettivo della colonna nella vista pubblica v_attualita.
+    source_url: z.string().url().optional(),
+    sourceUrl: z.string().url().optional(),
     category: z.enum(NEWS_CATEGORIES).optional().nullable(),
     country: z.string().optional().nullable(),
     pdf_url: z.string().url().optional().nullable(),
@@ -59,20 +66,21 @@ export type NewsRow = z.infer<typeof newsRowSchema>;
 
 /** Converte una riga già validata in NewsItem. Ritorna null se manca un campo essenziale. */
 export function mapRow(row: NewsRow): NewsItem | null {
-  const originalUrl = row.original_url ?? row.originalUrl;
+  const originalUrl = row.original_url ?? row.originalUrl ?? row.source_url ?? row.sourceUrl;
   const originalDate = row.original_date ?? row.originalDate ?? row.published_at ?? undefined;
   if (!originalUrl || !originalDate) return null;
 
   const item: NewsItem = {
     id: String(row.id),
     title: row.title,
-    summary: row.summary,
+    summary: row.summary ?? "",
     sourceId: row.source_id ?? row.sourceId ?? "",
     sourceName: row.source_name ?? row.sourceName ?? "",
     sourceKind: row.source_kind ?? row.sourceKind ?? "ISTITUZIONALE",
     sourceTier: row.source_tier ?? row.sourceTier ?? "PRIMARY",
     originalDate,
-    lastVerifiedAt: row.last_verified_at ?? row.lastVerifiedAt ?? originalDate,
+    lastVerifiedAt:
+      row.last_verified_at ?? row.lastVerifiedAt ?? row.primary_source_verified_at ?? originalDate,
     language: row.language ?? "it",
     geo: row.geo,
     topic: row.topic,
@@ -130,9 +138,7 @@ export function buildRealFeedResult(args: {
   rejectedRows: number;
   status: RepoStatus;
 }): NewsFeedResult {
-  const sorted = args.items
-    .slice()
-    .sort((a, b) => b.originalDate.localeCompare(a.originalDate));
+  const sorted = args.items.slice().sort((a, b) => b.originalDate.localeCompare(a.originalDate));
   const filtering = isFiltering(args.filters);
   const lastRun = sorted[0]?.lastVerifiedAt ?? args.generatedAt;
   return {

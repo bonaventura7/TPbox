@@ -55,6 +55,50 @@ describe("mappatura righe reali", () => {
     expect(mapRow(parsed)?.sourceName).toBe("OCSE");
   });
 
+  it("mappa la forma reale della vista v_attualita", () => {
+    const parsed = newsRowSchema.parse({
+      id: "b0f1a8e2-0000-4000-8000-000000000001",
+      title: "Documento pubblicato",
+      summary: null,
+      source_name: "Agenzia delle Entrate",
+      source_kind: "ISTITUZIONALE",
+      source_tier: "PRIMARY",
+      language: "it",
+      geo: "ITALIA",
+      topic: "Documentazione",
+      category: "Transfer Pricing",
+      country: null,
+      source_url: "https://www.agenziaentrate.gov.it/doc",
+      pdf_url: null,
+      published_at: "2026-08-01T10:00:00.000Z",
+      primary_source_verified_at: "2026-08-02T10:00:00.000Z",
+    });
+    const item = mapRow(parsed);
+    expect(item?.originalUrl).toBe("https://www.agenziaentrate.gov.it/doc");
+    expect(item?.originalDate).toBe("2026-08-01T10:00:00.000Z");
+    expect(item?.lastVerifiedAt).toBe("2026-08-02T10:00:00.000Z");
+    expect(item?.summary).toBe("");
+    expect(item?.sourceId).toBe("");
+    expect(item?.isDemo).toBe(false);
+    expect(item?.workflowState).toBe("PUBLISHED");
+    expect(item?.pdfUrl).toBeUndefined();
+  });
+
+  it("scarta una riga reale senza alcuna URL di fonte", () => {
+    const { items, rejectedRows } = mapRows([
+      {
+        id: "1",
+        title: "Senza fonte",
+        summary: "x",
+        geo: "UE",
+        topic: "Intangibili",
+        published_at: "2026-08-01T10:00:00.000Z",
+      },
+    ]);
+    expect(items).toHaveLength(0);
+    expect(rejectedRows).toBe(1);
+  });
+
   it("scarta le righe non conformi senza aggiustarle", () => {
     const { items, rejectedRows } = mapRows([
       validRow,
@@ -142,9 +186,7 @@ describe("guardrail: nessun fallback silenzioso", () => {
 describe("classificazione degli errori di lettura", () => {
   it("riconosce vista assente e permessi negati come schema non disponibile", () => {
     expect(classifyReadError({ code: "42P01" })).toBe("SCHEMA_UNAVAILABLE");
-    expect(classifyReadError({ message: "permission denied for view" })).toBe(
-      "SCHEMA_UNAVAILABLE",
-    );
+    expect(classifyReadError({ message: "permission denied for view" })).toBe("SCHEMA_UNAVAILABLE");
     expect(classifyReadError({ code: "PGRST205", message: "Could not find the table" })).toBe(
       "SCHEMA_UNAVAILABLE",
     );
