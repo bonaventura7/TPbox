@@ -186,9 +186,7 @@ describe("guardrail: nessun fallback silenzioso", () => {
 describe("classificazione degli errori di lettura", () => {
   it("riconosce vista assente e permessi negati come schema non disponibile", () => {
     expect(classifyReadError({ code: "42P01" })).toBe("SCHEMA_UNAVAILABLE");
-    expect(classifyReadError({ message: "permission denied for view" })).toBe(
-      "SCHEMA_UNAVAILABLE",
-    );
+    expect(classifyReadError({ message: "permission denied for view" })).toBe("SCHEMA_UNAVAILABLE");
     expect(classifyReadError({ code: "PGRST205", message: "Could not find the table" })).toBe(
       "SCHEMA_UNAVAILABLE",
     );

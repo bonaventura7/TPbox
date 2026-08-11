@@ -80,10 +80,7 @@ export function mapRow(row: NewsRow): NewsItem | null {
     sourceTier: row.source_tier ?? row.sourceTier ?? "PRIMARY",
     originalDate,
     lastVerifiedAt:
-      row.last_verified_at ??
-      row.lastVerifiedAt ??
-      row.primary_source_verified_at ??
-      originalDate,
+      row.last_verified_at ?? row.lastVerifiedAt ?? row.primary_source_verified_at ?? originalDate,
     language: row.language ?? "it",
     geo: row.geo,
     topic: row.topic,
@@ -141,9 +138,7 @@ export function buildRealFeedResult(args: {
   rejectedRows: number;
   status: RepoStatus;
 }): NewsFeedResult {
-  const sorted = args.items
-    .slice()
-    .sort((a, b) => b.originalDate.localeCompare(a.originalDate));
+  const sorted = args.items.slice().sort((a, b) => b.originalDate.localeCompare(a.originalDate));
   const filtering = isFiltering(args.filters);
   const lastRun = sorted[0]?.lastVerifiedAt ?? args.generatedAt;
   return {
