@@ -165,6 +165,27 @@ Deno.serve(async (req: Request) => {
       if (!source) throw new GateFailure('FAIL_DOMAIN', `dominio non whitelistato: ${domain}`);
 
       const sourceText = await fetchText(d.source_url);
+
+      // GATE DI INGRESSO — fail-closed PRIMA di qualsiasi chiamata LLM.
+      const facts = extractFactCandidates(sourceText, d.source_url);
+      const inputReasons = validateGenerationInput({ primaryText: sourceText, facts });
+      if (inputReasons.length > 0) {
+        const pendingRow = toReviewableNewsItemRow({
+          slug: stableSlug(d.title, d.source_url),
+          title: d.title,
+          sourceUrl: d.source_url,
+          sourceName: source.name,
+          country: source.country,
+          pdfUrl: d.pdf_url ?? null,
+          reasons: inputReasons,
+        });
+        const { error: pendingError } = await supabase
+          .from('news_items')
+          .upsert(pendingRow, { onConflict: 'slug' });
+        if (pendingError) throw new Error(`news_items upsert (pending review) fallito: ${errorMessage(pendingError)}`);
+        throw new GateFailure('FAIL_EMPTY', `input di generazione insufficiente: ${inputReasons.join('; ')}`);
+      }
+
       const rawDraft = await generate(sourceText, domain);
       const validation = validateDraft(rawDraft);
       if (!validation.ok) throw new GateFailure('FAIL_EMPTY', validation.reason);
@@ -181,21 +202,25 @@ Deno.serve(async (req: Request) => {
       if (duplicateError) throw new Error(`controllo duplicati fallito: ${errorMessage(duplicateError)}`);
       if (duplicate) throw new GateFailure('FAIL_DUP', 'source_url già presente in news_items');
 
-      const { error: insertError } = await supabase.from('news_items').insert({
-        slug: slugify(draft.title),
+      // Serializzazione fail-closed: lo stato è sempre DRAFT, mai PUBLISHED.
+      const row = toReviewableNewsItemRow({
+        slug: stableSlug(draft.title, d.source_url),
         title: draft.title,
         summary: draft.summary,
-        content_markdown: draft.content_markdown,
+        contentMarkdown: draft.content_markdown,
         category,
         country: source.country,
-        source_name: source.name,
-        source_url: d.source_url,
-        pdf_url: d.pdf_url ?? null,
-        normative_references: refs,
-        status: 'DRAFT',
-        fetched_at: new Date().toISOString(),
+        sourceName: source.name,
+        sourceUrl: d.source_url,
+        pdfUrl: d.pdf_url ?? null,
+        normativeReferences: refs,
+        reasons: [],
       });
-      if (insertError) throw new Error(`news_items insert fallito: ${errorMessage(insertError)}`);
+      const { error: insertError } = await supabase
+        .from('news_items')
+        .upsert(row, { onConflict: 'slug' });
+      if (insertError) throw new Error(`news_items upsert fallito: ${errorMessage(insertError)}`);
+
 
       const { error: checkpointError } = await supabase.from('news_discovery').update({ status: 'GENERATED', gate_result: 'PASS', error: null }).eq('id', d.id);
       if (checkpointError) throw new Error(`checkpoint GENERATED fallito: ${errorMessage(checkpointError)}`);
