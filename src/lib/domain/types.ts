@@ -94,6 +94,13 @@ export interface NewsItem {
   country?: string;
   /** URL diretto al documento PDF ufficiale scaricabile (se disponibile). */
   pdfUrl?: string;
+  /**
+   * Identificativo della pagina articolo. Assente sulle righe che non lo
+   * dichiarano: in quel caso `articleSlug` ne deriva uno stabile.
+   */
+  slug?: string;
+  /** Corpo redazionale in markdown: è l'articolo scritto da noi, non la fonte. */
+  body?: string;
 }
 
 export interface NewsFilters {

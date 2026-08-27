@@ -31,6 +31,28 @@ export const getNewsFeed = createServerFn({ method: "GET" })
     return getNewsRepo().getPublished(data);
   });
 
+/**
+ * Secondo livello della sezione Attualità: l'articolo redazionale.
+ * Lo slug è validato sulla forma, così un parametro arbitrario non arriva
+ * al filtro della vista pubblica.
+ */
+export const getNewsArticle = createServerFn({ method: "GET" })
+  .inputValidator((data: unknown) =>
+    z
+      .object({
+        slug: z
+          .string()
+          .min(1)
+          .max(160)
+          .regex(/^[a-z0-9-]+$/),
+      })
+      .parse(data),
+  )
+  .handler(async ({ data }) => {
+    const { getNewsRepo } = await import("./repositories/news.repo.server");
+    return getNewsRepo().getBySlug(data.slug);
+  });
+
 export const getSources = createServerFn({ method: "GET" }).handler(async () => {
   const { getNewsRepo } = await import("./repositories/news.repo.server");
   return getNewsRepo().getSources();

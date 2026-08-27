@@ -9,7 +9,8 @@
  */
 import { createClient } from "@supabase/supabase-js";
 
-import type { NewsFeedResult, NewsFilters, NewsSource } from "../domain/types";
+import { articleSlug } from "../domain/article";
+import type { NewsFeedResult, NewsFilters, NewsItem, NewsSource } from "../domain/types";
 import {
   CircuitBreaker,
   audit,
@@ -205,6 +206,60 @@ async function readAttualita(filters: NewsFilters): Promise<NewsFeedResult> {
 }
 
 /**
+ * Articolo singolo. Due passaggi, non uno: la vista pubblica espone `slug`, ma
+ * una riga che lo ha nullo resterebbe irraggiungibile pur avendo una card in
+ * pagina. Il secondo passaggio ricalcola lo slug derivato sulle righe
+ * pubblicate e chiude quel buco, al costo di una lettura sola e solo in caso di
+ * mancato riscontro.
+ */
+async function readArticle(slug: string): Promise<NewsItem | null> {
+  const wanted = slug.trim().toLowerCase();
+  if (wanted.length === 0) return null;
+
+  const client = createPublicClient();
+  if (!client) return null;
+  if (!breaker.canPass()) return null;
+
+  try {
+    const direct = await withTimeout(async () =>
+      retryIdempotent(async () => {
+        const base = client.from(PUBLIC_VIEWS.attualita).select("*") as unknown as ReadQuery;
+        const { data, error } = await base.eq("slug", wanted).limit(1);
+        if (error) throw new Error(error.message);
+        return (data ?? []) as unknown[];
+      }),
+    );
+    breaker.recordSuccess();
+
+    const mapped = mapRows(direct);
+    const diretto = mapped.items[0];
+    if (diretto) return diretto;
+
+    const scan = await withTimeout(async () =>
+      retryIdempotent(async () => {
+        const query = client.from(PUBLIC_VIEWS.attualita).select("*") as unknown as ReadQuery;
+        const { data, error } = await query.limit(500);
+        if (error) throw new Error(error.message);
+        return (data ?? []) as unknown[];
+      }),
+    );
+
+    return mapRows(scan).items.find((item) => articleSlug(item) === wanted) ?? null;
+  } catch {
+    breaker.recordFailure();
+    audit({
+      correlationId: newCorrelationId(),
+      action: "news.real.article",
+      actorRole: "USER",
+      at: new Date().toISOString(),
+      outcome: "ERROR",
+      detail: "lettura articolo non riuscita",
+    });
+    return null;
+  }
+}
+
+/**
  * Le fonti non hanno ancora una vista pubblica verificata: nessuna query improvvisata.
  * Fino alla verifica dello schema la lista reale è vuota e la UI non mostra dati demo.
  */
@@ -216,4 +271,5 @@ export const realNewsRepo: NewsRepo = {
   kind: "REAL",
   getPublished: readAttualita,
   getSources: readSources,
+  getBySlug: readArticle,
 };

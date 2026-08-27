@@ -1,3 +1,4 @@
+import { articleSlug } from "../domain/article";
 import {
   DEMO_DRAFTS_PENDING,
   DEMO_NEWS,
@@ -125,6 +126,16 @@ export async function listNewsFeed(filters: NewsFilters): Promise<MockNewsFeedRe
     draftsPending: DEMO_DRAFTS_PENDING,
     availableCountries: getAvailableCountries(items),
   };
+}
+
+/**
+ * Ricerca dell'articolo dimostrativo per slug. Il confronto passa da
+ * `articleSlug`, la stessa funzione che compone il collegamento nella card:
+ * un solo punto decide l'indirizzo, quindi card e pagina non possono divergere.
+ */
+export function findNewsBySlug(slug: string): NewsItem | null {
+  const wanted = slug.trim().toLowerCase();
+  return publishedOnly(DEMO_NEWS).find((item) => articleSlug(item) === wanted) ?? null;
 }
 
 export function listSources(): NewsSource[] {

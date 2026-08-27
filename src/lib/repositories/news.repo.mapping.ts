@@ -58,6 +58,10 @@ export const newsRowSchema = z
     country: z.string().optional().nullable(),
     pdf_url: z.string().url().optional().nullable(),
     pdfUrl: z.string().url().optional().nullable(),
+    // Pagina articolo: slug e corpo redazionale prodotti da news-generate.
+    slug: z.string().optional().nullable(),
+    content_markdown: z.string().optional().nullable(),
+    contentMarkdown: z.string().optional().nullable(),
     published_at: z.string().optional().nullable(),
   })
   .passthrough();
@@ -93,6 +97,10 @@ export function mapRow(row: NewsRow): NewsItem | null {
   if (row.country) item.country = row.country;
   const pdf = row.pdf_url ?? row.pdfUrl;
   if (pdf) item.pdfUrl = pdf;
+  const slug = row.slug?.trim();
+  if (slug) item.slug = slug;
+  const body = row.content_markdown ?? row.contentMarkdown;
+  if (body && body.trim().length > 0) item.body = body;
   return item;
 }
 
