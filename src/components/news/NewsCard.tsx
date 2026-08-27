@@ -1,6 +1,7 @@
-import { Download, ExternalLink } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 
 import { DemoBadge } from "@/components/site/DemoBadge";
+import { articlePath } from "@/lib/domain/article";
 import type { NewsItem } from "@/lib/domain/types";
 import { CATEGORY_COLORS } from "@/lib/domain/types";
 import { cn } from "@/lib/utils";
@@ -118,6 +119,13 @@ export function NewsCard({
   const featured = variant === "featured";
   const catColors = item.category ? CATEGORY_COLORS[item.category] : null;
 
+  /**
+   * Collegamento interno alla pagina articolo. Ancora nativa e non `Link` del
+   * router: la card è un componente puro, reso anche fuori da un RouterProvider
+   * (SSR statico e test), e un `Link` in quel contesto solleva.
+   */
+  const href = articlePath(item);
+
   return (
     <article
       className={cn(
@@ -157,7 +165,9 @@ export function NewsCard({
           featured ? "text-2xl sm:text-3xl" : variant === "compact" ? "text-base" : "text-xl",
         )}
       >
-        {item.title}
+        <a href={href} className="underline-offset-4 hover:underline">
+          {item.title}
+        </a>
       </h3>
 
       {/* Sommario */}
@@ -179,31 +189,16 @@ export function NewsCard({
         <NewsMeta item={item} />
       )}
 
-      {/* Azioni: fonte originale + PDF */}
-      <div className="mt-4 flex flex-wrap items-center gap-4">
+      {/* Azione unica: l'articolo. La fonte ufficiale vive dentro l'articolo. */}
+      <div className="mt-4">
         <a
-          href={item.originalUrl}
-          target="_blank"
-          rel="noopener noreferrer nofollow"
+          href={href}
           className="inline-flex min-h-11 items-center gap-2 text-sm font-medium text-petrol underline underline-offset-4"
         >
-          Apri la fonte originale
-          <ExternalLink className="h-4 w-4" aria-hidden="true" />
-          <span className="sr-only">(si apre in una nuova finestra)</span>
+          Leggi l&apos;articolo
+          <ArrowRight className="h-4 w-4" aria-hidden="true" />
+          <span className="sr-only">: {item.title}</span>
         </a>
-
-        {item.pdfUrl ? (
-          <a
-            href={item.pdfUrl}
-            target="_blank"
-            rel="noopener noreferrer nofollow"
-            className="inline-flex min-h-11 items-center gap-2 rounded border border-border bg-secondary px-3 text-sm font-medium text-foreground hover:bg-secondary/80"
-            aria-label={`Scarica il documento PDF ufficiale: ${item.title}`}
-          >
-            <Download className="h-4 w-4" aria-hidden="true" />
-            Scarica PDF ufficiale
-          </a>
-        ) : null}
       </div>
     </article>
   );

@@ -13,9 +13,10 @@ import type {
 export const DEMO_NEWS_ITEMS: NewsItem[] = [
   {
     id: "news-india-apa-2025-26",
+    slug: "india-rapporto-apa-2025-26",
     title: "India pubblica il Rapporto APA 2025-26: record di accordi preventivi",
     summary:
-      "Il CBDT ha siglato 220 APA nell'esercizio 2025-26, il massimo storico, portando il totale cumulativo a 1.035 accordi. Record anche per le BAPA (84), con prime intese bilaterali con Francia, Indonesia, Irlanda e Svezia. Il regime safe harbor per i servizi IT è stato unificato al 15,5% con soglia di fatturato elevata a INR 20 miliardi. Il periodo mediano di risoluzione è di 36 mesi per le UAPA e 38 mesi per le BAPA.",
+      "Il CBDT ha siglato 220 APA nell'esercizio 2025-26, il massimo storico, portando il totale cumulativo a 1.035 accordi. Record anche per le BAPA (84), con prime intese bilaterali con Francia, Indonesia, Irlanda e Svezia. Il periodo mediano di risoluzione è di 36 mesi per le UAPA e 38 mesi per le BAPA.",
     sourceId: "src-cbdt-india",
     sourceName: "Central Board of Direct Taxes (CBDT) – India",
     sourceKind: "ISTITUZIONALE",
@@ -27,6 +28,23 @@ export const DEMO_NEWS_ITEMS: NewsItem[] = [
     country: "India",
     topic: "APA e MAP",
     category: "Transfer Pricing",
+    body: [
+      "## Che cosa dice il rapporto",
+      "",
+      "Il Central Board of Direct Taxes ha pubblicato l'ottavo rapporto annuale sul programma degli accordi preventivi sui prezzi di trasferimento. Nell'esercizio 2025-26 sono stati sottoscritti 220 accordi, il numero più alto dall'avvio del programma, che portano il totale cumulativo a 1.035 intese.",
+      "",
+      "Il dato che più incide sulla pianificazione di gruppo riguarda la componente bilaterale: 84 accordi bilaterali in un solo esercizio, anch'essi un massimo storico. Tra questi figurano le prime intese concluse con Francia, Indonesia, Irlanda e Svezia, giurisdizioni fino a oggi assenti dal quadro bilaterale indiano.",
+      "",
+      "## I tempi di conclusione",
+      "",
+      "Il rapporto indica un periodo mediano di risoluzione di 36 mesi per gli accordi unilaterali e di 38 mesi per quelli bilaterali. È l'elemento da tenere presente quando si valuta se aprire un'istanza: il vantaggio della certezza si misura su un orizzonte pluriennale, e l'esercizio coperto dal rollback va considerato in sede di stima.",
+      "",
+      "## Perché interessa un gruppo con presenza in India",
+      "",
+      "L'ampliamento della rete bilaterale riduce l'area nella quale una rettifica indiana resta priva di rimedio corrispondente nell'altro Stato. Per i gruppi italiani con società indiane l'apertura verso nuovi partner convenzionali sposta il confronto dal contenzioso interno alla sede bilaterale, dove la doppia imposizione si risolve tra amministrazioni.",
+      "",
+      "Restano fuori da questa nota le misure di safe harbour: non sono contenute nel rapporto APA e vanno lette sul provvedimento che le dispone. Una voce, una fonte.",
+    ].join("\n"),
     originalUrl: "https://www.incometaxindia.gov.in/documents/d/guest/apa-report2025-26-2-pdf",
     pdfUrl: "https://www.incometaxindia.gov.in/documents/d/guest/apa-report2025-26-2-pdf",
     workflowState: "PUBLISHED",
@@ -34,6 +52,7 @@ export const DEMO_NEWS_ITEMS: NewsItem[] = [
   },
   {
     id: "news-ocse-mcaa-cbc-2026",
+    slug: "ocse-firmatari-mcaa-cbc-2026",
     title: "OCSE aggiorna la lista dei firmatari del MCAA-CbC",
     summary:
       "L'OCSE ha pubblicato l'elenco aggiornato dei firmatari del Multilateral Competent Authority Agreement on Country-by-Country Reporting (MCAA-CbC). L'aggiornamento riflette le nuove adesioni e modifica le condizioni di scambio automatico dei dati CbCR tra giurisdizioni partecipanti, in attuazione dell'Azione 13 BEPS.",
@@ -54,6 +73,7 @@ export const DEMO_NEWS_ITEMS: NewsItem[] = [
   },
   {
     id: "news-malaysia-tp-loans-2026",
+    slug: "malaysia-linee-guida-tp-finanziamenti-infragruppo",
     title: "Malaysia emana le linee guida TP per i finanziamenti infragruppo",
     summary:
       "L'Inland Revenue Board of Malaysia (IRBM) ha pubblicato le Malaysia Transfer Pricing Guidelines per i prestiti infragruppo, allineate alle Linee Guida OCSE 2022 (capitolo X). Le linee guida disciplinano la determinazione del tasso arm's length con riferimento al merito creditizio, ai comparabili di mercato e alla funzione di garanzia implicita del gruppo.",
@@ -74,6 +94,7 @@ export const DEMO_NEWS_ITEMS: NewsItem[] = [
   },
   {
     id: "news-belgio-pillar-two-gir-2026",
+    slug: "belgio-proroga-notifica-gir-pillar-two",
     title: "Belgio proroga il termine per la notifica del mandatario GIR Pillar Two 2024-25",
     summary:
       "Il Servizio Pubblico Federale delle Finanze del Belgio ha chiarito la proroga del termine per la designazione dell'entità responsabile della presentazione del Global Information Return (GIR) ai sensi della Direttiva 2022/2523/UE (Pillar Two). La proroga riguarda i periodi d'imposta 2024 e 2025.",
@@ -94,6 +115,7 @@ export const DEMO_NEWS_ITEMS: NewsItem[] = [
   },
   {
     id: "news-australia-globe-2026",
+    slug: "australia-regole-globe-2026",
     title: "Australia aggiorna le disposizioni GloBE: interazione CFC, DTA e entità trasparenti",
     summary:
       "L'ATO ha emanato le Amending Rules 2026 (Misure n. 2) che modificano la Taxation (Multinational—Global and Domestic Minimum Tax) Act in materia di interazione con le CFC rules, deferred tax assets e flow-through entities. Le modifiche recepiscono le linee guida amministrative OCSE GloBE del 2025.",
@@ -114,6 +136,7 @@ export const DEMO_NEWS_ITEMS: NewsItem[] = [
   },
   {
     id: "news-germania-iva-ristoranti-2026",
+    slug: "germania-iva-ristorazione-aliquota-7",
     title: "Germania: IVA al 7% permanente sugli alimenti nei ristoranti dal 2026",
     summary:
       "Il Tax Amendment Act 2025 tedesco rende permanente l'aliquota IVA ridotta al 7% sugli alimenti somministrati in ristoranti e servizi di catering a partire dal 1° gennaio 2026, mentre le bevande restano soggette all'aliquota ordinaria del 19%. La misura era precedentemente temporanea.",
@@ -134,6 +157,7 @@ export const DEMO_NEWS_ITEMS: NewsItem[] = [
   },
   {
     id: "news-cipro-iva-scadenze-2026",
+    slug: "cipro-scadenze-iva-e-vies",
     title: "Cipro proroga le scadenze per le dichiarazioni IVA di giugno 2026 e VIES di luglio 2026",
     summary:
       "Il Tax Department di Cipro ha concesso una proroga per la presentazione delle dichiarazioni IVA relative al periodo chiuso il 30 giugno 2026 e per i Modelli Riepilogativi (VIES) del luglio 2026, in considerazione del periodo estivo. I contribuenti interessati beneficiano di giorni aggiuntivi per il versamento dell'IVA dovuta.",
@@ -154,6 +178,7 @@ export const DEMO_NEWS_ITEMS: NewsItem[] = [
   },
   {
     id: "news-paesi-bassi-hybrid-mismatch-2026",
+    slug: "paesi-bassi-disallineamenti-da-ibridi",
     title: "Paesi Bassi: nuove regole sui disallineamenti ibridi per regimi fiscali USA e stabili organizzazioni",
     summary:
       "Il Decreto sulla Politica dei Disallineamenti Ibridi 2026 (Decreto n. 2026-12123) recepisce le modifiche introdotte dal Segretario di Stato alle Finanze olandese in materia di ATAD 2. Il provvedimento aggiorna le istruzioni applicative per i regimi fiscali statunitensi (check-the-box, S-corporations) e le stabili organizzazioni, chiarendo i casi di doppia non-imposizione rilevanti.",

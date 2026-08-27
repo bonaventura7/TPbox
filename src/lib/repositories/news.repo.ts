@@ -3,7 +3,7 @@
  * Due implementazioni: mock (dati demo) e real (DB TP Box).
  * Nessun fallback silenzioso: lo stato del repo reale è sempre esplicito nel risultato.
  */
-import type { NewsFeedResult, NewsFilters, NewsSource } from "../domain/types";
+import type { NewsFeedResult, NewsFilters, NewsItem, NewsSource } from "../domain/types";
 
 export type RepoKind = "MOCK" | "REAL";
 
@@ -18,6 +18,8 @@ export interface NewsRepo {
   readonly kind: RepoKind;
   getPublished(filters: NewsFilters): Promise<NewsFeedResult>;
   getSources(): Promise<NewsSource[]>;
+  /** Articolo singolo per slug. `null` significa «non pubblicato o inesistente». */
+  getBySlug(slug: string): Promise<NewsItem | null>;
 }
 
 /**
