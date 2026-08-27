@@ -31,6 +31,7 @@ import { Route as ToolCompanyFinderRouteImport } from './routes/tool.company-fin
 import { Route as ToolRavvedimentoRouteImport } from './routes/tool.ravvedimento'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
+import { Route as AttualitaArticoloSlugRouteImport } from './routes/attualita.articolo.$slug'
 import { Route as NormativaPortaleInterpelliIndexRouteImport } from './routes/normativa.portale-interpelli.index'
 import { Route as NormativaPortaleInterpelliIdRouteImport } from './routes/normativa.portale-interpelli.$id'
 import { Route as ToolAmountBIndexRouteImport } from './routes/tool.amount-b.index'
@@ -159,6 +160,11 @@ const Char91DotmcpChar93InvokeToolToolRoute =
     path: '/.mcp/invoke-tool/$tool',
     getParentRoute: () => rootRouteImport,
   } as any)
+const AttualitaArticoloSlugRoute = AttualitaArticoloSlugRouteImport.update({
+  id: '/articolo/$slug',
+  path: '/articolo/$slug',
+  getParentRoute: () => AttualitaRoute,
+} as any)
 const NormativaPortaleInterpelliIndexRoute =
   NormativaPortaleInterpelliIndexRouteImport.update({
     id: '/portale-interpelli/',
@@ -251,6 +257,7 @@ export interface FileRoutesByFullPath {
   '/tool/': typeof ToolIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/attualita/articolo/$slug': typeof AttualitaArticoloSlugRoute
   '/normativa/portale-interpelli/$id': typeof NormativaPortaleInterpelliIdRoute
   '/tool/amount-b/nuovo': typeof ToolAmountBNuovoRoute
   '/tool/beps-mli/ricerca': typeof ToolBepsMliRicercaRoute
@@ -286,6 +293,7 @@ export interface FileRoutesByTo {
   '/tool': typeof ToolIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/attualita/articolo/$slug': typeof AttualitaArticoloSlugRoute
   '/normativa/portale-interpelli/$id': typeof NormativaPortaleInterpelliIdRoute
   '/tool/amount-b/nuovo': typeof ToolAmountBNuovoRoute
   '/tool/beps-mli/ricerca': typeof ToolBepsMliRicercaRoute
@@ -324,6 +332,7 @@ export interface FileRoutesById {
   '/tool/': typeof ToolIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/attualita/articolo/$slug': typeof AttualitaArticoloSlugRoute
   '/normativa/portale-interpelli/$id': typeof NormativaPortaleInterpelliIdRoute
   '/tool/amount-b/nuovo': typeof ToolAmountBNuovoRoute
   '/tool/beps-mli/ricerca': typeof ToolBepsMliRicercaRoute
@@ -363,6 +372,7 @@ export interface FileRouteTypes {
     | '/tool/'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
+    | '/attualita/articolo/$slug'
     | '/normativa/portale-interpelli/$id'
     | '/tool/amount-b/nuovo'
     | '/tool/beps-mli/ricerca'
@@ -398,6 +408,7 @@ export interface FileRouteTypes {
     | '/tool'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
+    | '/attualita/articolo/$slug'
     | '/normativa/portale-interpelli/$id'
     | '/tool/amount-b/nuovo'
     | '/tool/beps-mli/ricerca'
@@ -435,6 +446,7 @@ export interface FileRouteTypes {
     | '/tool/'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
+    | '/attualita/articolo/$slug'
     | '/normativa/portale-interpelli/$id'
     | '/tool/amount-b/nuovo'
     | '/tool/beps-mli/ricerca'
@@ -634,6 +646,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char91DotmcpChar93InvokeToolToolRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/attualita/articolo/$slug': {
+      id: '/attualita/articolo/$slug'
+      path: '/articolo/$slug'
+      fullPath: '/attualita/articolo/$slug'
+      preLoaderRoute: typeof AttualitaArticoloSlugRouteImport
+      parentRoute: typeof AttualitaRoute
+    }
     '/normativa/portale-interpelli/': {
       id: '/normativa/portale-interpelli/'
       path: '/portale-interpelli'
@@ -731,11 +750,13 @@ declare module '@tanstack/react-router' {
 interface AttualitaRouteChildren {
   AttualitaAreaRoute: typeof AttualitaAreaRoute
   AttualitaIndexRoute: typeof AttualitaIndexRoute
+  AttualitaArticoloSlugRoute: typeof AttualitaArticoloSlugRoute
 }
 
 const AttualitaRouteChildren: AttualitaRouteChildren = {
   AttualitaAreaRoute: AttualitaAreaRoute,
   AttualitaIndexRoute: AttualitaIndexRoute,
+  AttualitaArticoloSlugRoute: AttualitaArticoloSlugRoute,
 }
 
 const AttualitaRouteWithChildren = AttualitaRoute._addFileChildren(
