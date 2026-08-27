@@ -2,6 +2,8 @@ import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { authorizeCaller, jsonResponse } from '../_shared/auth.ts';
 import { canonicalUrl } from '../_shared/whitelist.ts';
 import { runSourceGate, isPass } from '../_shared/source-gate.ts';
+import { MIN_PUBLISHABLE_CONTENT_CHARS } from '../_shared/reviewable-row.ts';
+
 
 const SUPABASE_URL=Deno.env.get('SUPABASE_URL')!;
 const AUTO_PUBLISH=Deno.env.get('AUTO_PUBLISH_ENABLED')==='true';
