@@ -6,6 +6,7 @@
  * verità dei dati — quella sta nella fonte — ma misura struttura e densità.
  */
 import { renderDraftMarkdown } from "./markdown";
+import type { GenerationInput } from "./prompt";
 import { checkDraftSources } from "./source-policy";
 import { structureFor } from "./structure";
 import {
@@ -276,4 +277,48 @@ export function toReviewableNewsItemRow(input: unknown): DraftValidation<NewsIte
     return { ok: false, reasons: ["stato non consentito: l'engine non pubblica"] };
   }
   return { ok: true, value: row };
+}
+
+/**
+ * ---------------------------------------------------------------------------
+ * Gate di INGRESSO della generazione (fail-closed, prima di qualsiasi LLM).
+ *
+ * Un modello senza materiale primario può solo inventare: se il testo della
+ * fonte è troppo corto o i fatti verificabili sono meno di tre, la generazione
+ * non parte. Le soglie sono condivise con il gate lato pipeline
+ * (`supabase/functions/_shared/generation-input.ts`) e verificate in parità dai
+ * test, così non esistono due politiche divergenti.
+ * ---------------------------------------------------------------------------
+ */
+
+export const MIN_PRIMARY_TEXT_CHARS = 2000;
+export const MIN_GENERATION_FACTS = 3;
+
+/** Motivi di blocco dell'input di generazione. Array vuoto = input ammesso. */
+export function validateGenerationInput(input: unknown): string[] {
+  const reasons: string[] = [];
+  if (!input || typeof input !== "object") return ["input di generazione non strutturato"];
+
+  const candidate = input as Partial<GenerationInput>;
+  const primaryText = typeof candidate.primaryText === "string" ? candidate.primaryText.trim() : "";
+  const facts = Array.isArray(candidate.facts) ? candidate.facts : [];
+
+  if (primaryText.length < MIN_PRIMARY_TEXT_CHARS) {
+    reasons.push(
+      `testo della fonte primaria insufficiente: ${primaryText.length} caratteri (minimo ${MIN_PRIMARY_TEXT_CHARS})`,
+    );
+  }
+  if (facts.length < MIN_GENERATION_FACTS) {
+    reasons.push(
+      `fatti verificabili insufficienti: ${facts.length} (minimo ${MIN_GENERATION_FACTS})`,
+    );
+  }
+  for (const fact of facts) {
+    const statement = typeof fact?.statement === "string" ? fact.statement.trim() : "";
+    const sourceUrl = typeof fact?.sourceUrl === "string" ? fact.sourceUrl.trim() : "";
+    if (!statement) reasons.push("fatto privo di enunciato");
+    if (!isHttpUrl(sourceUrl)) reasons.push(`fatto senza URL fonte valida: ${sourceUrl}`);
+  }
+
+  return reasons;
 }
