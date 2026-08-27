@@ -1,4 +1,4 @@
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Download, FileText } from "lucide-react";
 
 import { DemoBadge } from "@/components/site/DemoBadge";
 import { articlePath } from "@/lib/domain/article";
@@ -73,17 +73,6 @@ export function NewsMeta({ item }: { item: NewsCardItem }) {
         <dd className="min-w-0 truncate font-medium">{item.sourceName}</dd>
       </div>
       <div className="flex gap-2">
-        <dt className="shrink-0 text-muted-foreground">Tipo fonte</dt>
-        <dd className="font-medium">
-          {item.sourceKind === "ISTITUZIONALE"
-            ? "Istituzionale"
-            : item.sourceKind === "PROFESSIONALE"
-              ? "Professionale"
-              : "Accademica"}{" "}
-          · {item.sourceTier === "PRIMARY" ? "primaria" : "secondaria"}
-        </dd>
-      </div>
-      <div className="flex gap-2">
         <dt className="shrink-0 text-muted-foreground">Data originale</dt>
         <dd className="font-medium">{formatDate(item.originalDate)}</dd>
       </div>
@@ -125,6 +114,14 @@ export function NewsCard({
    * (SSR statico e test), e un `Link` in quel contesto solleva.
    */
   const href = articlePath(item);
+
+  /**
+   * Primo rimando della catena, quando è il documento: la card mostra soltanto
+   * quello. La pagina che lo ospita resta nell'articolo, dove c'è spazio per
+   * distinguerla.
+   */
+  const primo = buildSourceLinks(item)[0];
+  const documento = primo?.kind === "DOCUMENTO" ? primo : null;
 
   return (
     <article
@@ -189,16 +186,40 @@ export function NewsCard({
         <NewsMeta item={item} />
       )}
 
-      {/* Azione unica: l'articolo. La fonte ufficiale vive dentro l'articolo. */}
-      <div className="mt-4">
+      {/*
+        Due azioni distinte: l'articolo redazionale e il documento su cui è
+        basato. Il rimando al documento porta il suo titolo, così il lettore sa
+        che cosa apre prima di lasciare la pagina.
+      */}
+      <div className="mt-4 flex flex-col gap-3">
         <a
           href={href}
-          className="inline-flex min-h-11 items-center gap-2 text-sm font-medium text-petrol underline underline-offset-4"
+          className="inline-flex min-h-11 items-center gap-2 self-start text-sm font-medium text-petrol underline underline-offset-4"
         >
           Leggi l&apos;articolo
           <ArrowRight className="h-4 w-4" aria-hidden="true" />
           <span className="sr-only">: {item.title}</span>
         </a>
+        {documento ? (
+          <a
+            href={documento.url}
+            target="_blank"
+            rel="noopener noreferrer nofollow"
+            className="inline-flex min-h-11 max-w-full items-start gap-2 self-start border border-border bg-secondary px-3 py-2 text-xs font-medium text-foreground hover:bg-secondary/80"
+          >
+            {documento.download ? (
+              <Download className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+            ) : (
+              <FileText className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+            )}
+            <span className="min-w-0">
+              <span className="block">{documento.label}</span>
+              <span className="mt-0.5 block font-normal text-muted-foreground">
+                {documento.download ? "Scarica il documento" : "Apri il documento"}
+              </span>
+            </span>
+          </a>
+        ) : null}
       </div>
     </article>
   );
