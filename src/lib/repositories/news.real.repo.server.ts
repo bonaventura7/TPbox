@@ -50,12 +50,20 @@ export function classifyReadError(error: { code?: string; message?: string } | n
 }
 
 function createPublicClient() {
+  // Priorità alle variabili dedicate, poi ricaduta sulla configurazione
+  // Supabase del progetto: le viste pubbliche vivono nello stesso database, e
+  // richiedere una seconda coppia di variabili per leggerle lasciava la
+  // sezione muta anche con il database pieno.
   const url =
     process.env["ATTUALITA_SUPABASE_URL"] ??
-    import.meta.env["VITE_ATTUALITA_SUPABASE_URL"];
+    import.meta.env["VITE_ATTUALITA_SUPABASE_URL"] ??
+    process.env["SUPABASE_URL"] ??
+    import.meta.env["VITE_SUPABASE_URL"];
   const key =
     process.env["ATTUALITA_SUPABASE_PUBLISHABLE_KEY"] ??
-    import.meta.env["VITE_ATTUALITA_SUPABASE_PUBLISHABLE_KEY"];
+    import.meta.env["VITE_ATTUALITA_SUPABASE_PUBLISHABLE_KEY"] ??
+    process.env["SUPABASE_PUBLISHABLE_KEY"] ??
+    import.meta.env["VITE_SUPABASE_PUBLISHABLE_KEY"];
   if (!url || !key) return null;
   return createClient(url, key, {
     auth: { storage: undefined, persistSession: false, autoRefreshToken: false },
