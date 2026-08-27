@@ -18,7 +18,6 @@ import {
   type EditorialDraft,
 } from "./types";
 
-
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 /** Tracce di generazione incompleta o di invenzione dichiarata. */
@@ -89,9 +88,41 @@ function validateBoxes(boxes: DraftBox[], required: DraftBoxKind[], reasons: str
 }
 
 const STOPWORDS = new Set([
-  "il","lo","la","i","gli","le","un","uno","una","di","del","della","dei","degli","delle","e",
-  "per","con","su","nel","nella","nei","alle","ai","al","da","dal","in","a","che","non","come",
-  "cosa","resta","sul",
+  "il",
+  "lo",
+  "la",
+  "i",
+  "gli",
+  "le",
+  "un",
+  "uno",
+  "una",
+  "di",
+  "del",
+  "della",
+  "dei",
+  "degli",
+  "delle",
+  "e",
+  "per",
+  "con",
+  "su",
+  "nel",
+  "nella",
+  "nei",
+  "alle",
+  "ai",
+  "al",
+  "da",
+  "dal",
+  "in",
+  "a",
+  "che",
+  "non",
+  "come",
+  "cosa",
+  "resta",
+  "sul",
 ]);
 
 function significantWords(text: string): string[] {
@@ -121,7 +152,6 @@ function sectionCoverage(headings: string[], sections: string[]): number {
   });
   return matched.length / sections.length;
 }
-
 
 export function validateEditorialDraft(input: unknown): DraftValidation<EditorialDraft> {
   const reasons: string[] = [];
@@ -186,7 +216,6 @@ export function validateEditorialDraft(input: unknown): DraftValidation<Editoria
   validateSources(sources, reasons);
   validateBoxes(boxes, structure.boxes, reasons);
 
-
   const scanned = [title, excerpt, bodyMd, ...takeaways, ...boxes.flatMap((box) => box.lines)].join(
     "\n",
   );
@@ -248,4 +277,3 @@ export function toReviewableNewsItemRow(input: unknown): DraftValidation<NewsIte
   }
   return { ok: true, value: row };
 }
-
