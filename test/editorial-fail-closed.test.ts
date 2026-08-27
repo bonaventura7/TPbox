@@ -66,7 +66,7 @@ describe("gate di ingresso della generazione", () => {
     const text =
       "Il rapporto APA 2025-26 registra 174 accordi unilaterali firmati nel 2025. " +
       "Una frase priva di riferimenti concreti. " +
-      "L'art. 92CC dell'Income Tax Act disciplina la procedura di accordo preventivo. " +
+      "La procedura di accordo preventivo e' disciplinata dall'Income Tax Act del 1961. " +
       "Le istanze pendenti risultano pari a 1 200 unità al 31 marzo 2026.";
     const first = extractFactCandidates(text, url);
     expect(first).toEqual(extractFactCandidates(text, url));
