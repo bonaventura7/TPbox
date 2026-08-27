@@ -19,9 +19,9 @@ import {
 import { INDIA_APA_DRAFT } from "./fixtures/india-apa-2025-26";
 
 /** Il record India storico: 802 caratteri di corpo, pubblicato senza gate. */
-const SHORT_802 = "L'India ha pubblicato il rapporto APA 2025-26 con dati sugli accordi. ".repeat(
-  12,
-).slice(0, 802);
+const SHORT_802 = "L'India ha pubblicato il rapporto APA 2025-26 con dati sugli accordi. "
+  .repeat(12)
+  .slice(0, 802);
 
 describe("gate di ingresso della generazione", () => {
   it("blocca primaryText da 802 caratteri e facts vuoti", () => {
@@ -36,9 +36,9 @@ describe("gate di ingresso della generazione", () => {
       statement: `Fatto verificabile numero ${index + 1} presente nel documento.`,
       sourceUrl: "https://www.incometaxindia.gov.in/apa-report-2025-26.pdf",
     }));
-    expect(validateGenerationInput({ primaryText: "x".repeat(MIN_PRIMARY_TEXT_CHARS), facts })).toEqual(
-      [],
-    );
+    expect(
+      validateGenerationInput({ primaryText: "x".repeat(MIN_PRIMARY_TEXT_CHARS), facts }),
+    ).toEqual([]);
   });
 
   it("rifiuta fatti senza URL fonte valida", () => {
@@ -46,7 +46,10 @@ describe("gate di ingresso della generazione", () => {
       statement: "Enunciato presente nel documento.",
       sourceUrl: "non-una-url",
     }));
-    const reasons = validateGenerationInput({ primaryText: "x".repeat(MIN_PRIMARY_TEXT_CHARS), facts });
+    const reasons = validateGenerationInput({
+      primaryText: "x".repeat(MIN_PRIMARY_TEXT_CHARS),
+      facts,
+    });
     expect(reasons.some((reason) => reason.includes("URL fonte"))).toBe(true);
   });
 
