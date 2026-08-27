@@ -112,6 +112,7 @@ export type Database = {
           content_markdown: string | null
           country: string | null
           created_at: string
+          discovery_url: string | null
           fetched_at: string | null
           flag_pending_review: boolean
           gate_result: Json | null
@@ -124,6 +125,7 @@ export type Database = {
           published_at: string | null
           reviewed_by: string | null
           slug: string
+          source_document_title: string | null
           source_kind: string
           source_name: string | null
           source_tier: string
@@ -140,6 +142,7 @@ export type Database = {
           content_markdown?: string | null
           country?: string | null
           created_at?: string
+          discovery_url?: string | null
           fetched_at?: string | null
           flag_pending_review?: boolean
           gate_result?: Json | null
@@ -152,6 +155,7 @@ export type Database = {
           published_at?: string | null
           reviewed_by?: string | null
           slug: string
+          source_document_title?: string | null
           source_kind?: string
           source_name?: string | null
           source_tier?: string
@@ -168,6 +172,7 @@ export type Database = {
           content_markdown?: string | null
           country?: string | null
           created_at?: string
+          discovery_url?: string | null
           fetched_at?: string | null
           flag_pending_review?: boolean
           gate_result?: Json | null
@@ -180,6 +185,7 @@ export type Database = {
           published_at?: string | null
           reviewed_by?: string | null
           slug?: string
+          source_document_title?: string | null
           source_kind?: string
           source_name?: string | null
           source_tier?: string
@@ -267,6 +273,7 @@ export type Database = {
           published_at: string | null
           reviewed_by: string | null
           slug: string | null
+          source_document_title: string | null
           source_kind: string | null
           source_name: string | null
           source_tier: string | null
@@ -278,7 +285,7 @@ export type Database = {
         }
         Insert: {
           author_type?: string | null
-          category?: string | null
+          category?: never
           content_markdown?: string | null
           country?: string | null
           created_at?: string | null
@@ -291,6 +298,7 @@ export type Database = {
           published_at?: string | null
           reviewed_by?: string | null
           slug?: string | null
+          source_document_title?: string | null
           source_kind?: string | null
           source_name?: string | null
           source_tier?: string | null
@@ -302,7 +310,7 @@ export type Database = {
         }
         Update: {
           author_type?: string | null
-          category?: string | null
+          category?: never
           content_markdown?: string | null
           country?: string | null
           created_at?: string | null
@@ -315,6 +323,7 @@ export type Database = {
           published_at?: string | null
           reviewed_by?: string | null
           slug?: string | null
+          source_document_title?: string | null
           source_kind?: string | null
           source_name?: string | null
           source_tier?: string | null
