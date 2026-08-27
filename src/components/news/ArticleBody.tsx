@@ -12,7 +12,12 @@
  */
 import type { ReactNode } from "react";
 
-import { parseArticleMarkdown } from "@/lib/domain/article-markdown";
+import {
+  parseArticleMarkdown,
+  type ArticleBlock,
+  type CalloutKind,
+} from "@/lib/domain/article-markdown";
+
 import { safeUrl } from "@/lib/domain/source-link";
 
 /** Grassetto e collegamenti. Un URL con schema diverso da http resta testo. */
