@@ -4,14 +4,48 @@
  * il componente si limita a renderla.
  */
 
+export const CALLOUT_KINDS = ["NORMATIVA", "TECNICO", "PRATICA", "ATTENZIONE"] as const;
+export type CalloutKind = (typeof CALLOUT_KINDS)[number];
+
 export type ArticleBlock =
   | { kind: "heading"; level: 2 | 3; text: string }
   | { kind: "paragraph"; text: string }
-  | { kind: "list"; ordered: boolean; items: string[] };
+  | { kind: "list"; ordered: boolean; items: string[] }
+  | { kind: "callout"; callout: CalloutKind; title: string; blocks: ArticleBlock[] };
 
 const HEADING = /^(#{1,6})\s+(.+)$/;
 const BULLET = /^\s*[-*•]\s+(.+)$/;
 const NUMBERED = /^\s*\d+[.)]\s+(.+)$/;
+const QUOTE = /^>\s?(.*)$/;
+const CALLOUT_HEAD = /^\[!([A-Z]+)\]\s*(.*)$/;
+
+function isCalloutKind(value: string): value is CalloutKind {
+  return (CALLOUT_KINDS as readonly string[]).includes(value);
+}
+
+/**
+ * Box editoriale: `> [!NORMATIVA] Titolo` seguito da righe citate. Vive dentro
+ * `content_markdown`, così box e punti chiave non richiedono nuove colonne.
+ */
+function parseCallout(lines: string[]): ArticleBlock | null {
+  const stripped: string[] = [];
+  for (const line of lines) {
+    const match = QUOTE.exec(line);
+    if (!match) return null;
+    stripped.push(match[1] ?? "");
+  }
+  const head = CALLOUT_HEAD.exec((stripped[0] ?? "").trim());
+  if (!head) return null;
+  const kind = (head[1] ?? "").trim();
+  if (!isCalloutKind(kind)) return null;
+
+  return {
+    kind: "callout",
+    callout: kind,
+    title: (head[2] ?? "").trim(),
+    blocks: parseArticleMarkdown(stripped.slice(1).join("\n")),
+  };
+}
 
 export function parseArticleMarkdown(source: string): ArticleBlock[] {
   const blocks: ArticleBlock[] = [];
@@ -22,6 +56,14 @@ export function parseArticleMarkdown(source: string): ArticleBlock[] {
       .map((line) => line.trim())
       .filter(Boolean);
     if (lines.length === 0) continue;
+
+    if (lines[0]?.startsWith(">")) {
+      const callout = parseCallout(lines);
+      if (callout) {
+        blocks.push(callout);
+        continue;
+      }
+    }
 
     const heading = lines.length === 1 ? HEADING.exec(lines[0] ?? "") : null;
     if (heading) {

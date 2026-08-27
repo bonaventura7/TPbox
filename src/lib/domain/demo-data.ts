@@ -3,12 +3,7 @@
  * Articoli reali da fonti istituzionali — marcati isDemo: true.
  * Regola d'oro: ogni articolo riporta originalUrl (fonte) e pdfUrl (documento ufficiale) quando disponibile.
  */
-import type {
-  CompanyCandidate,
-  FinancialYear,
-  NewsItem,
-  NewsSource,
-} from "@/lib/domain/types";
+import type { CompanyCandidate, FinancialYear, NewsItem, NewsSource } from "@/lib/domain/types";
 
 export const DEMO_NEWS_ITEMS: NewsItem[] = [
   {
@@ -35,7 +30,13 @@ export const DEMO_NEWS_ITEMS: NewsItem[] = [
       "",
       "Il dato che più incide sulla pianificazione di gruppo riguarda la componente bilaterale: 84 accordi bilaterali in un solo esercizio, anch'essi un massimo storico. Tra questi figurano le prime intese concluse con Francia, Indonesia, Irlanda e Svezia, giurisdizioni fino a oggi assenti dal quadro bilaterale indiano.",
       "",
+      "> [!TECNICO] I numeri del rapporto",
+      "> - 220 APA sottoscritti nell'esercizio 2025-26",
+      "> - 1.035 accordi cumulativi dall'avvio del programma",
+      "> - 84 accordi bilaterali, massimo storico",
+      "",
       "## I tempi di conclusione",
+
       "",
       "Il rapporto indica un periodo mediano di risoluzione di 36 mesi per gli accordi unilaterali e di 38 mesi per quelli bilaterali. È l'elemento da tenere presente quando si valuta se aprire un'istanza: il vantaggio della certezza si misura su un orizzonte pluriennale, e l'esercizio coperto dal rollback va considerato in sede di stima.",
       "",
@@ -43,8 +44,18 @@ export const DEMO_NEWS_ITEMS: NewsItem[] = [
       "",
       "L'ampliamento della rete bilaterale riduce l'area nella quale una rettifica indiana resta priva di rimedio corrispondente nell'altro Stato. Per i gruppi italiani con società indiane l'apertura verso nuovi partner convenzionali sposta il confronto dal contenzioso interno alla sede bilaterale, dove la doppia imposizione si risolve tra amministrazioni.",
       "",
+      "> [!PRATICA] Orizzonte temporale dell'istanza",
+      "> Periodo mediano di risoluzione: 36 mesi per le UAPA, 38 mesi per le BAPA. La valutazione di convenienza si fa su un orizzonte pluriennale, considerando gli esercizi coperti dal rollback.",
+      "",
       "Restano fuori da questa nota le misure di safe harbour: non sono contenute nel rapporto APA e vanno lette sul provvedimento che le dispone. Una voce, una fonte.",
+      "",
+      "## Punti chiave",
+      "",
+      "- 220 accordi in un solo esercizio: il programma indiano cresce in volume, non solo in anzianità.",
+      "- Le prime intese bilaterali con Francia, Indonesia, Irlanda e Svezia ampliano la rete convenzionale utilizzabile.",
+      "- La certezza si valuta su un orizzonte pluriennale: la mediana resta sopra i tre anni.",
     ].join("\n"),
+
     originalUrl: "https://www.incometaxindia.gov.in/documents/d/guest/apa-report2025-26-2-pdf",
     pdfUrl: "https://www.incometaxindia.gov.in/documents/d/guest/apa-report2025-26-2-pdf",
     workflowState: "PUBLISHED",
@@ -158,7 +169,8 @@ export const DEMO_NEWS_ITEMS: NewsItem[] = [
   {
     id: "news-cipro-iva-scadenze-2026",
     slug: "cipro-scadenze-iva-e-vies",
-    title: "Cipro proroga le scadenze per le dichiarazioni IVA di giugno 2026 e VIES di luglio 2026",
+    title:
+      "Cipro proroga le scadenze per le dichiarazioni IVA di giugno 2026 e VIES di luglio 2026",
     summary:
       "Il Tax Department di Cipro ha concesso una proroga per la presentazione delle dichiarazioni IVA relative al periodo chiuso il 30 giugno 2026 e per i Modelli Riepilogativi (VIES) del luglio 2026, in considerazione del periodo estivo. I contribuenti interessati beneficiano di giorni aggiuntivi per il versamento dell'IVA dovuta.",
     sourceId: "src-tax-dept-cipro",
@@ -179,7 +191,8 @@ export const DEMO_NEWS_ITEMS: NewsItem[] = [
   {
     id: "news-paesi-bassi-hybrid-mismatch-2026",
     slug: "paesi-bassi-disallineamenti-da-ibridi",
-    title: "Paesi Bassi: nuove regole sui disallineamenti ibridi per regimi fiscali USA e stabili organizzazioni",
+    title:
+      "Paesi Bassi: nuove regole sui disallineamenti ibridi per regimi fiscali USA e stabili organizzazioni",
     summary:
       "Il Decreto sulla Politica dei Disallineamenti Ibridi 2026 (Decreto n. 2026-12123) recepisce le modifiche introdotte dal Segretario di Stato alle Finanze olandese in materia di ATAD 2. Il provvedimento aggiorna le istruzioni applicative per i regimi fiscali statunitensi (check-the-box, S-corporations) e le stabili organizzazioni, chiarendo i casi di doppia non-imposizione rilevanti.",
     sourceId: "src-mof-nl",
@@ -312,21 +325,85 @@ export const DEMO_COMPANIES: CompanyCandidate[] = [
 /** Serie economico-finanziarie dimostrative per companyId. */
 export const DEMO_FINANCIALS: Record<string, FinancialYear[]> = {
   "cmp-001": [
-    { year: 2024, revenue: 184_500_000, ebit: 12_900_000, netResult: 8_400_000, totalAssets: 142_000_000, equity: 61_000_000, employees: 612 },
-    { year: 2023, revenue: 171_200_000, ebit: 10_400_000, netResult: 6_900_000, totalAssets: 136_500_000, equity: 55_300_000, employees: 589 },
-    { year: 2022, revenue: 158_900_000, ebit: 9_100_000, netResult: 5_600_000, totalAssets: 129_800_000, equity: 50_100_000, employees: 564 },
+    {
+      year: 2024,
+      revenue: 184_500_000,
+      ebit: 12_900_000,
+      netResult: 8_400_000,
+      totalAssets: 142_000_000,
+      equity: 61_000_000,
+      employees: 612,
+    },
+    {
+      year: 2023,
+      revenue: 171_200_000,
+      ebit: 10_400_000,
+      netResult: 6_900_000,
+      totalAssets: 136_500_000,
+      equity: 55_300_000,
+      employees: 589,
+    },
+    {
+      year: 2022,
+      revenue: 158_900_000,
+      ebit: 9_100_000,
+      netResult: 5_600_000,
+      totalAssets: 129_800_000,
+      equity: 50_100_000,
+      employees: 564,
+    },
   ],
   "cmp-002": [
-    { year: 2024, revenue: 42_300_000, ebit: 2_100_000, netResult: 1_350_000, totalAssets: 28_400_000, equity: 11_800_000, employees: 148 },
-    { year: 2023, revenue: 39_800_000, ebit: 1_780_000, netResult: 1_020_000, totalAssets: 26_900_000, equity: 10_600_000, employees: 141 },
+    {
+      year: 2024,
+      revenue: 42_300_000,
+      ebit: 2_100_000,
+      netResult: 1_350_000,
+      totalAssets: 28_400_000,
+      equity: 11_800_000,
+      employees: 148,
+    },
+    {
+      year: 2023,
+      revenue: 39_800_000,
+      ebit: 1_780_000,
+      netResult: 1_020_000,
+      totalAssets: 26_900_000,
+      equity: 10_600_000,
+      employees: 141,
+    },
   ],
   "cmp-003": [
-    { year: 2023, revenue: 96_700_000, ebit: 4_800_000, netResult: 3_050_000, totalAssets: 71_200_000, equity: 24_900_000, employees: 233 },
-    { year: 2022, revenue: 91_100_000, ebit: 4_150_000, netResult: 2_480_000, totalAssets: 68_400_000, equity: 22_600_000, employees: 226 },
+    {
+      year: 2023,
+      revenue: 96_700_000,
+      ebit: 4_800_000,
+      netResult: 3_050_000,
+      totalAssets: 71_200_000,
+      equity: 24_900_000,
+      employees: 233,
+    },
+    {
+      year: 2022,
+      revenue: 91_100_000,
+      ebit: 4_150_000,
+      netResult: 2_480_000,
+      totalAssets: 68_400_000,
+      equity: 22_600_000,
+      employees: 226,
+    },
   ],
 };
 
 /** Serie di riserva usata quando il provider non copre la società richiesta. */
 export const DEMO_FINANCIALS_FALLBACK: FinancialYear[] = [
-  { year: 2024, revenue: 25_000_000, ebit: 1_250_000, netResult: 780_000, totalAssets: 18_500_000, equity: 7_400_000, employees: 96 },
+  {
+    year: 2024,
+    revenue: 25_000_000,
+    ebit: 1_250_000,
+    netResult: 780_000,
+    totalAssets: 18_500_000,
+    equity: 7_400_000,
+    employees: 96,
+  },
 ];
