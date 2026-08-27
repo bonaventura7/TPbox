@@ -6,11 +6,13 @@
  * verità dei dati — quella sta nella fonte — ma misura struttura e densità.
  */
 import { renderDraftMarkdown } from "./markdown";
+import { checkDraftSources } from "./source-policy";
 import { structureFor } from "./structure";
 import {
   DRAFT_CATEGORIES,
   NEWS_TYPES,
   type DraftBox,
+  type DraftBoxKind,
   type DraftSource,
   type DraftValidation,
   type EditorialDraft,
@@ -68,15 +70,87 @@ function validateSources(sources: DraftSource[], reasons: string[]): void {
     if (!source.label.trim()) reasons.push("fonte senza etichetta");
     if (!isHttpUrl(source.url)) reasons.push(`URL fonte non valida: ${source.url}`);
   }
+  // Fail-closed sul dominio: la whitelist istituzionale è l'unica ammessa.
+  reasons.push(...checkDraftSources(sources));
 }
 
-function validateBoxes(boxes: DraftBox[], reasons: string[]): void {
+function validateBoxes(boxes: DraftBox[], required: DraftBoxKind[], reasons: string[]): void {
   for (const box of boxes) {
     if (!box.title.trim()) reasons.push(`box ${box.kind} senza titolo`);
     if (box.lines.filter((line) => line.trim()).length === 0) {
       reasons.push(`box ${box.kind} senza contenuto`);
     }
   }
+  const present = new Set(boxes.map((box) => box.kind));
+  for (const kind of required) {
+    if (!present.has(kind)) reasons.push(`box obbligatorio mancante per il tipo: ${kind}`);
+  }
+}
+
+const STOPWORDS = new Set([
+  "il",
+  "lo",
+  "la",
+  "i",
+  "gli",
+  "le",
+  "un",
+  "uno",
+  "una",
+  "di",
+  "del",
+  "della",
+  "dei",
+  "degli",
+  "delle",
+  "e",
+  "per",
+  "con",
+  "su",
+  "nel",
+  "nella",
+  "nei",
+  "alle",
+  "ai",
+  "al",
+  "da",
+  "dal",
+  "in",
+  "a",
+  "che",
+  "non",
+  "come",
+  "cosa",
+  "resta",
+  "sul",
+]);
+
+function significantWords(text: string): string[] {
+  return text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\s]/g, " ")
+    .split(/\s+/)
+    .filter((word) => word.length > 2 && !STOPWORDS.has(word));
+}
+
+/**
+ * Copertura delle sezioni attese: il confronto è per parole significative, così
+ * una variante lessicale ("…con presenza in India" per "…nella giurisdizione")
+ * non fa cadere il gate, mentre un articolo che salta metà struttura sì.
+ */
+function sectionCoverage(headings: string[], sections: string[]): number {
+  if (sections.length === 0) return 1;
+  const headingWords = headings.map((heading) => new Set(significantWords(heading)));
+  const matched = sections.filter((section) => {
+    const words = significantWords(section);
+    if (words.length === 0) return true;
+    return headingWords.some(
+      (set) => words.filter((word) => set.has(word)).length / words.length >= 0.5,
+    );
+  });
+  return matched.length / sections.length;
 }
 
 export function validateEditorialDraft(input: unknown): DraftValidation<EditorialDraft> {
@@ -129,12 +203,18 @@ export function validateEditorialDraft(input: unknown): DraftValidation<Editoria
   if (headings.length < 3) {
     reasons.push(`struttura insufficiente: ${headings.length} sezioni (minimo 3)`);
   }
+  const coverage = sectionCoverage(headings, structure.sections);
+  if (coverage < 0.6) {
+    reasons.push(
+      `struttura non conforme al tipo ${newsType}: copertura sezioni ${Math.round(coverage * 100)}% (minimo 60%)`,
+    );
+  }
   if (takeaways.length < structure.minTakeaways) {
     reasons.push(`takeaway insufficienti: ${takeaways.length} (minimo ${structure.minTakeaways})`);
   }
 
   validateSources(sources, reasons);
-  validateBoxes(boxes, reasons);
+  validateBoxes(boxes, structure.boxes, reasons);
 
   const scanned = [title, excerpt, bodyMd, ...takeaways, ...boxes.flatMap((box) => box.lines)].join(
     "\n",
@@ -179,4 +259,21 @@ export function toNewsItemRow(draft: EditorialDraft) {
     source_url: primary?.url ?? null,
     status: "DRAFT" as const,
   };
+}
+
+export type NewsItemDraftRow = ReturnType<typeof toNewsItemRow>;
+
+/**
+ * Unico ingresso ammesso in pipeline: valida e poi serializza. Se il gate non
+ * passa non esiste riga da scrivere, e la riga prodotta è sempre DRAFT — la
+ * pubblicazione resta una decisione umana separata (news-publish).
+ */
+export function toReviewableNewsItemRow(input: unknown): DraftValidation<NewsItemDraftRow> {
+  const validation = validateEditorialDraft(input);
+  if (!validation.ok) return validation;
+  const row = toNewsItemRow(validation.value);
+  if (row.status !== "DRAFT") {
+    return { ok: false, reasons: ["stato non consentito: l'engine non pubblica"] };
+  }
+  return { ok: true, value: row };
 }
