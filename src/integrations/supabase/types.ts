@@ -113,6 +113,8 @@ export type Database = {
           country: string | null
           created_at: string
           fetched_at: string | null
+          flag_pending_review: boolean
+          gate_result: Json | null
           geo: string
           id: string
           language: string
@@ -139,6 +141,8 @@ export type Database = {
           country?: string | null
           created_at?: string
           fetched_at?: string | null
+          flag_pending_review?: boolean
+          gate_result?: Json | null
           geo?: string
           id?: string
           language?: string
@@ -165,6 +169,8 @@ export type Database = {
           country?: string | null
           created_at?: string
           fetched_at?: string | null
+          flag_pending_review?: boolean
+          gate_result?: Json | null
           geo?: string
           id?: string
           language?: string
