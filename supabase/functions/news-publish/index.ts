@@ -42,7 +42,21 @@ Deno.serve(async(req: Request)=>{
   const known=new Set((norms??[]).map((x:{key:string})=>x.key.trim().toLowerCase()));
   let published=0,blocked=0; const details=[];
   for(const it of items??[]){
+    // Fail-closed: si pubblica SOLO da DRAFT con gate di generazione superato.
+    const gateOk=Boolean(it.gate_result)&&(it.gate_result as {ok?:unknown}).ok===true;
+    if(it.status!=='DRAFT'||!gateOk){
+      blocked++;details.push({id:it.id,result:'BLOCKED',gate:'FAIL_GATE_RESULT',reason:'gate_result.ok !== true'});
+      continue;
+    }
+    // Difesa in profondità: contenuto sotto la soglia minima non è pubblicabile.
+    const contentLength=(it.content_markdown??'').trim().length;
+    if(contentLength<MIN_PUBLISHABLE_CONTENT_CHARS){
+      await supabase.from('news_items').update({flag_pending_review:true,gate_result:{ok:false,reasons:[`articolo troppo breve: ${contentLength} caratteri (minimo ${MIN_PUBLISHABLE_CONTENT_CHARS})`]}}).eq('id',it.id).eq('status','DRAFT');
+      blocked++;details.push({id:it.id,result:'BLOCKED',gate:'FAIL_TOO_SHORT',reason:`content_markdown ${contentLength} < ${MIN_PUBLISHABLE_CONTENT_CHARS}`});
+      continue;
+    }
     const gate=await runSourceGate({sourceUrl:it.source_url,pdfUrl:it.pdf_url??null,bodyText:it.content_markdown??it.summary??'',references:Array.isArray(it.normative_references)?it.normative_references:[],knownNormativeKeys:known},ctx);
+
     await supabase.from('news_gate_log').insert({news_id:it.id,gate_result:gate.result,details:{...gate.checks,reason:gate.reason??null}});
     if(isPass(gate)){
       const {error:updateError}=await supabase.from('news_items').update({status:'PUBLISHED',published_at:new Date().toISOString()}).eq('id',it.id).eq('status','DRAFT');
