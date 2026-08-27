@@ -231,8 +231,14 @@ describe("traduzione dei filtri in predicati", () => {
 });
 
 describe("default del flag", () => {
-  it("VITE_USE_REAL_REPO assente significa mock", async () => {
+  it("VITE_USE_REAL_REPO assente significa repo reale", async () => {
     delete (import.meta.env as Record<string, unknown>)["VITE_USE_REAL_REPO"];
+    const { useRealNewsRepo } = await import("../platform/feature-flags");
+    expect(useRealNewsRepo()).toBe(true);
+  });
+
+  it('VITE_USE_REAL_REPO="false" è il kill-switch e riporta al mock', async () => {
+    (import.meta.env as Record<string, unknown>)["VITE_USE_REAL_REPO"] = "false";
     const { useRealNewsRepo } = await import("../platform/feature-flags");
     expect(useRealNewsRepo()).toBe(false);
   });

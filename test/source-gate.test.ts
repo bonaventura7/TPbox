@@ -21,6 +21,6 @@ describe('primary source gate',()=>{
  it('keeps regfollower.com blocked',()=>expect(isAllowedHost('regfollower.com')).toBe(false));
  it('keeps application and Edge whitelist mappings exactly synchronized',()=>{
    expect(APP_WHITELIST).toEqual(EDGE_WHITELIST);
-   expect(new Set(EDGE_WHITELIST.map(source=>source.name)).size).toBe(56);
+   expect(new Set(EDGE_WHITELIST.map(source=>source.name)).size).toBe(58);
  });
 });

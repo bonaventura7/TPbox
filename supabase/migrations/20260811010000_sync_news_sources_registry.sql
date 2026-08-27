@@ -65,7 +65,9 @@ WITH added AS (
     ('KRA Kenya', 'TP', 'KE', NULL, 'HTML_WATCH', false),
     ('Belastingdienst Netherlands', 'TP', 'NL', NULL, 'HTML_WATCH', false),
     ('HMRC UK', 'TP', 'UK', NULL, 'HTML_WATCH', false),
-    ('Government of Poland', 'VAT', 'PL', NULL, 'HTML_WATCH', false)
+    ('Government of Poland', 'VAT', 'PL', NULL, 'HTML_WATCH', false),
+    ('Nemzeti Jogszabalytar (registro normativo Ungheria)', 'TP', 'HU', NULL, 'HTML_WATCH', false),
+    ('Magyar Kozlony (Gazzetta ufficiale Ungheria)', 'TP', 'HU', NULL, 'HTML_WATCH', false)
   ON CONFLICT (name) DO NOTHING
   RETURNING name
 )
