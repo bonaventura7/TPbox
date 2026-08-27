@@ -58,6 +58,16 @@ export function parseArticleMarkdown(source: string): ArticleBlock[] {
       .filter(Boolean);
     if (lines.length === 0) continue;
 
+    if (lines[0]?.startsWith(">")) {
+      const callout = parseCallout(lines);
+      if (callout) {
+        blocks.push(callout);
+        continue;
+      }
+    }
+
+
+
     const heading = lines.length === 1 ? HEADING.exec(lines[0] ?? "") : null;
     if (heading) {
       blocks.push({
