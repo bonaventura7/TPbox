@@ -2,9 +2,12 @@ import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { authorizeCaller, jsonResponse } from '../_shared/auth.ts';
 import { validateDraft } from '../_shared/draft-quality.ts';
 import { errorMessage } from '../_shared/error-message.ts';
+import { extractFactCandidates, validateGenerationInput } from '../_shared/generation-input.ts';
 import { generateJson } from '../_shared/llm-provider.ts';
 import { redactSecret } from '../_shared/redact.ts';
+import { toReviewableNewsItemRow } from '../_shared/reviewable-row.ts';
 import { extractDomain, findSource, isSpecificPrimaryUrl } from '../_shared/whitelist.ts';
+
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
