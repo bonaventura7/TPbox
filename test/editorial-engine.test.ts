@@ -128,3 +128,61 @@ describe("prompt del generatore", () => {
     expect(buildUserPrompt({ ...input, newsType: "PILLAR_TWO" })).toContain("regole GloBE");
   });
 });
+
+/**
+ * Guardrail aggiuntivi: dominio della fonte primaria (whitelist istituzionale),
+ * copertura delle sezioni attese dal tipo, box obbligatori e ingresso unico in
+ * pipeline che non può produrre nulla di pubblicato.
+ */
+describe("guardrail fail-closed su fonti, struttura e pipeline", () => {
+  it("rifiuta una fonte primaria su dominio non censito", () => {
+    const reasons = failureReasons({
+      ...INDIA_APA_DRAFT,
+      sources: [{ label: "Blog fiscale", url: "https://blog-esempio.com/nota", role: "PRIMARY" }],
+    });
+    expect(reasons.some((reason) => reason.includes("dominio fonte primaria non ammesso"))).toBe(
+      true,
+    );
+  });
+
+  it("rifiuta la homepage istituzionale come fonte primaria", () => {
+    const reasons = failureReasons({
+      ...INDIA_APA_DRAFT,
+      sources: [{ label: "OCSE", url: "https://www.oecd.org/", role: "PRIMARY" }],
+    });
+    expect(reasons.some((reason) => reason.includes("fonte primaria generica"))).toBe(true);
+  });
+
+  it("accetta il draft golden, la cui fonte primaria è istituzionale e puntuale", () => {
+    expect(validateEditorialDraft(INDIA_APA_DRAFT).ok).toBe(true);
+  });
+
+  it("rifiuta un corpo che ignora la struttura del tipo", () => {
+    const reasons = failureReasons({
+      ...INDIA_APA_DRAFT,
+      bodyMd: INDIA_APA_DRAFT.bodyMd.replace(/^## .*$/gm, "## Considerazioni varie"),
+    });
+    expect(reasons.some((reason) => reason.includes("copertura sezioni"))).toBe(true);
+  });
+
+  it("rifiuta il draft privo di un box obbligatorio per il tipo", () => {
+    const reasons = failureReasons({
+      ...INDIA_APA_DRAFT,
+      boxes: INDIA_APA_DRAFT.boxes.filter((box) => box.kind !== "PRATICA"),
+    });
+    expect(reasons.some((reason) => reason.includes("box obbligatorio mancante"))).toBe(true);
+  });
+
+  it("l'unico ingresso in pipeline produce sempre una riga DRAFT", () => {
+    const result = toReviewableNewsItemRow(INDIA_APA_DRAFT);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.status).toBe("DRAFT");
+      expect(result.value.source_url).toContain("incometaxindia.gov.in");
+    }
+  });
+
+  it("non produce alcuna riga quando il gate non passa", () => {
+    expect(toReviewableNewsItemRow({ ...INDIA_APA_DRAFT, sources: [] }).ok).toBe(false);
+  });
+});
