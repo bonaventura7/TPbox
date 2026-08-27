@@ -50,7 +50,9 @@ export const WHITELIST: Source[] = [
   {domain:'kra.go.ke',name:'KRA Kenya',country:'KE'},
   {domain:'belastingdienst.nl',name:'Belastingdienst Netherlands',country:'NL'},
   {domain:'hmrc.gov.uk',name:'HMRC UK',country:'UK'},
-  {domain:'gov.pl',name:'Government of Poland',country:'PL'}
+  {domain:'gov.pl',name:'Government of Poland',country:'PL'},
+  {domain:'njt.jog.gov.hu',name:'Nemzeti Jogszabalytar (registro normativo Ungheria)',country:'HU'},
+  {domain:'magyarkozlony.hu',name:'Magyar Kozlony (Gazzetta ufficiale Ungheria)',country:'HU'}
 ];
 export function extractDomain(url:string){try{return new URL(url).hostname.toLowerCase().replace(/^www\./,'')}catch{return ''}}
 export function findSource(domain:string){const d=domain.toLowerCase().replace(/^www\./,'');return WHITELIST.find(s=>d===s.domain||d.endsWith(`.${s.domain}`))??null}

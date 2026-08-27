@@ -11,7 +11,7 @@ const migration = readFileSync(migrationPath, 'utf8');
 describe('news_sources registry synchronization migration', () => {
   it('registers every exact source name used by the Edge whitelist', () => {
     const uniqueNames = [...new Set(WHITELIST.map((source) => source.name))];
-    expect(uniqueNames).toHaveLength(56);
+    expect(uniqueNames).toHaveLength(58);
 
     for (const name of uniqueNames) {
       const escaped = name.replaceAll("'", "''");

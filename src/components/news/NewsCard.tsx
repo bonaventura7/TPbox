@@ -2,6 +2,7 @@ import { ArrowRight, Download, FileText } from "lucide-react";
 
 import { DemoBadge } from "@/components/site/DemoBadge";
 import { articlePath } from "@/lib/domain/article";
+import { buildSourceLinks } from "@/lib/domain/source-link";
 import type { NewsItem } from "@/lib/domain/types";
 import { CATEGORY_COLORS } from "@/lib/domain/types";
 import { cn } from "@/lib/utils";
