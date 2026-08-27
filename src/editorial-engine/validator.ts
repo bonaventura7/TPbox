@@ -6,15 +6,18 @@
  * verità dei dati — quella sta nella fonte — ma misura struttura e densità.
  */
 import { renderDraftMarkdown } from "./markdown";
+import { checkDraftSources } from "./source-policy";
 import { structureFor } from "./structure";
 import {
   DRAFT_CATEGORIES,
   NEWS_TYPES,
   type DraftBox,
+  type DraftBoxKind,
   type DraftSource,
   type DraftValidation,
   type EditorialDraft,
 } from "./types";
+
 
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
