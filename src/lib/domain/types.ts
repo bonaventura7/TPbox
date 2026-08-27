@@ -95,6 +95,12 @@ export interface NewsItem {
   /** URL diretto al documento PDF ufficiale scaricabile (se disponibile). */
   pdfUrl?: string;
   /**
+   * Titolo esatto del documento ufficiale, come compare sul documento.
+   * E' l'etichetta mostrata al lettore al posto di una dizione generica:
+   * il rimando dichiara che cosa si scarica, non di che rango sia la fonte.
+   */
+  sourceDocumentTitle?: string;
+  /**
    * Identificativo della pagina articolo. Assente sulle righe che non lo
    * dichiarano: in quel caso `articleSlug` ne deriva uno stabile.
    */

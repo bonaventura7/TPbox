@@ -15,11 +15,17 @@ export function isEnabled(flag: FeatureFlag): boolean {
 
 /**
  * Attualità: repository reale (database TP Box) contro repository mock.
- * Default sicuro: mock. Il repo reale si attiva solo con VITE_USE_REAL_REPO="true".
- * La variabile non è un segreto: abilita soltanto la sorgente dati.
+ *
+ * Il default è il repo reale, perché il database contiene articoli pubblicati
+ * con fonte primaria verificata: tenere il mock come default significherebbe
+ * mostrare dati demo accanto a contenuti reali già disponibili.
+ *
+ * `VITE_USE_REAL_REPO="false"` è il kill-switch: riporta la sezione ai dati
+ * demo senza un deploy di codice. Qualunque altro valore, variabile assente
+ * compresa, seleziona il repo reale.
  */
 export function useRealNewsRepo(): boolean {
-  return import.meta.env["VITE_USE_REAL_REPO"] === "true";
+  return import.meta.env["VITE_USE_REAL_REPO"] !== "false";
 }
 /** Portale interpelli: acquisizione disattivata, fallback su import manuale. */
 export const INTERPELLI_FLAGS = {
