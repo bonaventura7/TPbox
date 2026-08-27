@@ -86,8 +86,8 @@ describe("riconoscimento del documento e catena della fonte", () => {
     const links = buildSourceLinks(makeItem({ pdfUrl: PDF_INDIA }));
 
     expect(links).toHaveLength(1);
-    expect(links[0].kind).toBe("PDF");
-    expect(links[0].label).toBe("Scarica il PDF ufficiale");
+    expect(links[0].kind).toBe("DOCUMENTO");
+    expect(links[0].download).toBe(true);
   });
 
   it("tratta come identiche due URL che differiscono solo per la barra finale", () => {
@@ -103,15 +103,53 @@ describe("riconoscimento del documento e catena della fonte", () => {
       makeItem({ originalUrl: "https://esempio.gov/comunicato", pdfUrl: PDF_INDIA }),
     );
 
-    expect(links.map((link) => link.kind)).toEqual(["PDF", "PAGINA"]);
-    expect(links[1].label).toBe("Apri la pagina ufficiale");
+    expect(links.map((link) => link.kind)).toEqual(["DOCUMENTO", "PAGINA"]);
+    expect(links[1].label).toBe("Pagina che ospita il documento");
   });
 
   it("chiama documento ufficiale la pagina su cui l'articolo è basato quando non c'è PDF", () => {
     const links = buildSourceLinks(makeItem({ originalUrl: "https://esempio.gov/comunicato" }));
 
     expect(links).toHaveLength(1);
-    expect(links[0].label).toBe("Apri la pagina ufficiale");
+    expect(links[0].label).toBe("Pagina ufficiale");
+    expect(links[0].download).toBe(false);
+  });
+
+  it("usa il titolo del documento come etichetta, quando è dichiarato", () => {
+    const titolo = "APA Annual Report FY 2025-26";
+    const links = buildSourceLinks(
+      makeItem({ pdfUrl: PDF_INDIA, sourceDocumentTitle: titolo }),
+    );
+
+    expect(links[0].label).toBe(titolo);
+    expect(links[0].kind).toBe("DOCUMENTO");
+  });
+
+  it("non scrive mai il rango della fonte nell'etichetta", () => {
+    for (const item of [
+      makeItem({ pdfUrl: PDF_INDIA }),
+      makeItem({ originalUrl: "https://esempio.gov/comunicato" }),
+      makeItem({ originalUrl: "https://esempio.gov/comunicato", pdfUrl: PDF_INDIA }),
+    ]) {
+      for (const link of buildSourceLinks(item)) {
+        expect(link.label.toLowerCase()).not.toContain("primaria");
+        expect(link.label.toLowerCase()).not.toContain("secondaria");
+      }
+    }
+  });
+
+  it("tratta come documento la pagina istituzionale che porta un titolo dichiarato", () => {
+    const links = buildSourceLinks(
+      makeItem({
+        originalUrl: "https://www.ato.gov.au/guidance/exemptions",
+        sourceDocumentTitle: "Exemptions and administrative relief",
+      }),
+    );
+
+    expect(links[0].kind).toBe("DOCUMENTO");
+    expect(links[0].label).toBe("Exemptions and administrative relief");
+    // Non è un file: il rimando non promette un download.
+    expect(links[0].download).toBe(false);
   });
 
   it("non produce collegamenti da una URL non http", () => {
@@ -119,8 +157,13 @@ describe("riconoscimento del documento e catena della fonte", () => {
   });
 });
 
-describe("card: rinvio all'articolo, non alla fonte", () => {
-  const item = makeItem({ slug: "india-rapporto-apa-2025-26", pdfUrl: PDF_INDIA });
+describe("card: articolo interno e rimando al documento", () => {
+  const TITOLO_DOC = "APA Annual Report FY 2025-26";
+  const item = makeItem({
+    slug: "india-rapporto-apa-2025-26",
+    pdfUrl: PDF_INDIA,
+    sourceDocumentTitle: TITOLO_DOC,
+  });
 
   it("collega la card all'articolo interno", () => {
     const markup = renderToStaticMarkup(<NewsCard item={item} />);
@@ -129,30 +172,49 @@ describe("card: rinvio all'articolo, non alla fonte", () => {
     expect(markup).toContain("Leggi l&#x27;articolo");
   });
 
-  it("non porta fuori dal sito e non usa più l'etichetta generica", () => {
+  it("offre il documento accanto all'articolo, con il suo titolo", () => {
     const markup = renderToStaticMarkup(<NewsCard item={item} />);
 
-    expect(markup).not.toContain("incometaxindia.gov.in");
+    expect(markup).toContain(PDF_INDIA);
+    expect(markup).toContain(TITOLO_DOC);
+    expect(markup).toContain("Scarica il documento");
     expect(markup).not.toContain("Apri la fonte originale");
   });
 
-  it("vale anche per la variante in evidenza e per quella compatta", () => {
-    for (const variant of ["featured", "compact"] as const) {
+  it("non mostra il rango della fonte in nessuna variante", () => {
+    for (const variant of ["list", "featured", "compact"] as const) {
       const markup = renderToStaticMarkup(<NewsCard item={item} variant={variant} />);
       expect(markup).toContain('href="/attualita/articolo/india-rapporto-apa-2025-26"');
-      expect(markup).not.toContain("incometaxindia.gov.in");
+      expect(markup).not.toContain("Tipo fonte");
+      expect(markup).not.toContain("primaria");
+      expect(markup).not.toContain("secondaria");
     }
+  });
+
+  it("non mostra alcun rimando quando il documento non è consultabile", () => {
+    const markup = renderToStaticMarkup(
+      <NewsCard item={makeItem({ slug: "x", originalUrl: "javascript:alert(1)" })} />,
+    );
+
+    expect(markup).not.toContain("Scarica il documento");
+    expect(markup).not.toContain("Apri il documento");
   });
 });
 
 describe("blocco fonte nella pagina articolo", () => {
-  it("porta un solo collegamento al PDF ufficiale, con l'etichetta giusta", () => {
-    const markup = renderToStaticMarkup(<SourceBlock item={makeItem({ pdfUrl: PDF_INDIA })} />);
+  it("porta un solo collegamento al documento, etichettato col suo titolo", () => {
+    const titolo = "APA Annual Report FY 2025-26";
+    const markup = renderToStaticMarkup(
+      <SourceBlock item={makeItem({ pdfUrl: PDF_INDIA, sourceDocumentTitle: titolo })} />,
+    );
 
-    expect(markup).toContain("Scarica il PDF ufficiale");
+    expect(markup).toContain(titolo);
+    expect(markup).toContain("Scarica il documento");
     expect(markup).toContain(PDF_INDIA);
-    expect(markup).not.toContain("Apri la pagina ufficiale");
     expect(markup.split(PDF_INDIA).length - 1).toBe(1);
+    // Il rango della fonte non compare in pagina.
+    expect(markup).not.toContain("primaria");
+    expect(markup).not.toContain("secondaria");
   });
 
   it("dichiara l'assenza invece di lasciare il lettore senza fonte", () => {
