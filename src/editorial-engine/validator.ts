@@ -6,6 +6,7 @@
  * verità dei dati — quella sta nella fonte — ma misura struttura e densità.
  */
 import { renderDraftMarkdown } from "./markdown";
+import type { GenerationInput } from "./prompt";
 import { checkDraftSources } from "./source-policy";
 import { structureFor } from "./structure";
 import {
@@ -290,15 +291,7 @@ export function toReviewableNewsItemRow(input: unknown): DraftValidation<NewsIte
  * ---------------------------------------------------------------------------
  */
 
-export interface GenerationFact {
-  statement: string;
-  sourceUrl: string;
-}
-
-export interface GenerationInput {
-  primaryText: string;
-  facts: GenerationFact[];
-}
+export type { ExtractedFact as GenerationFact, GenerationInput } from "./prompt";
 
 export const MIN_PRIMARY_TEXT_CHARS = 2000;
 export const MIN_GENERATION_FACTS = 3;
