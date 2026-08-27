@@ -79,9 +79,7 @@ export const INDIA_APA_DRAFT: EditorialDraft = {
     {
       kind: "PRATICA",
       title: "Orizzonte temporale dell'istanza",
-      lines: [
-        "Periodo mediano di risoluzione: 36 mesi per le UAPA, 38 mesi per le BAPA.",
-      ],
+      lines: ["Periodo mediano di risoluzione: 36 mesi per le UAPA, 38 mesi per le BAPA."],
     },
   ],
   takeaways: [

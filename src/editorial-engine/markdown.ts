@@ -30,7 +30,12 @@ export function renderSources(sources: DraftSource[]): string {
 
 /** Corpo completo: analisi, box, punti chiave, fonti. */
 export function renderDraftMarkdown(draft: EditorialDraft): string {
-  return [draft.bodyMd.trim(), ...draft.boxes.map(renderBox), renderTakeaways(draft.takeaways), renderSources(draft.sources)]
+  return [
+    draft.bodyMd.trim(),
+    ...draft.boxes.map(renderBox),
+    renderTakeaways(draft.takeaways),
+    renderSources(draft.sources),
+  ]
     .filter(Boolean)
     .join("\n\n");
 }

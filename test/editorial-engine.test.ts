@@ -25,9 +25,7 @@ describe("golden case — India APA 2025-26", () => {
   });
 
   it("rispetta la densità minima del tipo APA", () => {
-    expect(countWords(INDIA_APA_DRAFT.bodyMd)).toBeGreaterThanOrEqual(
-      structureFor("APA").minWords,
-    );
+    expect(countWords(INDIA_APA_DRAFT.bodyMd)).toBeGreaterThanOrEqual(structureFor("APA").minWords);
   });
 
   it("produce un markdown con sezioni, box, punti chiave e fonti", () => {
@@ -41,9 +39,9 @@ describe("golden case — India APA 2025-26", () => {
       "TECNICO",
       "PRATICA",
     ]);
-    expect(headings.some((block) => block.kind === "heading" && block.text === "Punti chiave")).toBe(
-      true,
-    );
+    expect(
+      headings.some((block) => block.kind === "heading" && block.text === "Punti chiave"),
+    ).toBe(true);
     expect(headings.some((block) => block.kind === "heading" && block.text === "Fonti")).toBe(true);
   });
 

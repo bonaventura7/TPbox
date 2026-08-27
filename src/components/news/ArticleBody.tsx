@@ -137,4 +137,3 @@ export function ArticleBody({ markdown }: { markdown: string }) {
     <div className="mt-8 space-y-5 text-[0.975rem] leading-relaxed">{renderBlocks(blocks)}</div>
   );
 }
-

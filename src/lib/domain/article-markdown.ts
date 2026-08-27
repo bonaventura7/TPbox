@@ -47,7 +47,6 @@ function parseCallout(lines: string[]): ArticleBlock | null {
   };
 }
 
-
 export function parseArticleMarkdown(source: string): ArticleBlock[] {
   const blocks: ArticleBlock[] = [];
 
@@ -65,8 +64,6 @@ export function parseArticleMarkdown(source: string): ArticleBlock[] {
         continue;
       }
     }
-
-
 
     const heading = lines.length === 1 ? HEADING.exec(lines[0] ?? "") : null;
     if (heading) {

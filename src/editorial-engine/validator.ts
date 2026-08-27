@@ -120,7 +120,9 @@ export function validateEditorialDraft(input: unknown): DraftValidation<Editoria
   const structure = structureFor(newsType);
   const words = countWords(bodyMd);
   if (words < structure.minWords) {
-    reasons.push(`articolo troppo breve per ${newsType}: ${words} parole (minimo ${structure.minWords})`);
+    reasons.push(
+      `articolo troppo breve per ${newsType}: ${words} parole (minimo ${structure.minWords})`,
+    );
   }
 
   const headings = headingTexts(bodyMd);
