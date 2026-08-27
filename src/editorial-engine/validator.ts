@@ -231,3 +231,21 @@ export function toNewsItemRow(draft: EditorialDraft) {
     status: "DRAFT" as const,
   };
 }
+
+export type NewsItemDraftRow = ReturnType<typeof toNewsItemRow>;
+
+/**
+ * Unico ingresso ammesso in pipeline: valida e poi serializza. Se il gate non
+ * passa non esiste riga da scrivere, e la riga prodotta è sempre DRAFT — la
+ * pubblicazione resta una decisione umana separata (news-publish).
+ */
+export function toReviewableNewsItemRow(input: unknown): DraftValidation<NewsItemDraftRow> {
+  const validation = validateEditorialDraft(input);
+  if (!validation.ok) return validation;
+  const row = toNewsItemRow(validation.value);
+  if (row.status !== "DRAFT") {
+    return { ok: false, reasons: ["stato non consentito: l'engine non pubblica"] };
+  }
+  return { ok: true, value: row };
+}
+
