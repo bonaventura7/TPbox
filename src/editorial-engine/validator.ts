@@ -173,12 +173,19 @@ export function validateEditorialDraft(input: unknown): DraftValidation<Editoria
   if (headings.length < 3) {
     reasons.push(`struttura insufficiente: ${headings.length} sezioni (minimo 3)`);
   }
+  const coverage = sectionCoverage(headings, structure.sections);
+  if (coverage < 0.6) {
+    reasons.push(
+      `struttura non conforme al tipo ${newsType}: copertura sezioni ${Math.round(coverage * 100)}% (minimo 60%)`,
+    );
+  }
   if (takeaways.length < structure.minTakeaways) {
     reasons.push(`takeaway insufficienti: ${takeaways.length} (minimo ${structure.minTakeaways})`);
   }
 
   validateSources(sources, reasons);
-  validateBoxes(boxes, reasons);
+  validateBoxes(boxes, structure.boxes, reasons);
+
 
   const scanned = [title, excerpt, bodyMd, ...takeaways, ...boxes.flatMap((box) => box.lines)].join(
     "\n",
