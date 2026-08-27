@@ -44,14 +44,14 @@ export interface ReviewableNewsRow {
   source_url: string;
   pdf_url: string | null;
   normative_references: string[];
-  status: 'DRAFT';
+  status: "DRAFT";
   flag_pending_review: boolean;
   gate_result: GateResult;
   fetched_at: string;
 }
 
 export function toReviewableNewsItemRow(input: ReviewableNewsInput): ReviewableNewsRow {
-  const content = (input.contentMarkdown ?? '').trim();
+  const content = (input.contentMarkdown ?? "").trim();
   const reasons = [...input.reasons];
   if (content.length < MIN_PUBLISHABLE_CONTENT_CHARS) {
     reasons.push(
@@ -71,7 +71,7 @@ export function toReviewableNewsItemRow(input: ReviewableNewsInput): ReviewableN
     source_url: input.sourceUrl,
     pdf_url: input.pdfUrl ?? null,
     normative_references: input.normativeReferences ?? [],
-    status: 'DRAFT',
+    status: "DRAFT",
     flag_pending_review: !gate.ok,
     gate_result: gate,
     fetched_at: new Date().toISOString(),

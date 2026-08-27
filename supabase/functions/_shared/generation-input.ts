@@ -24,7 +24,7 @@ export const MIN_GENERATION_FACTS = 3;
 function isHttpUrl(value: string): boolean {
   try {
     const url = new URL(value);
-    return url.protocol === 'https:' || url.protocol === 'http:';
+    return url.protocol === "https:" || url.protocol === "http:";
   } catch {
     return false;
   }
@@ -35,10 +35,10 @@ function isHttpUrl(value: string): boolean {
  */
 export function validateGenerationInput(input: unknown): string[] {
   const reasons: string[] = [];
-  if (!input || typeof input !== 'object') return ['input di generazione non strutturato'];
+  if (!input || typeof input !== "object") return ["input di generazione non strutturato"];
 
   const candidate = input as Partial<GenerationInput>;
-  const primaryText = typeof candidate.primaryText === 'string' ? candidate.primaryText.trim() : '';
+  const primaryText = typeof candidate.primaryText === "string" ? candidate.primaryText.trim() : "";
   const facts = Array.isArray(candidate.facts) ? candidate.facts : [];
 
   if (primaryText.length < MIN_PRIMARY_TEXT_CHARS) {
@@ -52,9 +52,9 @@ export function validateGenerationInput(input: unknown): string[] {
     );
   }
   for (const fact of facts) {
-    const statement = typeof fact?.statement === 'string' ? fact.statement.trim() : '';
-    const sourceUrl = typeof fact?.sourceUrl === 'string' ? fact.sourceUrl.trim() : '';
-    if (!statement) reasons.push('fatto privo di enunciato');
+    const statement = typeof fact?.statement === "string" ? fact.statement.trim() : "";
+    const sourceUrl = typeof fact?.sourceUrl === "string" ? fact.sourceUrl.trim() : "";
+    if (!statement) reasons.push("fatto privo di enunciato");
     if (!isHttpUrl(sourceUrl)) reasons.push(`fatto senza URL fonte valida: ${sourceUrl}`);
   }
 
@@ -76,7 +76,7 @@ export function extractFactCandidates(
   const seen = new Set<string>();
   const facts: GenerationFact[] = [];
   for (const raw of text.split(/(?<=[.;:!?])\s+/)) {
-    const statement = raw.replace(/\s+/g, ' ').trim();
+    const statement = raw.replace(/\s+/g, " ").trim();
     if (statement.length < 40 || statement.length > 400) continue;
     if (!FACT_MARKERS.test(statement)) continue;
     const key = statement.toLowerCase();
