@@ -35,7 +35,13 @@ export const DEMO_NEWS_ITEMS: NewsItem[] = [
       "",
       "Il dato che più incide sulla pianificazione di gruppo riguarda la componente bilaterale: 84 accordi bilaterali in un solo esercizio, anch'essi un massimo storico. Tra questi figurano le prime intese concluse con Francia, Indonesia, Irlanda e Svezia, giurisdizioni fino a oggi assenti dal quadro bilaterale indiano.",
       "",
+      "> [!TECNICO] I numeri del rapporto",
+      "> - 220 APA sottoscritti nell'esercizio 2025-26",
+      "> - 1.035 accordi cumulativi dall'avvio del programma",
+      "> - 84 accordi bilaterali, massimo storico",
+      "",
       "## I tempi di conclusione",
+
       "",
       "Il rapporto indica un periodo mediano di risoluzione di 36 mesi per gli accordi unilaterali e di 38 mesi per quelli bilaterali. È l'elemento da tenere presente quando si valuta se aprire un'istanza: il vantaggio della certezza si misura su un orizzonte pluriennale, e l'esercizio coperto dal rollback va considerato in sede di stima.",
       "",
