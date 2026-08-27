@@ -291,8 +291,6 @@ export function toReviewableNewsItemRow(input: unknown): DraftValidation<NewsIte
  * ---------------------------------------------------------------------------
  */
 
-export type { ExtractedFact as GenerationFact, GenerationInput } from "./prompt";
-
 export const MIN_PRIMARY_TEXT_CHARS = 2000;
 export const MIN_GENERATION_FACTS = 3;
 
