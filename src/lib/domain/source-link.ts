@@ -46,15 +46,20 @@ export function safeUrl(raw: string | null | undefined): URL | null {
 }
 
 /**
- * Riconosce il file scaricabile. L'estensione non basta: il rapporto APA
- * indiano vive su `.../apa-report2025-26-2-pdf`, senza punto. Il suffisso vale
- * solo a fine percorso, così `/pdf-viewer/istruzioni` resta una pagina.
+ * Riconosce il file scaricabile dalla sola URL. Tre forme osservate:
+ *
+ * - estensione a fine percorso, il caso normale;
+ * - suffisso senza punto, come il rapporto APA indiano su
+ *   `.../apa-report2025-26-2-pdf`. Vale solo a fine percorso, così
+ *   `/pdf-viewer/istruzioni` resta una pagina;
+ * - estensione seguita da un identificativo, come i portali che appendono un
+ *   UUID dopo il nome del file: `.../APA-Report2025-26.pdf/b82779ff-…`.
  */
 export function isPdfUrl(raw: string | null | undefined): boolean {
   const url = safeUrl(raw);
   if (!url) return false;
   const path = url.pathname.replace(/\/+$/, "");
-  return /\.pdf$/i.test(path) || /[-_/]pdf$/i.test(path);
+  return /\.pdf(?:\/|$)/i.test(path) || /[-_/]pdf$/i.test(path);
 }
 
 /** Forma canonica per il confronto: la barra finale non fa una risorsa diversa. */
@@ -104,7 +109,12 @@ export function buildSourceLinks(
           ? "Pagina che ospita il documento"
           : FALLBACK_LABEL[kind];
 
-    links.push({ kind, url: url.toString(), label, download: isPdfUrl(url.toString()) });
+    // Scaricabile quando la URL lo dichiara, oppure quando la riga lo dichiara
+    // mettendola in `pdfUrl`: quella colonna esiste per contenere il file, e
+    // portali che servono documenti da endpoint opachi (`/document/download/…`,
+    // `/letoltes`) non lo rivelano nell'indirizzo.
+    const download = isPdfUrl(url.toString()) || key === documentKey;
+    links.push({ kind, url: url.toString(), label, download });
   };
 
   add(item.pdfUrl);
