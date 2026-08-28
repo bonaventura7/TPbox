@@ -78,7 +78,10 @@ describe("riconoscimento del documento e catena della fonte", () => {
     expect(isPdfUrl(PDF_INDIA)).toBe(true);
     expect(isPdfUrl("https://esempio.gov/atti/documento.pdf")).toBe(true);
     expect(isPdfUrl("https://esempio.gov/atti/doc.PDF?download=1")).toBe(true);
-    expect(isPdfUrl("https://www.oecd.org")).toBe(false);
+    // Portali che appendono un identificativo dopo il nome del file.
+    expect(
+      isPdfUrl("https://www.incometaxindia.gov.in/documents/81799/APA-Report.pdf/b82779ff-39a2"),
+    ).toBe(true);
     expect(isPdfUrl("https://esempio.gov/pdf-viewer/istruzioni")).toBe(false);
   });
 
@@ -123,6 +126,23 @@ describe("riconoscimento del documento e catena della fonte", () => {
 
     expect(links[0].label).toBe(titolo);
     expect(links[0].kind).toBe("DOCUMENTO");
+  });
+
+  it("dichiara scaricabile il documento della colonna dedicata, anche con URL opaca", () => {
+    const opaca = "https://finance.ec.europa.eu/document/download/2a5f7f94-5a94_en";
+    const links = buildSourceLinks(
+      makeItem({
+        originalUrl: "https://finance.ec.europa.eu/publications/pcbcr_en",
+        pdfUrl: opaca,
+        sourceDocumentTitle: "pCBCR Taxonomy 2026",
+      }),
+    );
+
+    expect(links[0].kind).toBe("DOCUMENTO");
+    expect(links[0].url).toBe(opaca);
+    expect(links[0].download).toBe(true);
+    // La pagina che lo ospita resta una pagina.
+    expect(links[1].download).toBe(false);
   });
 
   it("non scrive mai il rango della fonte nell'etichetta", () => {
