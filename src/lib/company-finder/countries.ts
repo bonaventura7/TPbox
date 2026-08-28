@@ -14,7 +14,7 @@ export const COUNTRIES: CountryInfo[] = [
     registryAuthority: "Camere di Commercio",
     financials: {
       free: false,
-      note: "I bilanci sono depositati presso le CCIAA (XBRL dal 2024) e a pagamento (~5-7 €). WORKAROUND gratuito: per le società quotate, i bilanci ESEF sono gratuiti presso CONSOB/ESMA; il tool li mostrerà nelle prossime versioni.",
+      note: "I bilanci sono depositati presso le CCIAA (XBRL dal 2024) e a pagamento (~5-7 €). Alternativa gratuita: per le società quotate, i bilanci ESEF sono gratuiti presso CONSOB/ESMA, consultabili direttamente sul sito dell'autorità.",
     },
   },
   {
@@ -50,7 +50,7 @@ export const COUNTRIES: CountryInfo[] = [
     registryAuthority: "Registro Mercantil Central",
     financials: {
       free: false,
-      note: "I bilanci (cuentas anuales) sono a pagamento nei registri mercantili. WORKAROUND gratuito: per le società quotate, i bilanci ESEF sono gratuiti presso CNMV/ESMA; il tool li mostrerà nelle prossime versioni.",
+      note: "I bilanci (cuentas anuales) sono a pagamento nei registri mercantili. Alternativa gratuita: per le società quotate, i bilanci ESEF sono gratuiti presso CNMV/ESMA, consultabili direttamente sul sito dell'autorità.",
     },
   },
   {
@@ -86,7 +86,7 @@ export const COUNTRIES: CountryInfo[] = [
     registryAuthority: "Tribunali (Bezirksgericht)",
     financials: {
       free: false,
-      note: "I bilanci (Jahresabschluss) sono a pagamento su Unternehmensregister.at (registrazione gratuita). WORKAROUND gratuito: per le società quotate, i bilanci ESEF sono gratuiti presso FMA/ESMA.",
+      note: "I bilanci (Jahresabschluss) sono a pagamento su Unternehmensregister.at (registrazione gratuita). Alternativa gratuita: per le società quotate, i bilanci ESEF sono gratuiti presso FMA/ESMA.",
     },
   },
   {
@@ -122,7 +122,7 @@ export const COUNTRIES: CountryInfo[] = [
     registryAuthority: "Patentti- ja rekisterihallitus",
     financials: {
       free: false,
-      note: "I bilanci (tilinpäätös) su Virre (PRH) costano ~6 € + IVA. Il tool mostra comunque la scheda completa da YTJ (open data). WORKAROUND gratuito: per le società quotate, i bilanci ESEF sono gratuiti presso ESMA.",
+      note: "I bilanci (tilinpäätös) su Virre (PRH) costano ~6 € + IVA. Il tool mostra comunque la scheda completa da YTJ (open data). Alternativa gratuita: per le società quotate, i bilanci ESEF sono gratuiti presso ESMA.",
     },
   },
   {
@@ -134,7 +134,7 @@ export const COUNTRIES: CountryInfo[] = [
     registryAuthority: "Bolagsverket",
     financials: {
       free: false,
-      note: "I bilanci ufficiali (årsredovisning) costano 60-100 SEK su Bolagsverket. WORKAROUND gratuito: per le società quotate, i bilanci ESEF sono gratuiti presso Nasdaq Stockholm/ESMA.",
+      note: "I bilanci ufficiali (årsredovisning) costano 60-100 SEK su Bolagsverket. Alternativa gratuita: per le società quotate, i bilanci ESEF sono gratuiti presso Nasdaq Stockholm/ESMA.",
     },
   },
   {
@@ -182,7 +182,7 @@ export const COUNTRIES: CountryInfo[] = [
     registryAuthority: "Instituto dos Registos e do Notariado",
     financials: {
       free: false,
-      note: "Le contas annuali richiedono certidão a pagamento (IRN). WORKAROUND gratuito: per le società quotate, i bilanci ESEF sono gratuiti presso CMVM/ESMA.",
+      note: "Le contas annuali richiedono certidão a pagamento (IRN). Alternativa gratuita: per le società quotate, i bilanci ESEF sono gratuiti presso CMVM/ESMA.",
     },
   },
   {
@@ -230,7 +230,7 @@ export const COUNTRIES: CountryInfo[] = [
     registryAuthority: "Companies Registration Office",
     financials: {
       free: false,
-      note: "I bilanci (financial statements) su CORE (CRO) costano ~2,50 €/documento. WORKAROUND gratuito: per le società quotate, i bilanci ESEF sono gratuiti presso ESMA/EMEA.",
+      note: "I bilanci (financial statements) su CORE (CRO) costano ~2,50 €/documento. Alternativa gratuita: per le società quotate, i bilanci ESEF sono gratuiti presso ESMA/EMEA.",
     },
   },
   {

@@ -65,16 +65,14 @@ function Index() {
     <>
       <section className="border-b border-border bg-surface">
         <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
-          <p className="text-xs tracking-[0.18em] text-petrol uppercase">
-            Portale indipendente
-          </p>
+          <p className="text-xs tracking-[0.18em] text-petrol uppercase">Portale indipendente</p>
           <h1 className="mt-4 max-w-3xl font-serif text-4xl leading-[1.1] sm:text-5xl lg:text-6xl">
             {TITLE}
           </h1>
           <p className="mt-6 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
-            Selezione redazionale delle fonti istituzionali e professionali, con
-            metadati verificabili e strumenti di analisi per chi lavora quotidianamente
-            con i prezzi di trasferimento.
+            Selezione redazionale delle fonti istituzionali e professionali, con metadati
+            verificabili e strumenti di analisi per chi lavora quotidianamente con i prezzi di
+            trasferimento.
           </p>
           <div className="mt-9 flex flex-col gap-3 sm:flex-row">
             <Button asChild size="lg" className="min-h-11">
@@ -136,9 +134,7 @@ function Index() {
             {QUICK_LINKS.map((link) => (
               <li key={link.to} className="border border-border bg-card p-6">
                 <h3 className="font-serif text-xl">{link.label}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                  {link.text}
-                </p>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{link.text}</p>
                 <Link
                   to={link.to}
                   className="mt-4 inline-flex min-h-11 items-center gap-2 text-sm font-medium text-petrol underline underline-offset-4"
@@ -160,22 +156,24 @@ function Index() {
           </h2>
           <div className="mt-4 grid gap-4 text-sm leading-relaxed text-muted-foreground md:grid-cols-3">
             <p>
-              Tutti i contenuti sono <strong className="text-foreground">dati demo
-              sintetici</strong>: titoli, sintesi e valori economici non riproducono
-              documenti reali.
+              Le sezioni editoriali usano{" "}
+              <strong className="text-foreground">dati demo sintetici</strong>: titoli, sintesi e
+              valori economici non riproducono documenti reali.{" "}
+              <strong className="text-foreground">Company Finder</strong> fa eccezione: interroga i
+              registri ufficiali europei e mostra dati reali.
             </p>
             <p>
-              L'acquisizione delle fonti avviene solo lato server. Il browser non
-              esegue alcuna chiamata verso siti esterni.
+              L'acquisizione delle fonti avviene solo lato server. Il browser non esegue alcuna
+              chiamata verso siti esterni.
             </p>
             <p>
-              Ogni elemento acquisito entra come bozza e diventa pubblico soltanto dopo
-              revisione e approvazione redazionale.
+              Ogni elemento acquisito entra come bozza e diventa pubblico soltanto dopo revisione e
+              approvazione redazionale.
             </p>
           </div>
           <p className="mt-4 text-xs text-muted-foreground">
-            Elementi pubblicati in archivio demo: {data.totalPublished} · bozze in
-            attesa di revisione: {data.draftsPending}
+            Elementi pubblicati in archivio demo: {data.totalPublished} · bozze in attesa di
+            revisione: {data.draftsPending}
           </p>
         </section>
       </div>
