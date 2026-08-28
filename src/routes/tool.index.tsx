@@ -95,8 +95,8 @@ const DATABASES: readonly Tool[] = [
     description:
       "Identificazione di una società per denominazione o partita IVA e accesso al bilancio.",
     icon: Building,
-    status: "dimostrativo",
-    detail: "Dati sintetici",
+    status: "operativo",
+    detail: "Registri ufficiali UE, lato server",
   },
   {
     href: "/tool/patentscope",

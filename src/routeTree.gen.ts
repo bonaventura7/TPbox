@@ -31,6 +31,7 @@ import { Route as ToolCompanyFinderRouteImport } from './routes/tool.company-fin
 import { Route as ToolRavvedimentoRouteImport } from './routes/tool.ravvedimento'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
+import { Route as ApiCompanyFinderDocumentRouteImport } from './routes/api.company-finder.document'
 import { Route as AttualitaArticoloSlugRouteImport } from './routes/attualita.articolo.$slug'
 import { Route as NormativaPortaleInterpelliIndexRouteImport } from './routes/normativa.portale-interpelli.index'
 import { Route as NormativaPortaleInterpelliIdRouteImport } from './routes/normativa.portale-interpelli.$id'
@@ -160,6 +161,12 @@ const Char91DotmcpChar93InvokeToolToolRoute =
     path: '/.mcp/invoke-tool/$tool',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiCompanyFinderDocumentRoute =
+  ApiCompanyFinderDocumentRouteImport.update({
+    id: '/api/company-finder/document',
+    path: '/api/company-finder/document',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AttualitaArticoloSlugRoute = AttualitaArticoloSlugRouteImport.update({
   id: '/articolo/$slug',
   path: '/articolo/$slug',
@@ -257,6 +264,7 @@ export interface FileRoutesByFullPath {
   '/tool/': typeof ToolIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/api/company-finder/document': typeof ApiCompanyFinderDocumentRoute
   '/attualita/articolo/$slug': typeof AttualitaArticoloSlugRoute
   '/normativa/portale-interpelli/$id': typeof NormativaPortaleInterpelliIdRoute
   '/tool/amount-b/nuovo': typeof ToolAmountBNuovoRoute
@@ -293,6 +301,7 @@ export interface FileRoutesByTo {
   '/tool': typeof ToolIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/api/company-finder/document': typeof ApiCompanyFinderDocumentRoute
   '/attualita/articolo/$slug': typeof AttualitaArticoloSlugRoute
   '/normativa/portale-interpelli/$id': typeof NormativaPortaleInterpelliIdRoute
   '/tool/amount-b/nuovo': typeof ToolAmountBNuovoRoute
@@ -332,6 +341,7 @@ export interface FileRoutesById {
   '/tool/': typeof ToolIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/api/company-finder/document': typeof ApiCompanyFinderDocumentRoute
   '/attualita/articolo/$slug': typeof AttualitaArticoloSlugRoute
   '/normativa/portale-interpelli/$id': typeof NormativaPortaleInterpelliIdRoute
   '/tool/amount-b/nuovo': typeof ToolAmountBNuovoRoute
@@ -372,6 +382,7 @@ export interface FileRouteTypes {
     | '/tool/'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
+    | '/api/company-finder/document'
     | '/attualita/articolo/$slug'
     | '/normativa/portale-interpelli/$id'
     | '/tool/amount-b/nuovo'
@@ -408,6 +419,7 @@ export interface FileRouteTypes {
     | '/tool'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
+    | '/api/company-finder/document'
     | '/attualita/articolo/$slug'
     | '/normativa/portale-interpelli/$id'
     | '/tool/amount-b/nuovo'
@@ -446,6 +458,7 @@ export interface FileRouteTypes {
     | '/tool/'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
+    | '/api/company-finder/document'
     | '/attualita/articolo/$slug'
     | '/normativa/portale-interpelli/$id'
     | '/tool/amount-b/nuovo'
@@ -477,6 +490,7 @@ export interface RootRouteChildren {
   ToolIndexRoute: typeof ToolIndexRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
+  ApiCompanyFinderDocumentRoute: typeof ApiCompanyFinderDocumentRoute
   ToolAmountBNuovoRoute: typeof ToolAmountBNuovoRoute
   ToolBepsMliRicercaRoute: typeof ToolBepsMliRicercaRoute
   ToolPatentscopeIdRoute: typeof ToolPatentscopeIdRoute
@@ -646,6 +660,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char91DotmcpChar93InvokeToolToolRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/company-finder/document': {
+      id: '/api/company-finder/document'
+      path: '/api/company-finder/document'
+      fullPath: '/api/company-finder/document'
+      preLoaderRoute: typeof ApiCompanyFinderDocumentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/attualita/articolo/$slug': {
       id: '/attualita/articolo/$slug'
       path: '/articolo/$slug'
@@ -805,6 +826,7 @@ const rootRouteChildren: RootRouteChildren = {
   ToolIndexRoute: ToolIndexRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
+  ApiCompanyFinderDocumentRoute: ApiCompanyFinderDocumentRoute,
   ToolAmountBNuovoRoute: ToolAmountBNuovoRoute,
   ToolBepsMliRicercaRoute: ToolBepsMliRicercaRoute,
   ToolPatentscopeIdRoute: ToolPatentscopeIdRoute,
