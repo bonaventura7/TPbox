@@ -110,7 +110,7 @@ export const COUNTRIES: CountryInfo[] = [
     registryAuthority: "Erhvervsstyrelsen",
     financials: {
       free: true,
-      note: "Le annualità (årsrapporter) sono UFFICIALMENTE GRATUITE (regnskaber.virk.dk, PDF e XBRL, dal 2004): con la chiave gratuita CVR_DEV_API_KEY il tool mostra il documento ufficiale del bilancio in questa pagina.",
+      note: "Le årsrapporter sono pubbliche e gratuite dal 2004: il tool le preleva dall'indice aperto di Erhvervsstyrelsen (distribution.virk.dk) e mostra il documento ufficiale in pagina, senza chiave. Serve il numero CVR a 8 cifre, che coincide con le cifre dell'IVA danese.",
     },
   },
   {

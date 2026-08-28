@@ -1,18 +1,21 @@
-// ---------- Regnskaber — Danimarca: annual reports (årsrapporter) ufficiali ----------
-// I bilanci danesi (årsrapporter) sono pubblici e GRATUITI dal 2004:
-// PDF e XBRL sul portale ufficiale regnskaber.virk.dk (Erhvervsstyrelsen).
+// ---------- Regnskaber — Danimarca: årsrapporter ufficiali, gratuiti ----------
+// I bilanci danesi sono pubblici e gratuiti dal 2004. Erhvervsstyrelsen li
+// distribuisce su un indice Elasticsearch APERTO, senza chiave e senza
+// registrazione:
 //
-// Metadati + link ai documenti: endpoint regnskab di cvr.dev (dati CVR raw,
-// chiave gratuita CVR_DEV_API_KEY). Senza chiave la fonte è segnalata
-// come "chiave richiesta" (il portale ufficiale resta consultabile).
+//   POST http://distribution.virk.dk/offentliggoerelser/_search
+//   { "query": { "term": { "cvrNummer": <cvr> } },
+//     "sort":  [ { "offentliggoerelsesTidspunkt": "desc" } ] }
 //
-//   GET https://api.cvr.dev/api/cvr/regnskab?cvr_nummer={cvr}
+// Ogni pubblicazione porta il periodo contabile e i documenti depositati
+// (PDF, XHTML, XBRL) su regnskaber.virk.dk, serviti in pagina dal proxy.
 //
-// Il CVR-nummer (8-9 cifre) coincide con le cifre del numero IVA danese.
+// La versione precedente passava da api.cvr.dev, che richiede una chiave: senza
+// chiave la Danimarca restava scoperta. Questa fonte è ufficiale e non ne vuole.
 
 import type { Financials } from "../../types";
 
-const CVRDEV = "https://api.cvr.dev/api/cvr";
+const SEARCH_URL = "http://distribution.virk.dk/offentliggoerelser/_search";
 
 export interface RegnskabResult {
   ok: boolean;
@@ -21,112 +24,125 @@ export interface RegnskabResult {
   skipped?: string | undefined;
 }
 
-/** CVR-nummer dal numero IVA danese (senza prefisso). */
+/** CVR-nummer dalle cifre dell'IVA danese (o dal numero CVR digitato). */
 export function cvrFromVat(localVat: string): string | undefined {
   const digits = localVat.replace(/\D/g, "");
-  if (/^\d{8,9}$/.test(digits)) return digits;
-  return undefined;
+  return /^\d{8}$/.test(digits) ? digits : undefined;
 }
 
-/** Cerca ricorsivamente le URL di regnskaber.virk.dk dentro un JSON arbitrario. */
-function findDocUrls(node: unknown, found: string[] = []): string[] {
-  if (typeof node === "string") {
-    if (node.includes("regnskaber.virk.dk")) found.push(node);
-    return found;
-  }
-  if (Array.isArray(node)) {
-    for (const x of node) findDocUrls(x, found);
-    return found;
-  }
-  if (node && typeof node === "object") {
-    for (const v of Object.values(node as Record<string, unknown>)) findDocUrls(v, found);
-  }
-  return found;
+interface VirkDocument {
+  dokumentUrl?: string | undefined;
+  dokumentMimeType?: string | undefined;
+  dokumentType?: string | undefined;
 }
 
-interface RegnskabPeriod {
-  startDato?: string | undefined;
-  endDato?: string | undefined;
+interface VirkSource {
+  cvrNummer?: number | undefined;
+  offentliggoerelsestype?: string | undefined;
+  offentliggoerelsesTidspunkt?: string | undefined;
+  regnskab?:
+    | {
+        regnskabsperiode?:
+          { startDato?: string | undefined; slutDato?: string | undefined } | undefined;
+      }
+    | undefined;
+  dokumenter?: VirkDocument[] | undefined;
+}
+
+interface VirkResponse {
+  hits?: { hits?: { _source?: VirkSource | undefined }[] | undefined } | undefined;
+}
+
+/** Anno dell'esercizio, dal periodo contabile o dalla data di pubblicazione. */
+function periodLabel(source: VirkSource): string {
+  const end = source.regnskab?.regnskabsperiode?.slutDato;
+  const start = source.regnskab?.regnskabsperiode?.startDato;
+  if (end && start) {
+    const endYear = end.slice(0, 4);
+    const startYear = start.slice(0, 4);
+    return startYear === endYear ? `Esercizio ${endYear}` : `Esercizio ${startYear}/${endYear}`;
+  }
+  const published = source.offentliggoerelsesTidspunkt;
+  return published ? `Pubblicato ${published.slice(0, 10)}` : "Esercizio non datato";
+}
+
+/** PDF se c'è, altrimenti XHTML leggibile, altrimenti il primo documento. */
+function pickDocument(documents: VirkDocument[]): VirkDocument | undefined {
+  const withUrl = documents.filter((doc) => typeof doc.dokumentUrl === "string");
+  return (
+    withUrl.find((doc) => doc.dokumentMimeType === "application/pdf") ??
+    withUrl.find((doc) => doc.dokumentMimeType === "application/xhtml+xml") ??
+    withUrl[0]
+  );
 }
 
 export async function fetchDkRegnskaber(
   cvrNummer: string,
-  apiKey: string | undefined,
-  timeoutMs = 20000,
+  timeoutMs = 15000,
 ): Promise<RegnskabResult> {
-  if (!apiKey) {
-    return {
-      ok: false,
-      skipped:
-        "CVR_DEV_API_KEY non configurata (chiave gratuita: cvr.dev): necessaria per i metadati dei regnskaber; i PDF/XBRL ufficiali restano gratuiti su regnskaber.virk.dk",
-    };
-  }
-
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
-    const url = `${CVRDEV}/regnskab?cvr_nummer=${encodeURIComponent(cvrNummer)}`;
-    const res = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        Accept: "application/json",
-        "User-Agent": "TPbox-CompanyFinder/1.0",
-      },
+    const res = await fetch(SEARCH_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({
+        query: { term: { cvrNummer: Number(cvrNummer) } },
+        size: 10,
+        sort: [{ offentliggoerelsesTidspunkt: "desc" }],
+      }),
       signal: ctrl.signal,
-      cache: "no-store",
     });
-    if (res.status === 401 || res.status === 403)
-      return { ok: false, error: "CVR-dev: chiave non valida (401/403)" };
-    if (!res.ok) return { ok: false, error: `CVR-dev HTTP ${res.status}` };
-    const json = (await res.json()) as Record<string, unknown>;
+    if (!res.ok) return { ok: false, error: `Regnskaber HTTP ${res.status}` };
 
-    const periods = Array.isArray(json["regnskaber"])
-      ? (json["regnskaber"] as Array<{ regnskab?: { regnskabsperiode?: RegnskabPeriod } }>)
-      : [];
+    const json = (await res.json()) as VirkResponse;
+    const hits = (json.hits?.hits ?? [])
+      .map((hit) => hit._source)
+      .filter((source): source is VirkSource => Boolean(source))
+      .filter((source) => (source.offentliggoerelsestype ?? "regnskab") === "regnskab");
 
-    const docUrls = findDocUrls(json)
-      .map((u) => u.replace(/^http:\/\//, "https://"))
-      .filter((u, i, a) => a.indexOf(u) === i);
-
-    if (docUrls.length === 0 && periods.length === 0) {
+    if (hits.length === 0) {
       return {
-        ok: true,
-        data: {
-          available: false,
-          years: [],
-          note: `CVR ${cvrNummer}: nessun årsrapport indicizzato (la società potrebbe non aver depositato o il dato non è ancora disponibile).`,
-        },
+        ok: false,
+        error: `nessun bilancio depositato per il CVR ${cvrNummer}`,
       };
     }
 
-    const pdf = docUrls.find((u) => u.toLowerCase().endsWith(".pdf")) ?? docUrls[0];
-    const year = periods[0]?.regnskab?.regnskabsperiode?.endDato?.slice(0, 4);
+    // Il documento mostrato è quello dell'esercizio più recente; gli altri
+    // esercizi disponibili restano dichiarati nella nota.
+    const latest = hits[0]!;
+    const document = pickDocument(latest.dokumenter ?? []);
+    if (!document?.dokumentUrl) {
+      return { ok: false, error: "pubblicazione senza documenti allegati" };
+    }
 
-    return {
-      ok: true,
-      data: {
-        available: true,
-        years: [],
-        source: "Regnskaber.virk.dk (DK) — årsrapport ufficiale gratuita",
-        documentUrl: pdf
-          ? `/api/company-finder/document?url=${encodeURIComponent(pdf)}`
-          : undefined,
-        documentTitle: `Årsrapport${year ? ` ${year}` : ""} — CVR ${cvrNummer}`,
-        note: "Annualità depositata (PDF e/o XBRL) servita in pagina dal proxy del tool; nessun reindirizzamento.",
-      },
+    const periods = hits.map(periodLabel);
+    const proxied = `/api/company-finder/document?url=${encodeURIComponent(document.dokumentUrl)}`;
+
+    // ponytail: si serve il documento, non si estraggono i valori. L'XBRL
+    // danese è disponibile allo stesso indirizzo (mime application/xml):
+    // parsarlo è il passo successivo, se servono le tabelle per esercizio.
+    const data: Financials = {
+      available: true,
+      years: [],
+      source: `Regnskaber (CVR ${cvrNummer}) — Erhvervsstyrelsen`,
+      documentUrl: proxied,
+      documentTitle: `Årsrapport · ${periodLabel(latest)}`,
+      note:
+        `Esercizi depositati e consultabili: ${periods.slice(0, 8).join(", ")}` +
+        (hits.length > 8 ? ` e altri ${hits.length - 8}.` : ".") +
+        " Fonte ufficiale gratuita, nessuna chiave richiesta.",
     };
+    return { ok: true, data };
   } catch (e) {
-    const err = e as
-      | { name?: string | undefined; message?: string | undefined; cause?: { code?: string } }
-      | undefined;
-    const code = err?.cause?.code;
-    const msg =
-      err?.name === "AbortError"
-        ? "timeout"
-        : code === "ENOTFOUND" || code === "ECONNREFUSED"
-          ? "fonte non raggiungibile"
-          : (err?.message ?? "errore");
-    return { ok: false, error: `Regnskaber DK: ${msg}` };
+    const err = e as { name?: string | undefined; message?: string | undefined };
+    return {
+      ok: false,
+      error:
+        err?.name === "AbortError"
+          ? "Regnskaber: timeout"
+          : (err?.message ?? "Regnskaber: errore di rete"),
+    };
   } finally {
     clearTimeout(timer);
   }

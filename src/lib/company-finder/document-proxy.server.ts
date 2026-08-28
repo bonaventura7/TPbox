@@ -30,6 +30,14 @@ export const ALLOWED_DOCUMENT_HOSTS = new Set([
   "ws.uat2.cbso.nbb.be",
 ]);
 
+/**
+ * Host che pubblicano i documenti in chiaro e non rispondono su https
+ * (verificato: regnskaber.virk.dk va in timeout su TLS). Sono documenti
+ * pubblici di un registro statale, scaricati dal server e senza credenziali:
+ * il downgrade non espone nulla dell'utente. Nessun altro host lo ottiene.
+ */
+const HTTP_ONLY_HOSTS = new Set(["regnskaber.virk.dk"]);
+
 const MAX_BYTES = 30 * 1024 * 1024; // 30 MB
 const TIMEOUT_MS = 45_000;
 const UA =
@@ -90,7 +98,10 @@ export async function handleDocumentRequest(request: Request): Promise<Response>
   } catch {
     return fail("url non valida", 400);
   }
-  if (source.protocol !== "https:") return fail("sono ammesse solo url https", 400);
+  const plainHttpAllowed = HTTP_ONLY_HOSTS.has(source.hostname.toLowerCase());
+  if (source.protocol !== "https:" && !(source.protocol === "http:" && plainHttpAllowed)) {
+    return fail("sono ammesse solo url https", 400);
+  }
   if (!isAllowedDocumentHost(source)) return fail("dominio non autorizzato", 403);
 
   const controller = new AbortController();

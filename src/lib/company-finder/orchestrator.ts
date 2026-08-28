@@ -24,6 +24,8 @@ import { fetchPappersFinancials } from "./sources/bilanci/pappers-fr";
 import { fetchDkRegnskaber, cvrFromVat } from "./sources/bilanci/regnskaber-dk";
 import { fetchCbsoAccounts, cbeFromInput } from "./sources/bilanci/cbso-be";
 import { fetchKrsRdfDocuments, krsFromPlInput } from "./sources/bilanci/krs-rdf-pl";
+import { numericRegistryId, searchGleif } from "./sources/gleif";
+import type { GleifMatch } from "./sources/gleif";
 import { searchByName as ocSearch } from "./sources/open-corporates";
 import { lookupCompany as chLookup } from "./sources/companies-house";
 import type {
@@ -44,7 +46,6 @@ const OC_KEY = ENV["OPEN_CORPORATES_API_KEY"];
 const CH_KEY = ENV["COMPANIES_HOUSE_API_KEY"];
 const INPI_KEY = ENV["INPI_KEY"];
 const PAPPERS_KEY = ENV["PAPPERS_API_KEY"];
-const CVRDEV_KEY = ENV["CVR_DEV_API_KEY"];
 const NBB_CBSO_KEY = ENV["NBB_CBSO_API_KEY"];
 const NBB_CBSO_BASE = ENV["NBB_CBSO_BASE"]; // es. https://ws.uat2.cbso.nbb.be (test, chiave gratuita)
 
@@ -401,10 +402,11 @@ const FINANCIALS_ROUTES: Record<
         const cvr = cvrFromVat(ctx.localVat);
         if (!cvr) {
           s.state = "skipped";
-          s.detail = "CVR-nummer non ricavabile: inserisci l'IVA danese (DK + CVR)";
+          s.detail =
+            "CVR-nummer non ricavabile: inserisci il numero CVR a 8 cifre oppure l'IVA danese (DK + CVR)";
           return;
         }
-        const r = await fetchDkRegnskaber(cvr, CVRDEV_KEY);
+        const r = await fetchDkRegnskaber(cvr);
         if (r.ok && r.data) {
           s.state = "ok";
           s.detail = r.data.documentUrl
@@ -491,9 +493,37 @@ export async function runSearch(req: SearchRequest): Promise<SearchResponse> {
   const m = vatRaw.match(/^([A-Z]{2})([0-9A-Z]{5,16})$/);
   // I gruppi 1 e 2 esistono sempre quando la regex ha fatto match: il `?? ""`
   // è solo per soddisfare noUncheckedIndexedAccess, non cambia il valore.
-  const localVat = m ? (m[2] ?? "") : /^[0-9A-Z]{6,16}$/.test(vatRaw) ? vatRaw : "";
   const prefixIso = m ? prefixToIso(m[1] ?? "") : "";
-  const countryIso = (prefixIso || req.country || "").toUpperCase();
+  let localVat = m ? (m[2] ?? "") : /^[0-9A-Z]{6,16}$/.test(vatRaw) ? vatRaw : "";
+  let countryIso = (prefixIso || req.country || "").toUpperCase();
+
+  // ---------- 1-bis. Ricerca per solo nome: risoluzione via GLEIF ----------
+  // Senza numero, quasi nessun registro nazionale è interrogabile e senza paese
+  // la ricerca si fermava subito. GLEIF è gratuito e senza chiave: dal nome
+  // ricava paese e identificativo di registro (CVR, codice fiscale, SIREN…),
+  // che è proprio ciò di cui gli adapter hanno bisogno.
+  let gleifMatch: GleifMatch | undefined;
+  let gleifStatusDetail = "";
+  let gleifFailed = "";
+  if (localVat.length < 6 && query.length >= 3) {
+    const g = await searchGleif(query, countryIso);
+    if (!g.ok) {
+      gleifFailed = g.error ?? "fonte non raggiungibile";
+    } else if (g.matches.length === 0) {
+      gleifStatusDetail = "nessuna entità con LEI corrisponde a questa denominazione";
+    } else {
+      gleifMatch = g.matches[0];
+      const registryId = numericRegistryId(gleifMatch?.registeredAs);
+      gleifStatusDetail =
+        `${gleifMatch?.name} (${gleifMatch?.country})` +
+        (gleifMatch?.registeredAs ? ` · registro ${gleifMatch.registeredAs}` : "");
+      if (!countryIso && gleifMatch) countryIso = gleifMatch.country;
+      // L'identificativo si usa solo se il paese coincide: un LEI estero non
+      // deve dirottare la ricerca su un altro registro.
+      if (registryId && gleifMatch?.country === countryIso) localVat = registryId;
+    }
+  }
+
   const country = getCountry(countryIso);
 
   if (!country) {
@@ -501,7 +531,9 @@ export async function runSearch(req: SearchRequest): Promise<SearchResponse> {
       found: false,
       sources: [],
       warnings: [
-        "Paese non riconosciuto. Seleziona il paese oppure usa un numero di IVA con prefisso (es. PL7740001454).",
+        query.length >= 3
+          ? "Paese non individuato dalla sola ragione sociale: selezionalo nel menu, oppure inserisci il numero di IVA con prefisso (es. DK58495913) o il numero di registro nazionale."
+          : "Paese non riconosciuto. Seleziona il paese oppure usa un numero di IVA con prefisso (es. PL7740001454).",
       ],
       searchedAt: new Date().toISOString(),
     };
@@ -516,6 +548,37 @@ export async function runSearch(req: SearchRequest): Promise<SearchResponse> {
   const pl10nip = pl10 && !localVat.startsWith("0000");
 
   const ctx: Ctx = { query, localVat, countryIso };
+
+  // ---------- 2-zero. GLEIF: riporta l'esito gia' ottenuto tra le fonti ----------
+  if (gleifMatch || gleifStatusDetail || gleifFailed) {
+    const resolved = gleifMatch;
+    jobs.push(
+      makeJob("gleif", "GLEIF — registro mondiale LEI", async (job, s) => {
+        if (gleifFailed) {
+          s.state = "failed";
+          s.detail = gleifFailed;
+          return;
+        }
+        s.state = "ok";
+        s.detail = gleifStatusDetail;
+        if (resolved) {
+          job.profile = () => ({
+            name: resolved.name,
+            nameSource: "GLEIF (LEI)",
+            country: getCountry(resolved.country) ?? country,
+            address: resolved.address,
+            status: resolved.status,
+            identifiers: [
+              { key: "LEI", value: resolved.lei },
+              ...(resolved.registeredAs
+                ? [{ key: "Registro nazionale", value: resolved.registeredAs }]
+                : []),
+            ],
+          });
+        }
+      }),
+    );
+  }
 
   // ---------- 2a. Registro nazionale (tabella di regia) ----------
   for (const adapter of REGISTRY_ROUTES[countryIso] ?? []) {

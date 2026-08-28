@@ -40,11 +40,21 @@ describe("proxy dei documenti di bilancio", () => {
     expect((await handleDocumentRequest(get("?url=non-una-url"))).status).toBe(400);
   });
 
-  it("rifiuta http in chiaro anche su host autorizzato", async () => {
+  it("rifiuta http in chiaro sugli host che servono https", async () => {
     const res = await handleDocumentRequest(
       get("?url=http%3A%2F%2Fwww.unternehmensregister.de%2Fx.pdf"),
     );
     expect(res.status).toBe(400);
+  });
+
+  it("ammette http solo per regnskaber.virk.dk, che non risponde su TLS", async () => {
+    // Non deve fermarsi al controllo di protocollo: qui il rifiuto sarebbe un
+    // 400, mentre la chiamata deve proseguire (e fallire in rete, non prima).
+    const res = await handleDocumentRequest(
+      get("?url=http%3A%2F%2Fregnskaber.virk.dk%2F123%2Fdoc.pdf"),
+    );
+    expect(res.status).not.toBe(400);
+    expect(res.status).not.toBe(403);
   });
 
   it("non lascia entrare nella whitelist host generici", () => {
