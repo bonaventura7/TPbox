@@ -86,10 +86,16 @@ function findAccountsRows(
     const window = html.slice(Math.max(0, match.index - 1500), match.index);
     const rowStart = window.lastIndexOf("<tr");
     const text = decode(rowStart === -1 ? window : window.slice(rowStart));
-    const described = text.match(/([^.;]*accounts made up to[^.;]{0,60})/i);
+    // `<` esclude il markup del link che segue la descrizione.
+    const described = text.match(/([^.;<]*accounts made up to[^.;<]{0,60})/i);
     if (!described) continue;
     // Via la data che apre la riga: resta la sola descrizione del deposito.
-    const description = described[1]!.replace(/^\d{1,2}\s+\w+\s+\d{4}\s*/, "").trim();
+    // Via la data che apre la riga e il codice del modulo (AA, AAMD, …):
+    // resta la sola descrizione leggibile del deposito.
+    const description = described[1]!
+      .replace(/^\d{1,2}\s+\w+\s+\d{4}\s*/, "")
+      .replace(/^[A-Z]{2,6}\s+/, "")
+      .trim();
     rows.push({
       documentPath: path.replace(/&amp;/g, "&"),
       description,
