@@ -11,6 +11,8 @@
 // È il registro ufficiale, servito com'è, senza modifiche e con la fonte
 // dichiarata: non una copia, non uno scraping.
 
+import { CONSULT_PAGES, NO_FREE_SOURCE } from "./coverage";
+
 export interface OfficialPage {
   url: string;
   label: string;
@@ -34,57 +36,47 @@ export function officialPageFor(
   const id = digits(localVat);
   const name = query.trim();
 
-  switch (iso) {
-    case "DK": {
-      const url = id
+  // Danimarca e Belgio hanno un indirizzo diretto per numero: ci si arriva
+  // sulla scheda giusta invece che sulla home del registro.
+  if (iso === "DK") {
+    return {
+      url: id
         ? `https://datacvr.virk.dk/enhed/virksomhed/${id}`
-        : `https://datacvr.virk.dk/soegeresultater?fritekst=${encodeURIComponent(name)}&sideIndex=0&size=10`;
-      return {
-        url,
-        label: "CVR — Erhvervsstyrelsen",
-        note: "Il registro danese risponde solo a un browser: la sua pagina ufficiale è caricata qui dal tuo browser. Da lì si scarica l'årsrapport.",
-      };
-    }
-    case "BE": {
-      const cbe = id.padStart(10, "0");
-      const url = id
-        ? `https://consult.cbso.nbb.be/consult-enterprise/${cbe}`
-        : "https://consult.cbso.nbb.be/";
-      return {
-        url,
-        label: "Centrale dei bilanci — Banca nazionale del Belgio",
-        note: "I conti annuali belgi sono gratuiti ma la loro API rifiuta le chiamate da server: la pagina ufficiale della NBB è caricata qui dal tuo browser.",
-      };
-    }
-    case "DE":
-      return {
-        url: "https://www.unternehmensregister.de/ureg/",
-        label: "Unternehmensregister",
-        note: "Registro ufficiale tedesco, per confronto o per le pubblicazioni che la ricerca automatica non intercetta.",
-      };
-    case "LU":
-      return {
-        url: id
-          ? `https://www.lbr.lu/mjrcs-web-front/entities/${id}`
-          : "https://www.lbr.lu/mjrcs-web-front/",
-        label: "LBR — Registre de commerce et des sociétés",
-        note: "La consultazione dei conti depositati è gratuita ma il portale non risponde ai server: si apre qui nel tuo browser.",
-      };
-    case "IT":
-      return {
-        url: "https://italy.registroimprese.it/",
-        label: "Registro Imprese",
-        note: "I bilanci italiani sono depositati presso le CCIAA e non sono gratuiti: la pagina ufficiale è qui per la consultazione diretta.",
-      };
-    case "ES":
-      return {
-        url: name
-          ? `https://www.cnmv.es/portal/consultas/busquedaporentidad.aspx`
-          : "https://www.cnmv.es/",
-        label: "CNMV — Informes financieros anuales",
-        note: "Per le società quotate i conti annuali auditati sono gratuiti sul portale CNMV.",
-      };
-    default:
-      return undefined;
+        : `https://datacvr.virk.dk/soegeresultater?fritekst=${encodeURIComponent(name)}&sideIndex=0&size=10`,
+      label: "CVR — Erhvervsstyrelsen",
+      note: "Il registro danese risponde solo a un browser: la sua pagina ufficiale è caricata qui dal tuo browser. Da lì si scarica l'årsrapport.",
+    };
   }
+  if (iso === "BE") {
+    const cbe = id ? id.padStart(10, "0") : "";
+    return {
+      url: cbe
+        ? `https://consult.cbso.nbb.be/consult-enterprise/${cbe}`
+        : "https://consult.cbso.nbb.be/",
+      label: "Centrale dei bilanci — Banca nazionale del Belgio",
+      note: "I conti annuali belgi sono gratuiti ma la loro API rifiuta le chiamate da server: la pagina ufficiale della NBB è caricata qui dal tuo browser.",
+    };
+  }
+  if (iso === "DE") {
+    return {
+      url: "https://www.unternehmensregister.de/ureg/",
+      label: "Unternehmensregister",
+      note: "Registro ufficiale tedesco, per le pubblicazioni che la ricerca automatica non intercetta.",
+    };
+  }
+
+  const consult = CONSULT_PAGES[iso];
+  if (consult) {
+    return {
+      url: consult.url,
+      label: consult.label,
+      note: "Il bilancio è pubblico e gratuito, ma il registro non risponde alle chiamate da server: la sua pagina ufficiale è caricata qui dal tuo browser, da cui si scarica il documento.",
+    };
+  }
+
+  const paywall = NO_FREE_SOURCE[iso];
+  if (paywall) {
+    return undefined; // paese non coperto: la nota viene data dall'orchestratore
+  }
+  return undefined;
 }

@@ -32,7 +32,9 @@ describe("consultazione ufficiale incorporata", () => {
   });
 
   it("ogni pagina dichiara etichetta e motivo", () => {
-    for (const iso of ["DK", "BE", "DE", "LU", "IT", "ES"]) {
+    // IT ed ES non compaiono: da quando la copertura è a tre livelli, i paesi
+    // in cui il bilancio si paga non ricevono una pagina (vedi coverage.ts).
+    for (const iso of ["DK", "BE", "DE", "LU"]) {
       const page = officialPageFor(iso, "12345678", "Prova");
       expect(page, iso).toBeDefined();
       expect(page!.label.length, iso).toBeGreaterThan(3);
@@ -41,8 +43,7 @@ describe("consultazione ufficiale incorporata", () => {
     }
   });
 
-  it("non inventa una pagina per i paesi che non ne hanno una utile", () => {
-    expect(officialPageFor("NO", "123", "x")).toBeUndefined();
+  it("non inventa una pagina per un codice paese inesistente", () => {
     expect(officialPageFor("ZZ", "123", "x")).toBeUndefined();
   });
 });

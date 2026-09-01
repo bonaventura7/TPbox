@@ -24,6 +24,7 @@ import { fetchPappersFinancials } from "./sources/bilanci/pappers-fr";
 import { fetchDkRegnskaber, cvrFromVat } from "./sources/bilanci/regnskaber-dk";
 import { fetchCbsoAccounts, cbeFromInput } from "./sources/bilanci/cbso-be";
 import { fetchKrsRdfDocuments, krsFromPlInput } from "./sources/bilanci/krs-rdf-pl";
+import { NO_FREE_SOURCE } from "./coverage";
 import { officialPageFor } from "./official-pages";
 import { numericRegistryId, searchGleif } from "./sources/gleif";
 import { searchRechercheEntreprises } from "./sources/recherche-entreprises-fr";
@@ -945,6 +946,9 @@ export async function runSearch(req: SearchRequest, depth = 0): Promise<SearchRe
             // 2) nota per-paese (spiega la fonte e la chiave gratuita necessaria)
             // 3) messaggio generico di fallback
             fin?.note ||
+            // Paese senza fonte gratuita: si dice quanto costa e dove, invece
+            // di lasciare intendere che il tool ci arriverà.
+            NO_FREE_SOURCE[countryIso] ||
             country.financials.note ||
             "Per questo paese i bilanci sono disponibili via fonte gratuita: configura la chiave API corrispondente per visualizzarli.",
         };

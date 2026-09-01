@@ -18,6 +18,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { findCompany } from "@/lib/company-finder.functions";
 import { ALL_COUNTRIES } from "@/lib/company-finder/countries";
+import { AUTO_ISOS, CONSULT_PAGES, NO_FREE_SOURCE } from "@/lib/company-finder/coverage";
 import type {
   CompanyProfile,
   Financials,
@@ -65,18 +66,6 @@ const EXAMPLES = [
     country: "GB",
   },
 ] as const;
-
-/** Paesi con adapter diretto verso il registro nazionale. */
-const DIRECT_REGISTRY: Record<string, string> = {
-  PL: "KRS — odpis in tempo reale",
-  DK: "CVR — Erhvervsstyrelsen",
-  UK: "Companies House — sito pubblico",
-  CZ: "ARES — registro commerciale",
-  NO: "Brønnøysundregistrene",
-  FI: "YTJ — open data PRH",
-  FR: "Recherche d'entreprises — Stato francese",
-  BG: "Търговски регистър",
-};
 
 /** Paesi per cui il tool estrae il bilancio da una fonte ufficiale gratuita. */
 const FINANCIALS_REGISTRY: Record<string, string> = {
@@ -177,67 +166,90 @@ function SourceRow({ source }: { source: SourceStatus }) {
   );
 }
 
+const COVERED_COUNTRIES = ALL_COUNTRIES.filter(
+  (country) =>
+    (AUTO_ISOS as readonly string[]).includes(country.iso) || country.iso in CONSULT_PAGES,
+);
+
+function CoverageRow({
+  flag,
+  name,
+  chip,
+  tone,
+}: {
+  flag: string;
+  name: string;
+  chip: string;
+  tone: "ok" | "neutral";
+}) {
+  return (
+    <li className="flex items-center justify-between gap-3 border-b border-border/60 py-1.5">
+      <span>
+        {flag} {name}
+      </span>
+      <Chip tone={tone}>{chip}</Chip>
+    </li>
+  );
+}
+
 function RegistryCoverage() {
-  const direct = ALL_COUNTRIES.filter((country) => DIRECT_REGISTRY[country.iso]);
-  const financials = ALL_COUNTRIES.filter((country) => FINANCIALS_REGISTRY[country.iso]);
-  const viaVies = ALL_COUNTRIES.filter((country) => !DIRECT_REGISTRY[country.iso]);
+  const automatici = ALL_COUNTRIES.filter((c) => (AUTO_ISOS as readonly string[]).includes(c.iso));
+  const consultabili = ALL_COUNTRIES.filter((c) => c.iso in CONSULT_PAGES);
+  const esclusi = ALL_COUNTRIES.filter((c) => c.iso in NO_FREE_SOURCE);
 
   return (
     <section className="border border-border bg-card p-5 sm:p-6">
-      <p className="text-xs tracking-[0.18em] text-petrol uppercase">Registri collegati</p>
-      <h3 className="mt-1 font-serif text-xl">Copertura delle fonti</h3>
-      <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-        Ogni ricerca interroga in parallelo il registro nazionale del paese, quando è collegato, e
-        il VIES della Commissione Europea. Le chiamate partono dal server dell&apos;Osservatorio.
+      <p className="text-xs tracking-[0.18em] text-petrol uppercase">Copertura</p>
+      <h3 className="mt-1 font-serif text-xl">Dove il bilancio arriva, e come</h3>
+      <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">
+        Il tool copre i paesi in cui il bilancio depositato è gratuito. Dove il registro accetta
+        chiamate da server il documento compare da solo; dove le rifiuta, la sua pagina ufficiale
+        viene caricata qui dal tuo browser. I paesi in cui il documento si paga non sono coperti, e
+        sono elencati per non lasciarti cercare a vuoto.
       </p>
 
       <h4 className="mt-5 text-xs font-medium tracking-wide text-muted-foreground uppercase">
-        Bilancio estratto dal tool
+        Bilancio recuperato dal server, mostrato in pagina
       </h4>
       <ul className="mt-2 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
-        {financials.map((country) => (
-          <li
+        {automatici.map((country) => (
+          <CoverageRow
             key={country.iso}
-            className="flex items-center justify-between gap-3 border-b border-border/60 py-1.5"
-          >
-            <span>
-              {country.flag} {country.nameIt}
-            </span>
-            <Chip tone="ok">{FINANCIALS_REGISTRY[country.iso]}</Chip>
-          </li>
+            flag={country.flag}
+            name={country.nameIt}
+            tone="ok"
+            chip={FINANCIALS_REGISTRY[country.iso] ?? "documento ufficiale"}
+          />
         ))}
       </ul>
 
       <h4 className="mt-5 text-xs font-medium tracking-wide text-muted-foreground uppercase">
-        Scheda dal registro nazionale
+        Bilancio gratuito, registro ufficiale caricato in pagina
       </h4>
       <ul className="mt-2 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
-        {direct.map((country) => (
-          <li
+        {consultabili.map((country) => (
+          <CoverageRow
             key={country.iso}
-            className="flex items-center justify-between gap-3 border-b border-border/60 py-1.5"
-          >
-            <span>
-              {country.flag} {country.nameIt}
-            </span>
-            <Chip>{DIRECT_REGISTRY[country.iso]}</Chip>
-          </li>
+            flag={country.flag}
+            name={country.nameIt}
+            tone="neutral"
+            chip={CONSULT_PAGES[country.iso]?.label ?? "registro nazionale"}
+          />
         ))}
       </ul>
 
       <h4 className="mt-5 text-xs font-medium tracking-wide text-muted-foreground uppercase">
-        Identità via VIES, con nota di disponibilità del bilancio
+        Non coperti: il bilancio non è gratuito
       </h4>
-      <ul className="mt-2 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
-        {viaVies.map((country) => (
-          <li
-            key={country.iso}
-            className="flex items-center justify-between gap-3 border-b border-border/60 py-1.5"
-          >
-            <span>
+      <ul className="mt-2 space-y-1.5 text-sm">
+        {esclusi.map((country) => (
+          <li key={country.iso} className="border-b border-border/60 py-1.5">
+            <span className="font-medium">
               {country.flag} {country.nameIt}
             </span>
-            <span className="text-right text-xs text-muted-foreground">{country.registryName}</span>
+            <span className="ml-2 text-xs text-muted-foreground">
+              {NO_FREE_SOURCE[country.iso]}
+            </span>
           </li>
         ))}
       </ul>
@@ -582,7 +594,7 @@ function CompanyFinderPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value={ANY_COUNTRY}>Qualsiasi paese</SelectItem>
-                  {ALL_COUNTRIES.map((option) => (
+                  {COVERED_COUNTRIES.map((option) => (
                     <SelectItem key={option.iso} value={option.iso}>
                       {option.flag} {option.nameIt}
                     </SelectItem>
