@@ -18,7 +18,12 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { findCompany } from "@/lib/company-finder.functions";
 import { ALL_COUNTRIES } from "@/lib/company-finder/countries";
-import type { CompanyProfile, Financials, SourceStatus } from "@/lib/company-finder/types";
+import type {
+  CompanyProfile,
+  Financials,
+  OfficialPageRef,
+  SourceStatus,
+} from "@/lib/company-finder/types";
 
 const TITLE = "Company Finder";
 const DESCRIPTION =
@@ -460,6 +465,39 @@ function FinancialsCard({ financials }: { financials: Financials | undefined }) 
   );
 }
 
+function OfficialPageCard({ page }: { page: OfficialPageRef }) {
+  return (
+    <section className="border border-border bg-card p-5 sm:p-6">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <p className="text-xs tracking-[0.18em] text-petrol uppercase">Consultazione ufficiale</p>
+          <h3 className="mt-1 font-serif text-xl">{page.label}</h3>
+        </div>
+        <a
+          href={page.url}
+          target="_blank"
+          rel="noreferrer noopener"
+          className="border border-border bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+        >
+          Apri in una nuova scheda
+        </a>
+      </div>
+      <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">{page.note}</p>
+      <iframe
+        title={`Registro ufficiale — ${page.label}`}
+        src={page.url}
+        className="mt-4 h-[680px] w-full border border-border bg-white"
+        referrerPolicy="no-referrer"
+      />
+      <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+        Pagina del registro ufficiale, caricata dal tuo browser e mostrata senza modifiche. A
+        differenza del resto della scheda, questo riquadro è l&apos;unico punto in cui il browser
+        contatta direttamente il sito del registro.
+      </p>
+    </section>
+  );
+}
+
 function CompanyFinderPage() {
   const [query, setQuery] = useState("");
   const [vat, setVat] = useState("");
@@ -638,6 +676,8 @@ function CompanyFinderPage() {
               {result.company ? <CompanyCard company={result.company} /> : null}
 
               {result.found ? <FinancialsCard financials={result.financials} /> : null}
+
+              {result.officialPage ? <OfficialPageCard page={result.officialPage} /> : null}
 
               {result.sources.length > 0 ? (
                 <section className="border border-border bg-card p-5 sm:p-6">

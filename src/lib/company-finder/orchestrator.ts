@@ -24,6 +24,7 @@ import { fetchPappersFinancials } from "./sources/bilanci/pappers-fr";
 import { fetchDkRegnskaber, cvrFromVat } from "./sources/bilanci/regnskaber-dk";
 import { fetchCbsoAccounts, cbeFromInput } from "./sources/bilanci/cbso-be";
 import { fetchKrsRdfDocuments, krsFromPlInput } from "./sources/bilanci/krs-rdf-pl";
+import { officialPageFor } from "./official-pages";
 import { numericRegistryId, searchGleif } from "./sources/gleif";
 import { searchRechercheEntreprises } from "./sources/recherche-entreprises-fr";
 import { lookupUkPublic } from "./sources/bilanci/companies-house-public";
@@ -518,7 +519,24 @@ const FINANCIALS_ROUTES: Record<
 // Esecuzione
 // ============================================================================
 
-export async function runSearch(req: SearchRequest): Promise<SearchResponse> {
+/**
+ * Paesi il cui registro sa cercare per DENOMINAZIONE senza chiave. Quando
+ * l'utente scrive solo il nome e non sceglie il paese, si interrogano questi
+ * in parallelo invece di fermarsi: è il caso piu' frequente d'uso reale.
+ */
+const NAME_SEARCHABLE = ["DE", "UK", "FR", "NO", "FI", "BG"] as const;
+
+/** Quanto "vale" un esito, per scegliere il migliore nel fan-out. */
+function resultScore(r: SearchResponse): number {
+  if (!r.found) return 0;
+  const fin = r.financials;
+  if (fin?.available && fin.years.length > 0) return 3;
+  if (fin?.documentUrl) return 3;
+  if (r.company?.name) return 1;
+  return 0;
+}
+
+export async function runSearch(req: SearchRequest, depth = 0): Promise<SearchResponse> {
   const warnings: string[] = [];
   const jobs: Job[] = [];
 
@@ -562,13 +580,47 @@ export async function runSearch(req: SearchRequest): Promise<SearchResponse> {
   const country = getCountry(countryIso);
 
   if (!country) {
+    // Solo denominazione e nessun paese: invece di fermarsi, si interrogano in
+    // parallelo i registri che sanno cercare per nome. Vince chi restituisce
+    // un bilancio; a parità, chi restituisce una scheda.
+    if (depth === 0 && query.length >= 3) {
+      const attempts = await Promise.all(
+        NAME_SEARCHABLE.map((iso) =>
+          runSearch({ query, vat: "", country: iso }, 1).catch((): SearchResponse => ({
+            found: false,
+            sources: [],
+            warnings: [],
+            searchedAt: new Date().toISOString(),
+          })),
+        ),
+      );
+      const ranked = attempts
+        .map((r, i) => ({ r, iso: NAME_SEARCHABLE[i]!, score: resultScore(r) }))
+        .sort((a, b) => b.score - a.score);
+      const best = ranked[0];
+      if (best && best.score > 0) {
+        return {
+          ...best.r,
+          warnings: [
+            `Paese non indicato: la ricerca è stata estesa ai registri che accettano la denominazione (${NAME_SEARCHABLE.join(", ")}). Corrispondenza trovata in ${best.iso}.`,
+            ...best.r.warnings,
+          ],
+        };
+      }
+      return {
+        found: false,
+        sources: attempts.flatMap((r) => r.sources),
+        warnings: [
+          `Nessuna corrispondenza per questa denominazione nei registri che accettano la ricerca per nome (${NAME_SEARCHABLE.join(", ")}). Per gli altri paesi seleziona il paese e indica il numero di registro o la partita IVA.`,
+        ],
+        searchedAt: new Date().toISOString(),
+      };
+    }
     return {
       found: false,
       sources: [],
       warnings: [
-        query.length >= 3
-          ? "Paese non individuato dalla sola ragione sociale: selezionalo nel menu, oppure inserisci il numero di IVA con prefisso (es. DK58495913) o il numero di registro nazionale."
-          : "Paese non riconosciuto. Seleziona il paese oppure usa un numero di IVA con prefisso (es. PL7740001454).",
+        "Paese non riconosciuto. Seleziona il paese oppure usa un numero di IVA con prefisso (es. PL7740001454).",
       ],
       searchedAt: new Date().toISOString(),
     };
@@ -910,6 +962,7 @@ export async function runSearch(req: SearchRequest): Promise<SearchResponse> {
         "Scheda società non completata dalle fonti anagrafiche: mostrati i dati di bilancio disponibili.",
       );
     } else {
+      const fallbackPage = officialPageFor(countryIso, localVat, query);
       return {
         found: false,
         sources: jobs.map((j) => j.status),
@@ -918,6 +971,7 @@ export async function runSearch(req: SearchRequest): Promise<SearchResponse> {
           "Nessuna corrispondenza trovata nelle fonti consultate. Controlla ragione sociale e numero IVA.",
         ],
         searchedAt: new Date().toISOString(),
+        ...(fallbackPage ? { officialPage: fallbackPage } : {}),
       };
     }
   }
@@ -926,6 +980,13 @@ export async function runSearch(req: SearchRequest): Promise<SearchResponse> {
   company.country = country;
   if (!company.vat && viesProfile?.vat) company.vat = viesProfile.vat;
 
+  // Quando il documento non è estraibile lato server, si offre la pagina
+  // ufficiale del registro: la carica il browser dell'utente, che supera da
+  // solo le protezioni che rifiutano un server.
+  const officialPage = financialsOut.documentUrl
+    ? undefined
+    : officialPageFor(countryIso, localVat, query);
+
   return {
     found: true,
     company,
@@ -933,6 +994,7 @@ export async function runSearch(req: SearchRequest): Promise<SearchResponse> {
     sources: jobs.map((j) => j.status),
     warnings,
     searchedAt: new Date().toISOString(),
+    ...(officialPage ? { officialPage } : {}),
   };
 }
 

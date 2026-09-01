@@ -100,6 +100,16 @@ export interface Financials {
   documentTitle?: string | undefined;
 }
 
+/**
+ * Pagina ufficiale del registro da caricare nel browser dell'utente quando la
+ * fonte non è raggiungibile da un server. Vedi `official-pages.ts`.
+ */
+export interface OfficialPageRef {
+  url: string;
+  label: string;
+  note: string;
+}
+
 export interface SearchResponse {
   found: boolean;
   company?: CompanyProfile | undefined;
@@ -107,6 +117,8 @@ export interface SearchResponse {
   sources: SourceStatus[];
   warnings: string[];
   searchedAt: string;
+  /** Consultazione ufficiale incorporata: usata quando il documento non è estraibile lato server. */
+  officialPage?: OfficialPageRef | undefined;
 }
 
 export interface SearchRequest {
