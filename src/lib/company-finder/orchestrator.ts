@@ -25,6 +25,8 @@ import { fetchDkRegnskaber, cvrFromVat } from "./sources/bilanci/regnskaber-dk";
 import { fetchCbsoAccounts, cbeFromInput } from "./sources/bilanci/cbso-be";
 import { fetchKrsRdfDocuments, krsFromPlInput } from "./sources/bilanci/krs-rdf-pl";
 import { numericRegistryId, searchGleif } from "./sources/gleif";
+import { searchRechercheEntreprises } from "./sources/recherche-entreprises-fr";
+import { lookupUkPublic } from "./sources/bilanci/companies-house-public";
 import type { GleifMatch } from "./sources/gleif";
 import { searchByName as ocSearch } from "./sources/open-corporates";
 import { lookupCompany as chLookup } from "./sources/companies-house";
@@ -233,6 +235,26 @@ const REGISTRY_ROUTES: Record<string, DirectAdapter[]> = {
   // ---- Francia: INPI (API con chiave gratuita) ----
   FR: [
     {
+      // Fonte di Stato francese, gratuita e senza chiave: risponde al NOME,
+      // non solo al numero. È la prima consultata perché INPI vuole la chiave.
+      id: "re-fr",
+      label: "Recherche d'entreprises — Stato francese",
+      input: "either",
+      run: (ctx, job, s) =>
+        (async () => {
+          const r = await searchRechercheEntreprises(ctx.query, ctx.localVat);
+          if (r.ok && r.profile) {
+            s.state = "ok";
+            s.detail = r.profile.registry?.id ?? "SIREN risolto";
+            const profile = r.profile;
+            job.profile = () => profile;
+          } else {
+            s.state = "failed";
+            s.detail = r.error ?? "fonte non raggiungibile";
+          }
+        })(),
+    },
+    {
       id: "inpi",
       label: "INPI — Base SIRENE / RCS",
       input: "either",
@@ -367,12 +389,25 @@ const FINANCIALS_ROUTES: Record<
   // ---- Francia: Pappers (comptes annuels, chiave gratuita) ----
   FR: {
     id: "fin-pappers",
-    label: "Pappers — Comptes annuels (RCS)",
+    label: "Comptes annuels — fonte pubblica FR (+ Pappers se configurato)",
     run: (ctx, job, s) =>
       (async () => {
+        // Prima la fonte gratuita senza chiave: cifra d'affari e risultato
+        // netto per esercizio arrivano dall'API di Stato.
+        const free = await searchRechercheEntreprises(ctx.query, ctx.localVat);
+        if (free.ok && free.financials && free.financials.years.length > 0) {
+          const fin = free.financials;
+          s.state = "ok";
+          s.detail = `${fin.years.length} esercizi (fonte pubblica, senza chiave)`;
+          job.fin = () => fin;
+          if (!PAPPERS_KEY) return;
+        }
         if (!PAPPERS_KEY) {
-          s.state = "skipped";
-          s.detail = "PAPPERS_API_KEY non configurata (chiave gratuita: pappers.fr/developer)";
+          if (s.state !== "ok") {
+            s.state = "skipped";
+            s.detail =
+              "conti annuali non esposti dalla fonte pubblica; il documento integrale è su INPI (account gratuito) o Pappers (PAPPERS_API_KEY)";
+          }
           return;
         }
         const siren = sirenFromVat(ctx.localVat);
@@ -711,9 +746,31 @@ export async function runSearch(req: SearchRequest): Promise<SearchResponse> {
   // ---------- 2e. Regno Unito: Companies House (chiave) ----------
   if (countryIso === "UK" && (query || hasVat)) {
     jobs.push(
-      makeJob("ch", "Companies House", async (job, s) => {
-        // Senza chiave l'adapter usa l'endpoint di ricerca (gratuito, no-key)
-        // per la scheda; i conti annuali richiedono la chiave gratuita CH.
+      makeJob("ch-public", "Companies House — sito pubblico", async (job, s) => {
+        // Il sito pubblico serve scheda e conti annuali depositati senza
+        // alcuna chiave: l'API keyed resta un arricchimento, non un requisito.
+        const r = await lookupUkPublic(query, localVat);
+        if (r.ok && r.profile) {
+          s.state = "ok";
+          s.detail = r.financials?.documentTitle ?? r.profile.registry?.id ?? "scheda";
+          const profile = r.profile;
+          job.profile = () => profile;
+          if (r.financials) {
+            const fin = r.financials;
+            job.fin = () => fin;
+          }
+        } else {
+          s.state = "failed";
+          s.detail = r.error ?? "nessuna corrispondenza";
+        }
+      }),
+    );
+  }
+
+  // ---------- 2e-bis. Regno Unito: Companies House API (solo con chiave) ----------
+  if (countryIso === "UK" && CH_KEY && (query || hasVat)) {
+    jobs.push(
+      makeJob("ch", "Companies House — API (chiave)", async (job, s) => {
         const r = await chLookup(query, CH_KEY);
         if (r.ok && r.company) {
           s.state = "ok";
@@ -781,7 +838,7 @@ export async function runSearch(req: SearchRequest): Promise<SearchResponse> {
   const order = [
     ...(countryIso === "PL" ? ["krs"] : []),
     ...(countryIso === "DK" ? ["cvr"] : []),
-    ...(countryIso === "UK" ? ["ch"] : []),
+    ...(countryIso === "UK" ? ["ch-public", "ch"] : []),
     ...directIds,
     "oc",
     "vies",

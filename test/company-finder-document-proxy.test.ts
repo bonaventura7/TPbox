@@ -59,7 +59,7 @@ describe("proxy dei documenti di bilancio", () => {
 
   it("non lascia entrare nella whitelist host generici", () => {
     for (const host of ALLOWED_DOCUMENT_HOSTS) {
-      expect(host).toMatch(/\.(de|dk|nl|pl|be)$/);
+      expect(host).toMatch(/\.(de|dk|nl|pl|be|uk)$/);
     }
   });
 });

@@ -28,6 +28,8 @@ export const ALLOWED_DOCUMENT_HOSTS = new Set([
   // BE — NBB Central Balance Sheet Office
   "ws.cbso.nbb.be",
   "ws.uat2.cbso.nbb.be",
+  // UK — Companies House, sito pubblico (conti annuali depositati)
+  "find-and-update.company-information.service.gov.uk",
 ]);
 
 /**

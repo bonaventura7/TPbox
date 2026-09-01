@@ -65,11 +65,11 @@ const EXAMPLES = [
 const DIRECT_REGISTRY: Record<string, string> = {
   PL: "KRS — odpis in tempo reale",
   DK: "CVR — Erhvervsstyrelsen",
-  GB: "Companies House",
+  UK: "Companies House — sito pubblico",
   CZ: "ARES — registro commerciale",
   NO: "Brønnøysundregistrene",
   FI: "YTJ — open data PRH",
-  FR: "INPI — Base SIRENE (chiave)",
+  FR: "Recherche d'entreprises — Stato francese",
   BG: "Търговски регистър",
 };
 
@@ -77,11 +77,11 @@ const DIRECT_REGISTRY: Record<string, string> = {
 const FINANCIALS_REGISTRY: Record<string, string> = {
   DE: "Jahresabschluss — documento ufficiale",
   NL: "jaarrekeningen XBRL — valori per esercizio",
-  FR: "comptes annuels — chiave gratuita",
+  FR: "CA e risultato netto — fonte pubblica",
   DK: "årsrapport — documento ufficiale",
   BE: "conti annuali NBB — chiave gratuita",
   PL: "bilanci KRS pubblici — documento",
-  GB: "annual accounts — chiave gratuita",
+  UK: "annual accounts — documento ufficiale",
 };
 
 const NUMBER_FORMAT = new Intl.NumberFormat("it-IT", { maximumFractionDigits: 0 });
