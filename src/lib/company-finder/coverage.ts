@@ -12,7 +12,7 @@
 //     dichiararne l'assenza.
 
 /** Livello A: bilancio recuperato dal server e mostrato in pagina. */
-export const AUTO_ISOS = ["DE", "NL", "DK", "UK", "FR", "PL"] as const;
+export const AUTO_ISOS = ["DE", "NL", "DK", "UK", "FR"] as const;
 
 /**
  * Livello B: bilancio gratuito, consultazione ufficiale incorporata.
@@ -22,6 +22,10 @@ export const CONSULT_PAGES: Record<string, { url: string; label: string }> = {
   BE: {
     url: "https://consult.cbso.nbb.be/",
     label: "Centrale dei bilanci — Banca nazionale del Belgio",
+  },
+  PL: {
+    url: "https://ekrs.ms.gov.pl/rdf/pd/search_df",
+    label: "KRS — Repozytorium Dokumentów Finansowych",
   },
   LU: {
     url: "https://www.lbr.lu/mjrcs-web-front/",

@@ -23,8 +23,6 @@ export const ALLOWED_DOCUMENT_HOSTS = new Set([
   "datacvr.virk.dk",
   // NL — KVK open data
   "opendata.kvk.nl",
-  // PL — Repozytorium Dokumentów Finansowych KRS
-  "ekrs.ms.gov.pl",
   // BE — NBB Central Balance Sheet Office
   "ws.cbso.nbb.be",
   "ws.uat2.cbso.nbb.be",

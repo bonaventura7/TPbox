@@ -23,7 +23,6 @@ import { searchUrAccounting } from "./sources/bilanci/ur-de";
 import { fetchPappersFinancials } from "./sources/bilanci/pappers-fr";
 import { fetchDkRegnskaber, cvrFromVat } from "./sources/bilanci/regnskaber-dk";
 import { fetchCbsoAccounts, cbeFromInput } from "./sources/bilanci/cbso-be";
-import { fetchKrsRdfDocuments, krsFromPlInput } from "./sources/bilanci/krs-rdf-pl";
 import { NO_FREE_SOURCE } from "./coverage";
 import { officialPageFor } from "./official-pages";
 import { numericRegistryId, searchGleif } from "./sources/gleif";
@@ -476,34 +475,6 @@ const FINANCIALS_ROUTES: Record<
         if (r.ok && r.data) {
           s.state = "ok";
           s.detail = r.data.documentTitle || "conti annuali";
-          job.fin = () => r.data!;
-        } else if (r.skipped) {
-          s.state = "skipped";
-          s.detail = r.skipped;
-        } else {
-          s.state = "failed";
-          s.detail = r.error || "fonte non raggiungibile";
-        }
-      })(),
-  },
-
-  // ---- Polonia: Repozytorium Dokumentów Finansowych KRS (bilanci pubblici) ----
-  PL: {
-    id: "fin-krs-rdf",
-    label: "KRS RDF — Repozytorium Dokumentów Finansowych",
-    run: (ctx, job, s) =>
-      (async () => {
-        const krs = krsFromPlInput(ctx.localVat);
-        if (!krs) {
-          s.state = "skipped";
-          s.detail =
-            "servi il numero KRS (8 o 10 cifre) nel campo partita IVA per i bilanci depositati";
-          return;
-        }
-        const r = await fetchKrsRdfDocuments(krs);
-        if (r.ok && r.data) {
-          s.state = "ok";
-          s.detail = r.data.documentTitle || "documento finanziario";
           job.fin = () => r.data!;
         } else if (r.skipped) {
           s.state = "skipped";

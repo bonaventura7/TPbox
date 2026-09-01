@@ -71,7 +71,6 @@ const FINANCIALS_REGISTRY: Record<string, string> = {
   FR: "CA e risultato netto — fonte pubblica",
   DK: "årsrapport — documento ufficiale",
   BE: "conti annuali NBB — chiave gratuita",
-  PL: "bilanci KRS pubblici — documento",
   UK: "annual accounts — documento ufficiale",
 };
 
