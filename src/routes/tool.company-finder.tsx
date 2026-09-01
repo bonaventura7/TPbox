@@ -44,27 +44,24 @@ export const Route = createFileRoute("/tool/company-finder")({
 
 const ANY_COUNTRY = "ANY";
 
-/** Esempi verificati su fonti reali: precompilano il modulo e avviano la ricerca. */
+/**
+ * Esempi verificati su fonti reali. Dove la ricerca per nome funziona il campo
+ * IVA resta vuoto: è il modo in cui il tool va usato davvero.
+ */
 const EXAMPLES = [
-  { label: "SIEMENS AG · bilancio DE", query: "Siemens AG", vat: "", country: "DE" },
-  { label: "KVK 59581883 · bilancio NL (XBRL)", query: "", vat: "59581883", country: "NL" },
-  { label: "ORLEN · KRS 0000028860", query: "ORLEN", vat: "0000028860", country: "PL" },
-  { label: "PROXIMUS · BE0202239951", query: "Proximus", vat: "BE0202239951", country: "BE" },
+  { label: "TOD'S Deutschland GmbH · DE", query: "TOD'S Deutschland GmbH", vat: "", country: "DE" },
+  { label: "SIEMENS AG · DE", query: "Siemens AG", vat: "", country: "DE" },
+  { label: "ROLLS-ROYCE plc · UK", query: "Rolls-Royce Holdings plc", vat: "", country: "UK" },
+  { label: "TOD'S FRANCE · FR", query: "TOD'S France", vat: "", country: "FR" },
+  { label: "KVK 59581883 · NL (XBRL)", query: "", vat: "59581883", country: "NL" },
   {
-    label: "PETTINAROLI A/S · CVR 58495913",
+    label: "PETTINAROLI A/S · DK, CVR 58495913",
     query: "Pettinaroli A/S Northern Europe",
     vat: "58495913",
     country: "DK",
   },
-  { label: "CARLSBERG A/S · DK61056416", query: "CARLSBERG A/S", vat: "DK61056416", country: "DK" },
-  { label: "ČEZ a.s. · CZ45644790", query: "ČEZ", vat: "CZ45644790", country: "CZ" },
-  { label: "EQUINOR ASA · NO923609026MVA", query: "Equinor", vat: "NO923609026MVA", country: "NO" },
-  {
-    label: "ROLLS-ROYCE · GB987068025",
-    query: "Rolls-Royce Holdings plc",
-    vat: "GB987068025",
-    country: "GB",
-  },
+  { label: "ORLEN · PL, KRS 0000028860", query: "ORLEN", vat: "0000028860", country: "PL" },
+  { label: "PROXIMUS · BE0202239951", query: "Proximus", vat: "BE0202239951", country: "BE" },
 ] as const;
 
 /** Paesi per cui il tool estrae il bilancio da una fonte ufficiale gratuita. */
