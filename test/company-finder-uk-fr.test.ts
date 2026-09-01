@@ -24,9 +24,11 @@ const COMPANY_HTML = `
 
 const FILING_HTML = `
 <table><tbody>
-<tr><td>19 May 2026</td><td>SH06 Cancellation of shares</td>
+<tr><td>19 May 2026</td><td>SH06 Cancellation of shares. Statement of capital</td>
   <td><a href="/company/07524813/filing-history/AAA/document?format=pdf&amp;download=0">View PDF</a></td></tr>
-<tr><td>3 March 2026</td><td>Group of companies' accounts made up to 31 December 2025</td>
+<tr><td>5 Aug 2025</td><td>Interim accounts made up to 30 June 2025</td>
+  <td><a href="/company/07524813/filing-history/INTERIM/document?format=pdf&amp;download=0">View PDF</a></td></tr>
+<tr><td>18 May 2026</td><td>Group of companies' accounts made up to 31 December 2025</td>
   <td><a href="/company/07524813/filing-history/MzUzMzQx/document?format=pdf&amp;download=0">View PDF</a></td></tr>
 </tbody></table>`;
 
@@ -71,8 +73,10 @@ describe("Companies House — sito pubblico, senza chiave", () => {
     expect(r.profile?.name).toBe("ROLLS-ROYCE HOLDINGS PLC");
     expect(r.profile?.registry?.id).toBe("Company No. 07524813");
     expect(r.profile?.status).toBe("active");
-    // Deve saltare la riga SH06 e prendere quella dei conti annuali.
-    expect(r.financials?.documentTitle).toContain("accounts");
+    // Deve saltare la riga SH06 e, tra i conti, preferire quelli d'esercizio
+    // alla relazione infrannuale.
+    expect(r.financials?.documentTitle).toContain("Group of companies' accounts");
+    expect(r.financials?.documentUrl).not.toContain("INTERIM");
     expect(r.financials?.documentUrl).toContain(encodeURIComponent("MzUzMzQx"));
     expect(r.financials?.available).toBe(true);
   });

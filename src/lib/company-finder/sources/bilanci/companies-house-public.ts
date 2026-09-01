@@ -62,29 +62,56 @@ function firstSearchHit(html: string): { number: string; name: string } | undefi
   return { number, name };
 }
 
-/** Riga dei conti annuali: link al documento + descrizione + data. */
-function firstAccountsDocument(
+/**
+ * Riga dei conti annuali: link al documento + descrizione.
+ *
+ * Il filtro `?category=accounts` del sito funziona solo con il cookie di
+ * sessione: una GET da server lo riceve e lo ignora, restituendo la cronologia
+ * intera (verificato su Rolls-Royce, che deposita decine di SH06 al mese). Si
+ * scandisce quindi la cronologia non filtrata e si cerca la riga giusta.
+ */
+function findAccountsRows(
   html: string,
-): { documentPath: string; description: string } | undefined {
+): { documentPath: string; description: string; interim: boolean }[] {
+  const rows: { documentPath: string; description: string; interim: boolean }[] = [];
   const linkRe =
     /href="(\/company\/[A-Z0-9]{6,10}\/filing-history\/[^"]+?\/document\?format=pdf[^"]*)"/gi;
   let match: RegExpExecArray | null;
   while ((match = linkRe.exec(html)) !== null) {
     const path = match[1];
     if (!path) continue;
-    // La descrizione della pubblicazione precede il link nella stessa riga di
-    // tabella: si prende il testo dei 1.200 caratteri che stanno prima.
-    const before = html.slice(Math.max(0, match.index - 1200), match.index);
-    const text = decode(before);
-    if (/accounts/i.test(text)) {
-      const described = text.match(/([^.]*accounts[^.]{0,90})/i);
-      return {
-        documentPath: path.replace(/&amp;/g, "&"),
-        description: described ? described[1]!.trim() : "Annual accounts",
-      };
-    }
+    // La descrizione precede il link NELLA STESSA riga: si taglia al <tr> più
+    // vicino, altrimenti il testo della riga precedente entra nella cattura e
+    // una riga SH06 finisce per sembrare un deposito di conti.
+    const window = html.slice(Math.max(0, match.index - 1500), match.index);
+    const rowStart = window.lastIndexOf("<tr");
+    const text = decode(rowStart === -1 ? window : window.slice(rowStart));
+    const described = text.match(/([^.;]*accounts made up to[^.;]{0,60})/i);
+    if (!described) continue;
+    // Via la data che apre la riga: resta la sola descrizione del deposito.
+    const description = described[1]!.replace(/^\d{1,2}\s+\w+\s+\d{4}\s*/, "").trim();
+    rows.push({
+      documentPath: path.replace(/&amp;/g, "&"),
+      description,
+      interim: /interim/i.test(description),
+    });
   }
-  return undefined;
+  return rows;
+}
+
+/** Prima riga di conti nelle prime pagine della cronologia, annuali su interim. */
+async function firstAccountsDocument(
+  number: string,
+  signal: AbortSignal,
+): Promise<{ documentPath: string; description: string } | undefined> {
+  const pages = await Promise.all(
+    [1, 2, 3, 4].map((page) =>
+      get(`${HOST}/company/${number}/filing-history?page=${page}`, signal).catch(() => ""),
+    ),
+  );
+  const rows = pages.flatMap((html) => (html ? findAccountsRows(html) : []));
+  // Il bilancio d'esercizio vale più di una relazione infrannuale.
+  return rows.find((row) => !row.interim) ?? rows[0];
 }
 
 /** Scheda societaria dalla pagina /company/<n>. */
@@ -135,13 +162,12 @@ export async function lookupUkPublic(
     }
 
     // 2. scheda + 3. conti annuali depositati, in parallelo
-    const [companyHtml, filingHtml] = await Promise.all([
+    const [companyHtml, document] = await Promise.all([
       get(`${HOST}/company/${number}`, ctrl.signal),
-      get(`${HOST}/company/${number}/filing-history?category=accounts`, ctrl.signal),
+      firstAccountsDocument(number, ctrl.signal),
     ]);
 
     const profile = profileFrom(companyHtml, number, name);
-    const document = firstAccountsDocument(filingHtml);
     if (!document) {
       return {
         ok: true,
