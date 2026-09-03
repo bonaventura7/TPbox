@@ -108,6 +108,15 @@ export interface OfficialPageRef {
   url: string;
   label: string;
   note: string;
+  /**
+   * "embed": la pagina viene incorporata in un iframe (registri che lo
+   * consentono). "external": la pagina va aperta in una nuova scheda perché
+   * autenticazione/CAPTCHA/sessione devono avvenire nel contesto principale
+   * del browser dell'utente (LU, GR, PL). Assente = "embed".
+   */
+  mode?: "embed" | "external" | undefined;
+  /** Passi operativi, nell'ordine, per arrivare al documento sul portale. */
+  instructions?: string[] | undefined;
 }
 
 export interface SearchResponse {

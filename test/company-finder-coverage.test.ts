@@ -62,4 +62,12 @@ describe("copertura dichiarata", () => {
     expect(isCovered("GR")).toBe(true);
     expect(officialPageFor("GR", "", "")?.url).toContain("businessportal.gr");
   });
+
+  it("i nove paesi esclusi restano fuori dal menu a tendina", () => {
+    // Il dropdown della pagina deriva da isCovered: se uno di questi tornasse
+    // coperto per errore, ricomparirebbe nel menu. Questo test lo impedisce.
+    for (const iso of ["IT", "ES", "AT", "SE", "IS", "LI", "IE", "CY", "MT"]) {
+      expect(isCovered(iso), iso).toBe(false);
+    }
+  });
 });

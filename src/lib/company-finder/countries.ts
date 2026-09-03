@@ -98,7 +98,7 @@ export const COUNTRIES: CountryInfo[] = [
     registryAuthority: "Ministero della Giustizia — Portal Rejestrów Sądowych",
     financials: {
       free: true,
-      note: "I bilanci (sprawozdania finansowe) depositati in KRS sono pubblici e gratuiti: il tool li recupera dal Repozytorium Dokumentów Finansowych (Ministero della Giustizia PL) e li mostra in pagina. Inserisci il numero KRS (8 o 10 cifre) nel campo partita IVA.",
+      note: "I bilanci (sprawozdania finansowe) depositati in KRS sono pubblici e gratuiti sul portale RDF del Ministero della Giustizia: la consultazione avviene nel tuo browser (KRS → «Szukaj» → «Roczne sprawozdanie finansowe» → «Pobierz dokument»). Inserisci il numero KRS (8 o 10 cifre) nel campo partita IVA.",
     },
   },
   {
@@ -242,7 +242,7 @@ export const COUNTRIES: CountryInfo[] = [
     registryAuthority: "Ministero dello Sviluppo",
     financials: {
       free: false,
-      note: "Le pubblicazioni con i bilanci (Οικονομικές Καταστάσεις) sono scaricabili GRATIS dal portale GEMI (publicity.businessportal.gr), ma il portale è protetto da reCAPTCHA: l'estrazione automatica è in studio. In questa vista: identità e stato dal VIES.",
+      note: "Le pubblicazioni con i bilanci (Οικονομικές Καταστάσεις) sono scaricabili GRATIS dal portale GEMI (publicity.businessportal.gr): con l'identificativo ΓΕΜΗ (10 cifre) il tool apre direttamente la scheda della società nel tuo browser; eventuali verifiche CAPTCHA si completano sul portale ufficiale.",
     },
   },
   {
@@ -350,7 +350,7 @@ export const COUNTRIES: CountryInfo[] = [
     registryAuthority: "Luxembourg Business Register",
     financials: {
       free: true,
-      note: "I documenti depositati (comptes annuels) sono gratuiti su LBR/GDD (account gratuito); l'accesso strutturato è in espansione.",
+      note: "I conti annuali depositati (comptes annuels) sono consultabili sul portale LBR: con il numero RCS (es. B60814) il tool apre direttamente la scheda della società, sezione depositi, nel tuo browser; per i servizi protetti il portale può richiedere l'autenticazione (LuxTrust, eID, eIDAS), che completi tu sul sito ufficiale.",
     },
   },
   {

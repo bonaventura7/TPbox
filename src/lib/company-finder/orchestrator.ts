@@ -4,8 +4,9 @@
 // (tabella REGISTRY_ROUTES) + VIES + OpenCorporates → unifica i dati →
 // scheda impresa + stato di ogni fonte consultata.
 //
-// Tutto lato server: l'utente finale NON viene reindirizzato su alcun sito
-// esterno; ogni fonte è richiamata direttamente da questa applicazione.
+// Le fonti dati sono richiamate lato server. Per i paesi il cui registro
+// esige un browser reale (LU, GR, PL) la risposta include invece una
+// consultazione ufficiale da aprire nel browser dell'utente (official-pages).
 
 import { getCountry } from "./countries";
 import { checkVat } from "./sources/vies";
@@ -24,7 +25,7 @@ import { fetchPappersFinancials } from "./sources/bilanci/pappers-fr";
 import { fetchDkRegnskaber, cvrFromVat } from "./sources/bilanci/regnskaber-dk";
 import { fetchCbsoAccounts, cbeFromInput } from "./sources/bilanci/cbso-be";
 import { NO_FREE_SOURCE } from "./coverage";
-import { officialPageFor } from "./official-pages";
+import { gemiFromInput, officialPageFor, rcsFromInput } from "./official-pages";
 import { numericRegistryId, searchGleif } from "./sources/gleif";
 import { searchRechercheEntreprises } from "./sources/recherche-entreprises-fr";
 import { lookupUkPublic } from "./sources/bilanci/companies-house-public";
@@ -605,6 +606,12 @@ export async function runSearch(req: SearchRequest, depth = 0): Promise<SearchRe
   const pl10 = countryIso === "PL" && /^\d{10}$/.test(localVat);
   const pl10krs = pl10 && localVat.startsWith("0000");
   const pl10nip = pl10 && !localVat.startsWith("0000");
+  // Grecia: 10 cifre esatte = identificativo ΓΕΜΗ (l'IVA greca ne ha 9).
+  // Alimenta la consultazione ufficiale nel browser e NON va mai al VIES.
+  const grGemi = countryIso === "GR" && !!gemiFromInput(localVat);
+  // Lussemburgo: "B" + cifre = numero RCS, non un'IVA: alimenta il link
+  // ufficiale diretto (LBR) e non viene mai passato al VIES.
+  const luRcs = countryIso === "LU" && !!rcsFromInput(localVat);
 
   const ctx: Ctx = { query, localVat, countryIso };
 
@@ -653,7 +660,7 @@ export async function runSearch(req: SearchRequest, depth = 0): Promise<SearchRe
   // NL: 8 cifre pure nel campo IVA = KVK-nummer (NON un numero IVA) → no VIES.
   const nlKvkDirect = countryIso === "NL" && !!kvkFromInput(localVat);
   // ---------- 2b. VIES (tutti i paesi con prefisso IVA) ----------
-  if (hasVat && !pl8 && !pl10krs && !nlKvkDirect) {
+  if (hasVat && !pl8 && !pl10krs && !nlKvkDirect && !grGemi && !luRcs) {
     jobs.push(
       makeJob("vies", "VIES — Commissione Europea", async (job, s) => {
         const r = await checkVat(countryIso === "GR" ? "EL" : countryIso, localVat);
@@ -837,13 +844,19 @@ export async function runSearch(req: SearchRequest, depth = 0): Promise<SearchRe
   }
 
   if (jobs.length === 0) {
+    // Nessuna fonte interrogabile dal server (es. GR con identificativo ΓΕΜΗ,
+    // LU con numero RCS): resta la consultazione ufficiale nel browser.
+    const directPage = officialPageFor(countryIso, localVat, query);
     return {
       found: false,
       sources: [],
       warnings: [
-        "Nessuna fonte consultabile per questa combinazione di dati. Inserisci un numero di IVA completo (con prefisso) oppure una ragione sociale di almeno 3 caratteri.",
+        directPage
+          ? "Per questi dati nessuna fonte è interrogabile dal server: usa la consultazione ufficiale qui sotto, aperta direttamente nel tuo browser sul portale del registro."
+          : "Nessuna fonte consultabile per questa combinazione di dati. Inserisci un numero di IVA completo (con prefisso) oppure una ragione sociale di almeno 3 caratteri.",
       ],
       searchedAt: new Date().toISOString(),
+      ...(directPage ? { officialPage: directPage } : {}),
     };
   }
 
@@ -937,7 +950,7 @@ export async function runSearch(req: SearchRequest, depth = 0): Promise<SearchRe
         "Scheda società non completata dalle fonti anagrafiche: mostrati i dati di bilancio disponibili.",
       );
     } else {
-      const fallbackPage = officialPageFor(countryIso, localVat, query);
+      const fallbackPage = officialPageFor(countryIso, localVat, query, company?.registry?.id);
       return {
         found: false,
         sources: jobs.map((j) => j.status),
@@ -957,10 +970,11 @@ export async function runSearch(req: SearchRequest, depth = 0): Promise<SearchRe
 
   // Quando il documento non è estraibile lato server, si offre la pagina
   // ufficiale del registro: la carica il browser dell'utente, che supera da
-  // solo le protezioni che rifiutano un server.
+  // solo le protezioni che rifiutano un server. L'identificativo di registro
+  // risolto dalle fonti (KRS, RCS, ΓΕΜΗ…) rende il collegamento diretto.
   const officialPage = financialsOut.documentUrl
     ? undefined
-    : officialPageFor(countryIso, localVat, query);
+    : officialPageFor(countryIso, localVat, query, company.registry?.id);
 
   return {
     found: true,
