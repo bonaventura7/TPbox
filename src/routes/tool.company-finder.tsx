@@ -18,13 +18,9 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { findCompany } from "@/lib/company-finder.functions";
 import { ALL_COUNTRIES } from "@/lib/company-finder/countries";
-import { AUTO_ISOS, CONSULT_PAGES, NO_FREE_SOURCE } from "@/lib/company-finder/coverage";
-import type {
-  CompanyProfile,
-  Financials,
-  OfficialPageRef,
-  SourceStatus,
-} from "@/lib/company-finder/types";
+import { isCovered } from "@/lib/company-finder/coverage";
+import type { CompanyProfile, Financials, OfficialPageRef } from "@/lib/company-finder/types";
+
 
 const TITLE = "Company Finder";
 const DESCRIPTION =
