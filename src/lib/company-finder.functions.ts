@@ -4,6 +4,7 @@ import { z } from "zod";
 import type { SearchResponse } from "./company-finder/types";
 import { getCountry } from "./company-finder/countries";
 import { officialPageFor } from "./company-finder/official-pages";
+import { resolveGreekFilingUrl } from "./company-finder/greek-filing";
 
 const searchSchema = z.object({
   query: z.string().max(200).default(""),
@@ -24,26 +25,58 @@ function toInPageDocumentUrl(documentUrl: string): string {
   return `/api/company-finder/document?url=${encodeURIComponent(documentUrl)}`;
 }
 
-function prioritizeBalanceDocument(response: SearchResponse): SearchResponse {
-  const documentUrl = response.financials?.documentUrl;
-  if (!documentUrl) return response;
-
-  const current = response.officialPage;
-  response.officialPage = {
-    url: toInPageDocumentUrl(documentUrl),
-    label: current?.label ?? "Documento ufficiale di bilancio",
-    note: current?.note
-      ? `Bilancio ufficiale individuato: ${current.note}`
-      : "Documento ufficiale di bilancio individuato dalla fonte registrata.",
-  };
-  return response;
+function firstRegistryIdentifier(response: SearchResponse, fallback: string): string {
+  return response.company?.registry?.id?.trim() || fallback.trim();
 }
 
-function browserRegistryResponse(
+async function resolveGreekBalance(response: SearchResponse, fallbackId: string): Promise<SearchResponse> {
+  if (response.company?.country.iso !== "GR" || response.financials?.documentUrl) {
+    return response;
+  }
+
+  const gemi = firstRegistryIdentifier(response, fallbackId).replace(/\D/g, "");
+  if (!/^\d{10}$/.test(gemi)) return response;
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15_000);
+  try {
+    const filingUrl = await resolveGreekFilingUrl(gemi, controller.signal);
+    if (!filingUrl) return response;
+
+    response.financials = {
+      ...(response.financials ?? { available: false, years: [] }),
+      documentUrl: filingUrl,
+      documentTitle: "Bilancio ufficiale — ΓΕΜΗ / BusinessPortal iXBRL",
+      source: "ΓΕΜΗ — BusinessPortal iXBRL",
+      note: "Documento iXBRL ufficiale individuato direttamente per la società selezionata.",
+    };
+    response.officialPage = undefined;
+    return response;
+  } catch {
+    return response;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function prioritizeBalanceDocument(response: SearchResponse, fallbackId: string): Promise<SearchResponse> {
+  const resolved = await resolveGreekBalance(response, fallbackId);
+  const documentUrl = resolved.financials?.documentUrl;
+  if (!documentUrl) return resolved;
+
+  resolved.financials = {
+    ...resolved.financials!,
+    documentUrl: toInPageDocumentUrl(documentUrl),
+  };
+  resolved.officialPage = undefined;
+  return resolved;
+}
+
+async function browserRegistryResponse(
   countryIso: string,
   identifier: string,
   query: string,
-): SearchResponse | undefined {
+): Promise<SearchResponse | undefined> {
   const country = getCountry(countryIso);
   if (!country) return undefined;
 
@@ -51,7 +84,7 @@ function browserRegistryResponse(
   if (!officialPage) return undefined;
 
   const cleaned = identifier.trim();
-  return {
+  const response: SearchResponse = {
     found: true,
     company: {
       name: query.trim() || `${country.nameIt} — ${cleaned}`,
@@ -81,6 +114,8 @@ function browserRegistryResponse(
     searchedAt: new Date().toISOString(),
     officialPage,
   };
+
+  return prioritizeBalanceDocument(response, cleaned);
 }
 
 export const findCompany = createServerFn({ method: "POST" })
@@ -96,19 +131,19 @@ export const findCompany = createServerFn({ method: "POST" })
     }
 
     if (country === "GR" && /^\d{10}$/.test(normalized)) {
-      const direct = browserRegistryResponse("GR", normalized, query);
+      const direct = await browserRegistryResponse("GR", normalized, query);
       if (direct) return direct;
     }
 
     if (country === "LU" && /^B\d+$/.test(normalized)) {
-      const direct = browserRegistryResponse("LU", normalized, query);
+      const direct = await browserRegistryResponse("LU", normalized, query);
       if (direct) return direct;
     }
 
     const { runSearch } = await import("./company-finder/orchestrator");
     try {
       const response = await runSearch({ query, vat, country });
-      return prioritizeBalanceDocument(response);
+      return prioritizeBalanceDocument(response, normalized);
     } catch (error) {
       console.error("[company-finder] errore orchestratore", error);
       return emptyResponse(
