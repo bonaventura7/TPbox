@@ -3,13 +3,9 @@
 // consult.cbso.nbb.be sono dietro una sfida che un server non supera (403 da
 // qualunque IP, verificato). Proxarli è impossibile — ma incorporarli sì.
 //
-// Se la pagina ufficiale viaggia nell'iframe, è il browser DELL'UTENTE a
-// caricarla: la sfida la supera lui, come quando ci va a mano. Verificato in
-// Chrome che datacvr.virk.dk, consult.cbso.nbb.be e unternehmensregister.de
-// consentono di essere incorporati (nessun X-Frame-Options che li blocchi).
-//
-// È il registro ufficiale, servito com'è, senza modifiche e con la fonte
-// dichiarata: non una copia, non uno scraping.
+// Lussemburgo, Grecia e Polonia richiedono invece una consultazione in una
+// scheda browser dedicata: autenticazione, CAPTCHA e sessione devono rimanere
+// nel contesto ufficiale del registro e non vengono mai automatizzati dal tool.
 
 import { CONSULT_PAGES, NO_FREE_SOURCE } from "./coverage";
 
@@ -24,6 +20,26 @@ function digits(value: string): string {
   return value.replace(/\D/g, "");
 }
 
+/** RCS lussemburghese: lettera B seguita dalle cifre, senza inventare il codice. */
+function normalizeLuxembourgRcs(value: string): string | undefined {
+  const normalized = value.replace(/[\s.-]/g, "").toUpperCase();
+  return /^B\d+$/.test(normalized) ? normalized : undefined;
+}
+
+/** KRS polacco: il registro accetta normalmente 8 cifre; per istruzioni lo mostriamo a 10. */
+function normalizePolandKrs(value: string): string | undefined {
+  const normalized = value.replace(/\D/g, "");
+  return /^\d{8}$/.test(normalized) || /^\d{10}$/.test(normalized)
+    ? normalized.padStart(10, "0")
+    : undefined;
+}
+
+/** G.E.MI. / company-publicity id greco: 10 cifre. */
+function normalizeGreeceGemi(value: string): string | undefined {
+  const normalized = value.replace(/\D/g, "");
+  return /^\d{10}$/.test(normalized) ? normalized : undefined;
+}
+
 /**
  * Pagina di consultazione ufficiale del paese: per numero quando lo si ha,
  * altrimenti la ricerca per denominazione già compilata.
@@ -35,6 +51,40 @@ export function officialPageFor(
 ): OfficialPage | undefined {
   const id = digits(localVat);
   const name = query.trim();
+  const rawId = localVat.trim() || name;
+
+  // Lussemburgo: il deposito è sulla scheda impresa del LBR.
+  const luRcs = iso === "LU" ? normalizeLuxembourgRcs(rawId) : undefined;
+  if (luRcs) {
+    return {
+      url: `https://www.lbr.lu/mjrcs-web-front/consult-company/${luRcs}?tab=deposit`,
+      label: "LBR — Luxembourg Business Registers",
+      note:
+        "Apri la scheda LBR in una nuova scheda: per accedere ai depositi il registro può richiedere l'autenticazione. Il login va eseguito normalmente nel portale ufficiale; il tool non gestisce credenziali o sessioni.",
+    };
+  }
+
+  // Grecia: GEMI/publicity usa un identificativo societario a 10 cifre.
+  const grGemi = iso === "GR" ? normalizeGreeceGemi(rawId) : undefined;
+  if (grGemi) {
+    return {
+      url: `https://publicity.businessportal.gr/company/${grGemi}`,
+      label: "G.E.MI. — Publicity",
+      note:
+        "La scheda G.E.MI. viene aperta direttamente nel portale ufficiale. Se compare CAPTCHA o un'altra verifica del browser, completala lì: il tool non tenta di aggirarla.",
+    };
+  }
+
+  // Polonia: niente query string inventate; il documento si seleziona nel RDF.
+  const plKrs = iso === "PL" ? normalizePolandKrs(rawId) : undefined;
+  if (plKrs) {
+    return {
+      url: "https://rdf-przegladarka.ms.gov.pl/wyszukaj-podmiot",
+      label: "RDF — Repozytorium Dokumentów Finansowych",
+      note:
+        `Inserisci KRS ${plKrs} e premi “Szukaj”. Seleziona il periodo richiesto, quindi il documento “Roczne sprawozdanie finansowe” e infine “Pobierz dokument” (o l'icona di download). Per ogni società va scelto il periodo effettivo del deposito; il tool non presume l'anno.` ,
+    };
+  }
 
   // Danimarca e Belgio hanno un indirizzo diretto per numero: ci si arriva
   // sulla scheda giusta invece che sulla home del registro.
@@ -76,7 +126,7 @@ export function officialPageFor(
 
   const paywall = NO_FREE_SOURCE[iso];
   if (paywall) {
-    return undefined; // paese non coperto: la nota viene data dall'orchestratore
+    return undefined;
   }
   return undefined;
 }
