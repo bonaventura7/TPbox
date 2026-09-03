@@ -1,5 +1,9 @@
 {
   "buildCommand": "npm run build",
-  "outputDirectory": "dist",
-  "installCommand": "npm install"
+  "outputDirectory": ".vercel/output",
+  "installCommand": "npm install",
+  "framework": null,
+  "functions": {
+    "maxDuration": 60
+  }
 }
