@@ -1,11 +1,10 @@
 /**
  * Hungarian Browser Automation Agent
- * 
- * Agente browser che interagisce con il portale e-beszamolo.im.gov.hu
- * per cercare società e scaricare bilanci in modo automatico.
+ * Updated for @sparticuz/chromium (Vercel serverless optimized)
  */
 
-import type { Browser, Page } from 'puppeteer';
+import type { Browser, Page } from 'puppeteer-core';
+import chromium from '@sparticuz/chromium';
 
 const EBESZAMOLO_BASE = 'https://e-beszamolo.im.gov.hu';
 const SEARCH_URL = `${EBESZAMOLO_BASE}/oldal/kereses_merleglista`;
@@ -23,22 +22,22 @@ export class HuBrowserAgent {
   private browser: Browser | null = null;
 
   async searchCompany(companyName: string): Promise<HuSearchResult> {
-    const puppeteer = await import('puppeteer');
+    const puppeteer = await import('puppeteer-core');
+    
     const browser = await puppeteer.launch({
-      headless: 'new',
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      args: chromium.args,
+      executablePath: await chromium.executablePath(),
+      headless: chromium.headless,
     });
 
     try {
       const page = await browser.newPage();
       await page.goto(SEARCH_URL, { waitUntil: 'networkidle2', timeout: 60000 });
       
-      // Inserisci nome società
       await page.type('input[name="firmName"]', companyName, { delay: 50 });
       await page.click('button[type="submit"]');
       await page.waitForNavigation({ waitUntil: 'networkidle2' });
 
-      // Estrai risultati
       const results = await page.evaluate(() => {
         const items = document.querySelectorAll('.result-item, .search-result');
         return Array.from(items).map(el => ({
