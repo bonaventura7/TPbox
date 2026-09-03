@@ -98,6 +98,10 @@ export interface FinancialDocumentRef {
   filedAt?: string | undefined;
   /** PDF / XLSX / XBRL / iXBRL — dedotto dal documento, mai presunto. */
   format?: string | undefined;
+  /** Tipo di documento dichiarato dal registro (Bilancio, Atto depositato, …). */
+  kind?: string | undefined;
+  /** true solo se il registro indica che è una pubblicazione di conti annuali. */
+  financial?: boolean | undefined;
   /** Nome file proposto per il download. */
   fileName?: string | undefined;
   /** Apre il documento nel riquadro della scheda (inline). */
@@ -127,6 +131,8 @@ export interface Financials {
   documents?: FinancialDocumentRef[] | undefined;
   /** Motivo tecnico quando il documento non è disponibile (es. NO_KEY). */
   restriction?: string | undefined;
+  /** Da dove arriva il documento ("Registro ΓΕΜΗ (API aperta)", "Link fornito"). */
+  documentChannel?: string | undefined;
 }
 
 /**

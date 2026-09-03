@@ -15,6 +15,8 @@ export interface GemiDocumentCandidate {
   label: string;
   /** Percorso JSON in cui è stato trovato, per diagnostica. */
   path: string;
+  /** Collezione del registro che contiene il documento (es. "decision", "publication"). */
+  collection?: string | undefined;
   /** URL del file, quando il record lo espone direttamente. */
   url?: string | undefined;
   /** Id numerico per GET /downloadFile?elementId=. */
@@ -186,6 +188,8 @@ export function collectGemiDocuments(payload: unknown): GemiDocumentCandidate[] 
     seen.add(fingerprint);
 
     const candidate: GemiDocumentCandidate = { label, path, financial };
+    const collection = path.split(/[.[\]]+/).filter(Boolean)[0];
+    if (collection) candidate.collection = collection;
     if (url) candidate.url = url;
     if (elementId) candidate.elementId = elementId;
     if (downloadKey) candidate.downloadKey = downloadKey;

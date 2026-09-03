@@ -97,6 +97,38 @@ export function isGreekDocumentUrl(candidate: string): boolean {
   return DOWNLOAD_PATH_RE.test(url.pathname) || IXBRL_PATH_RE.test(url.pathname);
 }
 
+/**
+ * Famiglie di documenti servite dal portale pubblico come
+ * `/api/download/<famiglia>/<id>?companyId=<ΓΕΜΗ>`.
+ *
+ * Rilevate leggendo il codice della pagina società del portale
+ * (`/company/[arGEMI]`): le sezioni "Ιστορικό Καταστατικών", "Αποφάσεις Αρχών
+ * Ελέγχου Νομιμότητας", "Λοιπά Αρχεία", "FinancialStatements" e "Μεταβολές"
+ * costruiscono ciascuna il proprio link con questa forma.
+ */
+const PORTAL_DOCUMENT_FAMILIES = {
+  financial: "Bilancio",
+  modifications: "Variazioni registrate",
+  statutes: "Atto costitutivo / statuto",
+  authority: "Decisioni delle autorità di controllo",
+  rest: "Altri documenti",
+} as const;
+
+export type GreekDocumentFamily = keyof typeof PORTAL_DOCUMENT_FAMILIES;
+
+/** Etichetta italiana della famiglia di documento. */
+export function documentFamilyLabel(family: GreekDocumentFamily): string {
+  return PORTAL_DOCUMENT_FAMILIES[family];
+}
+
+/** Riconosce la famiglia di un link di download del portale. */
+export function greekDocumentFamily(pathname: string): GreekDocumentFamily | undefined {
+  const segment = (pathname.split("/").filter(Boolean)[2] ?? "").toLowerCase();
+  return (Object.keys(PORTAL_DOCUMENT_FAMILIES) as GreekDocumentFamily[]).find(
+    (family) => family === segment,
+  );
+}
+
 /** Costruisce l'URL di download ufficiale di un documento ΓΕΜΗ. */
 export function greekDownloadUrl(kind: string, elementId: string | number, arGemi: string): string {
   const safeKind = String(kind).replace(/[^A-Za-z0-9_-]/g, "");

@@ -1,11 +1,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  documentFamilyLabel,
   extractGemiFromText,
+  greekDocumentFamily,
   isGreekDocumentUrl,
   normalizeGemi,
   normalizeGreekVat,
 } from "../src/lib/company-finder/greece";
+import { isViewableInPage } from "../src/lib/company-finder/document-links";
 import { extractGreekDocumentLinks } from "../src/lib/company-finder/greek-filing";
 import {
   collectGemiDocuments,
@@ -283,5 +286,38 @@ describe("risoluzione dei documenti greci", () => {
     expect(result.state).toBe("NO_KEY");
     expect(result.detail).toContain("GEMI_API_KEY");
     expect(result.documents).toEqual([]);
+  });
+});
+
+describe("famiglie di documenti del portale ΓΕΜΗ", () => {
+  it("riconosce le cinque famiglie usate dalla pagina società", () => {
+    // Percorsi reali, letti dal codice della pagina /company/[arGEMI].
+    expect(greekDocumentFamily("/api/download/financial/2150556")).toBe("financial");
+    expect(greekDocumentFamily("/api/download/Modifications/123")).toBe("modifications");
+    expect(greekDocumentFamily("/api/download/statutes/998877")).toBe("statutes");
+    expect(greekDocumentFamily("/api/download/authority/11")).toBe("authority");
+    expect(greekDocumentFamily("/api/download/rest/22")).toBe("rest");
+  });
+
+  it("non inventa una famiglia per percorsi sconosciuti", () => {
+    expect(greekDocumentFamily("/api/download/sconosciuto/1")).toBeUndefined();
+    expect(greekDocumentFamily("/company/178892854000")).toBeUndefined();
+  });
+
+  it("dà a ogni famiglia un'etichetta italiana", () => {
+    expect(documentFamilyLabel("financial")).toBe("Bilancio");
+    expect(documentFamilyLabel("statutes")).toContain("statuto");
+  });
+});
+
+describe("formati incorporabili in pagina", () => {
+  it("PDF e iXBRL si mostrano, i file binari no", () => {
+    expect(isViewableInPage("PDF")).toBe(true);
+    expect(isViewableInPage("iXBRL")).toBe(true);
+    // Il caso reale del registro greco: bilancio servito come .xls.
+    expect(isViewableInPage("XLS")).toBe(false);
+    expect(isViewableInPage("XLSX")).toBe(false);
+    expect(isViewableInPage("ZIP")).toBe(false);
+    expect(isViewableInPage(undefined)).toBe(false);
   });
 });

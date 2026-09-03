@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { findCompany } from "@/lib/company-finder.functions";
+import { isViewableInPage } from "@/lib/company-finder/document-links";
 import { ALL_COUNTRIES } from "@/lib/company-finder/countries";
 import { isCovered } from "@/lib/company-finder/coverage";
 import type { CompanyProfile, Financials, OfficialPageRef } from "@/lib/company-finder/types";
@@ -249,6 +250,12 @@ function FinancialsCard({
   const activeIndex = Math.min(selected, Math.max(documents.length - 1, 0));
   const active = documents[activeIndex];
   const viewerSrc = active?.viewerUrl ?? financials?.documentUrl;
+  // Il registro ΓΕΜΗ pubblica alcuni bilanci come file Excel (tabelle HTML con
+  // estensione .xls): in un iframe sarebbero illeggibili. Per quei formati la
+  // scheda propone il download invece di un riquadro vuoto.
+  // Formato non dichiarato → si tenta comunque l'incorporamento (il download a
+  // un clic resta visibile accanto al riquadro).
+  const viewerViewable = active?.format ? isViewableInPage(active.format) : true;
   const viewerTitle = active
     ? `${active.label}${active.year ? ` — ${active.year}` : ""}`
     : (financials?.documentTitle ?? "Documento di bilancio");
@@ -262,7 +269,10 @@ function FinancialsCard({
             {hasValues ? "Conti annuali depositati" : "Bilancio — disponibilità della fonte"}
           </h3>
         </div>
-        {financials?.source ? <Chip>{financials.source}</Chip> : null}
+        <div className="flex flex-wrap items-center gap-2">
+          {financials?.documentChannel ? <Chip>{financials.documentChannel}</Chip> : null}
+          {financials?.source ? <Chip>{financials.source}</Chip> : null}
+        </div>
       </div>
 
       {hasValues && financials ? (
@@ -358,6 +368,7 @@ function FinancialsCard({
                   </p>
                   <p className="mt-1 flex flex-wrap gap-2 text-xs text-muted-foreground">
                     {document.year ? <Chip>{document.year}</Chip> : null}
+                    {document.kind ? <Chip>{document.kind}</Chip> : null}
                     {document.format ? <Chip>{document.format}</Chip> : null}
                     {document.filedAt ? <span>Depositato: {document.filedAt}</span> : null}
                   </p>
@@ -368,15 +379,17 @@ function FinancialsCard({
                     className="inline-flex min-h-10 items-center gap-2 bg-petrol px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-petrol/90"
                   >
                     <Download className="size-4" aria-hidden="true" />
-                    Scarica il bilancio
+                    {document.financial ? "Scarica il bilancio" : "Scarica il documento"}
                   </a>
-                  <button
-                    type="button"
-                    className="cursor-pointer border border-border bg-muted px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-                    onClick={() => setSelected(index)}
-                  >
-                    Mostra in pagina
-                  </button>
+                  {!document.format || isViewableInPage(document.format) ? (
+                    <button
+                      type="button"
+                      className="cursor-pointer border border-border bg-muted px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                      onClick={() => setSelected(index)}
+                    >
+                      Mostra in pagina
+                    </button>
+                  ) : null}
                 </div>
               </li>
             ))}
@@ -400,16 +413,37 @@ function FinancialsCard({
               </a>
             ) : null}
           </div>
-          <iframe
-            title={viewerTitle}
-            src={viewerSrc}
-            className="mt-2 h-[680px] w-full border border-border bg-white"
-          />
-          <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-            Documento gratuito del registro ufficiale, scaricato dal server dell&apos;Osservatorio e
-            servito da questa stessa pagina: si legge qui e si scarica con un clic, senza aprire né
-            essere reindirizzati ad alcun sito esterno.
-          </p>
+          {viewerViewable ? (
+            <>
+              <iframe
+                title={viewerTitle}
+                src={viewerSrc}
+                className="mt-2 h-[680px] w-full border border-border bg-white"
+              />
+              <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                Documento gratuito del registro ufficiale, scaricato dal server
+                dell&apos;Osservatorio e servito da questa stessa pagina: si legge qui e si scarica
+                con un clic, senza aprire né essere reindirizzati ad alcun sito esterno.
+              </p>
+            </>
+          ) : (
+            <div className="mt-2 border border-border bg-muted/40 p-4">
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                Il registro pubblica questo documento in formato{" "}
+                <strong className="text-foreground">{active?.format ?? "non HTML"}</strong>, che i
+                browser non mostrano in pagina. Nessuna perdita: il file è già sul server
+                dell&apos;Osservatorio e si scarica con un clic.
+              </p>
+              <a
+                href={active?.downloadUrl ?? viewerSrc}
+                download
+                className="mt-3 inline-flex min-h-11 items-center gap-2 bg-petrol px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-petrol/90"
+              >
+                <Download className="size-4" aria-hidden="true" />
+                Scarica {active?.format ?? "il documento"} con un clic
+              </a>
+            </div>
+          )}
         </div>
       ) : null}
 

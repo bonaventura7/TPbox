@@ -50,6 +50,19 @@ export function documentDownloadUrl(sourceUrl: string, fileName?: string): strin
   return documentProxyUrl(sourceUrl, { disposition: "attachment", fileName });
 }
 
+/**
+ * Formati che un browser sa mostrare dentro un <iframe>.
+ *
+ * Conta davvero: il registro ΓΕΜΗ pubblica alcuni bilanci come file `.xls`
+ * (in realtà tabelle HTML con estensione Excel), che in un iframe produrrebbero
+ * una schermata illeggibile. Per quelli la scheda mostra solo il download.
+ */
+const VIEWABLE_FORMATS = new Set(["PDF", "iXBRL", "XBRL", "HTML", "XML"]);
+
+export function isViewableInPage(format: string | undefined): boolean {
+  return Boolean(format && VIEWABLE_FORMATS.has(format));
+}
+
 /** Formato dichiarato all'utente, dedotto dal nome o dall'URL del documento. */
 export function documentFormat(...hints: (string | undefined)[]): string | undefined {
   const haystack = hints.filter(Boolean).join(" ").toLowerCase();

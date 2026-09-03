@@ -23,8 +23,9 @@ import {
 } from "./document-links";
 import { extractGreekDocumentLinks } from "./greek-filing";
 import {
+  documentFamilyLabel,
   extractGemiFromText,
-  greekDownloadUrl,
+  greekDocumentFamily,
   isGreekDocumentUrl,
   normalizeGemi,
   normalizeGreekVat,
@@ -42,6 +43,7 @@ import {
   gemiDownloadFileUrl,
   getGemiDocumentsRaw,
   searchGemiCompanies,
+  type GemiApiResult,
   type GemiApiState,
   type GemiCompanySummary,
 } from "./sources/gemi-opendata";
@@ -52,11 +54,18 @@ const PORTAL_UA =
 export type GreekResolutionState =
   "DOCUMENT_FOUND" | "NO_IDENTIFIER" | "NO_KEY" | "NOT_FOUND" | "SOURCE_UNAVAILABLE";
 
+/** Da dove arriva il documento: dichiarato all'utente, mai nascosto. */
+export type GreekDocumentChannel = "API aperta ΓΕΜΗ" | "Scheda pubblica ΓΕΜΗ" | "Link fornito";
+
 export interface GreekDocument {
   label: string;
   year?: string | undefined;
   filedAt?: string | undefined;
   format?: string | undefined;
+  /** Tipo dichiarato dal registro (es. "Pubblicazione ΓΕΜΗ", "Bilancio"). */
+  kind?: string | undefined;
+  /** true solo se il registro stesso indica una pubblicazione di conti annuali. */
+  financial: boolean;
   fileName: string;
   /** URL ufficiale: viaggia solo tra server e proxy, mai mostrato all'utente. */
   sourceUrl: string;
@@ -70,6 +79,8 @@ export interface GreekResolution {
   state: GreekResolutionState;
   documents: GreekDocument[];
   company?: GemiCompanySummary | undefined;
+  /** Canale che ha prodotto i documenti. */
+  channel?: GreekDocumentChannel | undefined;
   /** Motivo leggibile quando non c'è documento: finisce nella UI. */
   detail?: string | undefined;
   apiState?: GemiApiState | undefined;
@@ -81,19 +92,49 @@ export interface GreekSearchInput {
   name?: string | undefined;
 }
 
+/**
+ * Come il registro chiama la collezione in cui il documento è pubblicato.
+ * Serve a non spacciare per "bilancio" un atto che bilancio non è.
+ */
+const COLLECTION_LABELS: Record<string, string> = {
+  decision: "Atto depositato (decisione organo)",
+  publication: "Pubblicazione ΓΕΜΗ (ΥΜΣ)",
+  financial: "Bilancio",
+  financialstatements: "Bilancio",
+  financialstatement: "Bilancio",
+  balance: "Bilancio",
+  accounts: "Bilancio",
+  statutes: "Atto costitutivo / statuto",
+  authority: "Decisione autorità di controllo",
+  rest: "Altro documento",
+  attachments: "Allegato alla pubblicazione",
+};
+
+function collectionKind(collection: string | undefined): string | undefined {
+  if (!collection) return undefined;
+  const key = collection.toLowerCase().replace(/[^a-z]/g, "");
+  return COLLECTION_LABELS[key];
+}
+
 function toGreekDocument(
   label: string,
   sourceUrl: string,
-  extras: { year?: string | undefined; filedAt?: string | undefined } = {},
+  extras: {
+    year?: string | undefined;
+    filedAt?: string | undefined;
+    kind?: string | undefined;
+    financial?: boolean | undefined;
+  } = {},
 ): GreekDocument | undefined {
   if (!sourceUrl) return undefined;
   const fileName = safeFileName(
     label.match(/[^\s/\\]+\.(pdf|xls|xlsx|xml|xhtml|zip)/i)?.[0] ?? label,
-    "bilancio-grecia",
+    "documento-grecia",
   );
   const document: GreekDocument = {
     label: label.slice(0, 180),
     fileName,
+    financial: Boolean(extras.financial),
     sourceUrl,
     viewerUrl: documentViewerUrl(sourceUrl),
     downloadUrl: documentDownloadUrl(sourceUrl, fileName),
@@ -102,16 +143,28 @@ function toGreekDocument(
   if (format) document.format = format;
   if (extras.year) document.year = extras.year;
   if (extras.filedAt) document.filedAt = extras.filedAt;
+  if (extras.kind) document.kind = extras.kind;
   return document;
 }
 
-/** Un candidato dell'API aperta diventa un documento servibile dal proxy. */
-function candidateToDocument(
-  candidate: GemiDocumentCandidate,
-  arGemi: string,
-): GreekDocument | undefined {
+/**
+ * Un candidato dell'API aperta diventa un documento servibile dal proxy.
+ *
+ * Due soli casi, entrambi "il registro lo ha pubblicato":
+ *   • il record espone già l'URL del file;
+ *   • il record espone un `elementId`, che si risolve con l'endpoint
+ *     documentato `/downloadFile?key=&elementId=`.
+ * Non si costruisce mai un URL del portale a partire da un id dell'API aperta:
+ * sono spazi di identificatori diversi e l'utente riceverebbe un 404.
+ */
+function candidateToDocument(candidate: GemiDocumentCandidate): GreekDocument | undefined {
   const year = documentYear(candidate);
-  const extras = { year, filedAt: candidate.date };
+  const extras = {
+    year,
+    filedAt: candidate.date,
+    kind: collectionKind(candidate.collection),
+    financial: candidate.financial,
+  };
 
   if (candidate.url) {
     const raw = candidate.url.trim();
@@ -125,14 +178,6 @@ function candidateToDocument(
   }
 
   if (candidate.elementId) {
-    const viaPortal = greekDownloadUrl(
-      candidate.downloadKey ?? "financial",
-      candidate.elementId,
-      arGemi,
-    );
-    if (viaPortal && isGreekDocumentUrl(viaPortal)) {
-      return toGreekDocument(candidate.label, viaPortal, extras);
-    }
     const viaApi = gemiDownloadFileUrl(
       candidate.downloadKey ?? "assemblyDecision",
       candidate.elementId,
@@ -141,6 +186,34 @@ function candidateToDocument(
   }
 
   return undefined;
+}
+
+/**
+ * Cache TTL del payload documenti: la chiave ΓΕΜΗ ha limiti di frequenza
+ * (soprattutto quella tecnica di documentazione) e la stessa società viene
+ * cercata più volte nella stessa sessione. Dieci minuti, in memoria di
+ * funzione serverless: niente persistenza, niente dati personali.
+ */
+const DOCUMENTS_TTL_MS = 10 * 60 * 1000;
+const DOCUMENTS_CACHE_MAX = 200;
+const documentsCache = new Map<string, { at: number; payload: unknown }>();
+
+function cachedGemiDocuments(arGemi: string): { at: number; payload: unknown } | undefined {
+  const hit = documentsCache.get(arGemi);
+  if (!hit) return undefined;
+  if (Date.now() - hit.at > DOCUMENTS_TTL_MS) {
+    documentsCache.delete(arGemi);
+    return undefined;
+  }
+  return hit;
+}
+
+function rememberGemiDocuments(arGemi: string, payload: unknown): void {
+  if (documentsCache.size >= DOCUMENTS_CACHE_MAX) {
+    const oldest = documentsCache.keys().next().value;
+    if (oldest) documentsCache.delete(oldest);
+  }
+  documentsCache.set(arGemi, { at: Date.now(), payload });
 }
 
 /**
@@ -177,6 +250,54 @@ async function readPortalDocuments(gemi: string, signal: AbortSignal): Promise<s
   );
   if (!response.ok) return [];
   return extractGreekDocumentLinks(await response.text());
+}
+
+/**
+ * Formato e nome reali del file, letti dagli header della risposta.
+ *
+ * Serve perché gli URL del registro non contengono l'estensione: il caso reale
+ * (ARGI CORPORATION, `/api/download/financial/2150556`) risponde con un file
+ * `.xls` — in realtà una tabella HTML — che in un iframe sarebbe illeggibile.
+ * Una HEAD (o, se non è ammessa, un GET con Range) basta a saperlo prima di
+ * costruire la scheda. Non è un canale alternativo: stesso host, stesso file.
+ */
+async function probeDocumentMeta(
+  url: string,
+): Promise<{ format?: string | undefined; fileName?: string | undefined }> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 6_000);
+  const read = (response: Response): { format?: string; fileName?: string } => {
+    const disposition = response.headers.get("content-disposition") ?? "";
+    const declared =
+      disposition.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/i)?.[1]?.trim() || undefined;
+    const fileName = declared ? safeFileName(decodeURIComponent(declared)) : undefined;
+    const format = documentFormat(response.headers.get("content-type") ?? "", declared);
+    const meta: { format?: string; fileName?: string } = {};
+    if (format) meta.format = format;
+    if (fileName) meta.fileName = fileName;
+    return meta;
+  };
+
+  try {
+    const head = await fetch(url, {
+      method: "HEAD",
+      headers: { "User-Agent": PORTAL_UA },
+      signal: controller.signal,
+    }).catch(() => undefined);
+    if (head?.ok) {
+      const meta = read(head);
+      if (meta.format || meta.fileName) return meta;
+    }
+    const ranged = await fetch(url, {
+      method: "GET",
+      headers: { "User-Agent": PORTAL_UA, Range: "bytes=0-0" },
+      signal: controller.signal,
+    }).catch(() => undefined);
+    if (ranged && (ranged.ok || ranged.status === 206)) return read(ranged);
+    return {};
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 /**
@@ -233,13 +354,17 @@ export async function resolveGreekDocuments(
 
     // 2) Documenti via API aperta ΓΕΜΗ.
     if (gemiApiKey()) {
-      const raw = await getGemiDocumentsRaw(arGemi, controller.signal);
+      const cached = cachedGemiDocuments(arGemi);
+      const raw: GemiApiResult<unknown> = cached
+        ? { ok: true, state: "OK", data: cached.payload }
+        : await getGemiDocumentsRaw(arGemi, controller.signal);
       if (raw.ok) {
+        if (!cached) rememberGemiDocuments(arGemi, raw.data);
         const candidates = collectGemiDocuments(raw.data);
         const financial = candidates.filter((candidate) => candidate.financial);
         const chosen = sortByDateDesc(financial.length ? financial : candidates);
         const documents = chosen
-          .map((candidate) => candidateToDocument(candidate, arGemi!))
+          .map((candidate) => candidateToDocument(candidate))
           .filter((doc): doc is GreekDocument => Boolean(doc))
           .slice(0, 8);
 
@@ -249,7 +374,11 @@ export async function resolveGreekDocuments(
         }
 
         if (documents.length) {
-          const result: GreekResolution = { state: "DOCUMENT_FOUND", documents };
+          const result: GreekResolution = {
+            state: "DOCUMENT_FOUND",
+            documents,
+            channel: "API aperta ΓΕΜΗ",
+          };
           if (company) result.company = company;
           return result;
         }
@@ -269,16 +398,28 @@ export async function resolveGreekDocuments(
       () => [] as string[],
     );
     const portalDocuments = portalLinks
-      .map((link, index) =>
-        toGreekDocument(
-          `Documento ufficiale depositato${portalLinks.length > 1 ? ` (${index + 1})` : ""}`,
-          link,
-        ),
-      )
+      .map((link, index) => {
+        let pathname = "";
+        try {
+          pathname = new URL(link).pathname;
+        } catch {
+          return undefined;
+        }
+        const family = greekDocumentFamily(pathname);
+        const kind = family ? documentFamilyLabel(family) : undefined;
+        const label = kind
+          ? `${kind}${portalLinks.length > 1 ? ` (${index + 1})` : ""}`
+          : `Documento ufficiale depositato${portalLinks.length > 1 ? ` (${index + 1})` : ""}`;
+        return toGreekDocument(label, link, { kind, financial: family === "financial" });
+      })
       .filter((doc): doc is GreekDocument => Boolean(doc));
 
     if (portalDocuments.length) {
-      const result: GreekResolution = { state: "DOCUMENT_FOUND", documents: portalDocuments };
+      const result: GreekResolution = {
+        state: "DOCUMENT_FOUND",
+        documents: portalDocuments,
+        channel: "Scheda pubblica ΓΕΜΗ",
+      };
       if (company) result.company = company;
       return result;
     }
@@ -324,20 +465,29 @@ export async function applyGreekDocuments(
 
   // Documento fornito dall'utente: validato, poi servito in pagina.
   if (attachedDocumentUrl && isGreekDocumentUrl(attachedDocumentUrl)) {
-    const fileName = decodeURIComponent(
-      new URL(attachedDocumentUrl).pathname.split("/").pop() ?? "documento",
-    );
+    const attached = new URL(attachedDocumentUrl);
+    const fileName = decodeURIComponent(attached.pathname.split("/").pop() ?? "documento");
+    const family = greekDocumentFamily(attached.pathname);
+    const kind = family ? documentFamilyLabel(family) : undefined;
+    const label = kind
+      ? `${kind} — ΓΕΜΗ ${gemi?.arGemi ?? identifier}`
+      : `Documento ufficiale — ΓΕΜΗ ${gemi?.arGemi ?? identifier}`;
     const document: FinancialDocumentRef = {
-      label: `Documento ufficiale — ΓΕΜΗ ${gemi?.arGemi ?? identifier}`,
+      label,
       fileName,
       viewerUrl: documentViewerUrl(attachedDocumentUrl),
       downloadUrl: documentDownloadUrl(attachedDocumentUrl, fileName),
     };
+    const format = documentFormat(label, attachedDocumentUrl);
+    if (format) document.format = format;
+    if (kind) document.kind = kind;
+    if (family === "financial") document.financial = true;
     response.financials = {
       ...(response.financials ?? { available: false, years: [] }),
       documents: [document],
       documentUrl: document.viewerUrl,
-      documentTitle: document.label,
+      documentTitle: label,
+      documentChannel: "Link fornito",
       source: "ΓΕΜΗ — Registro generale del commercio",
       note: "Documento ufficiale greco servito da questa pagina: apertura in pagina e download con un clic.",
     };
@@ -394,21 +544,48 @@ export async function applyGreekDocuments(
           viewerUrl: document.viewerUrl,
           downloadUrl: document.downloadUrl,
           fileName: document.fileName,
+          financial: document.financial,
         };
         if (document.year) ref.year = document.year;
         if (document.filedAt) ref.filedAt = document.filedAt;
         if (document.format) ref.format = document.format;
+        if (document.kind) ref.kind = document.kind;
         return ref;
       });
       const primary = documents[0]!;
+      const primarySource = resolution.documents[0]!;
+
+      // Formato vero del documento principale: decide se mostrarlo in pagina o
+      // proporre solo il download. Fallisce in silenzio: non blocca la scheda.
+      if (!primary.format) {
+        const meta: { format?: string | undefined; fileName?: string | undefined } =
+          await probeDocumentMeta(primarySource.sourceUrl).catch(() => ({}));
+        if (meta.format) primary.format = meta.format;
+        // Se il nome che avevamo non è un vero nome di file (l'etichetta greca
+        // non ha estensione), vale quello dichiarato dal registro.
+        const looksLikeFileName = /\.(pdf|xls|xlsx|xml|xhtml|zip|htm|html)$/i.test(
+          primary.fileName ?? "",
+        );
+        if (meta.fileName && !looksLikeFileName) {
+          primary.fileName = meta.fileName;
+          primary.downloadUrl = documentDownloadUrl(primarySource.sourceUrl, meta.fileName);
+        }
+      }
+
+      // Il titolo dice ciò che il registro ha davvero pubblicato: "bilancio"
+      // solo quando il registro lo indica come pubblicazione di conti annuali.
+      const title = primarySource.financial
+        ? primary.year
+          ? `Bilancio ${primary.year} — documento ufficiale ΓΕΜΗ`
+          : `Bilancio — documento ufficiale ΓΕΜΗ`
+        : `${primary.label}${primarySource.kind ? ` (${primarySource.kind})` : ""}`;
 
       response.financials = {
         ...(response.financials ?? { available: false, years: [] }),
         documents,
         documentUrl: primary.viewerUrl,
-        documentTitle: primary.year
-          ? `Bilancio ${primary.year} — documento ufficiale ΓΕΜΗ`
-          : primary.label,
+        documentTitle: title,
+        documentChannel: resolution.channel,
         source: "ΓΕΜΗ — Registro generale del commercio",
         note: "Documento ufficiale greco scaricato dal server dell'Osservatorio e servito da questa pagina: si apre qui e si scarica con un clic.",
       };

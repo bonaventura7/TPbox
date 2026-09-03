@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { applyGreekDocuments } from "../src/lib/company-finder/greek-financials.server";
+import { isViewableInPage } from "../src/lib/company-finder/document-links";
 import { getCountry } from "../src/lib/company-finder/countries";
 import type { SearchResponse } from "../src/lib/company-finder/types";
 
@@ -30,15 +31,24 @@ function greekResponse(vat: string, name: string): SearchResponse {
   };
 }
 
-function stubGemiApi(documentsPayload: unknown): ReturnType<typeof vi.fn> {
-  const fetchMock = vi.fn(async (input: string | URL | Request) => {
+interface StubOptions {
+  /** Header che il registro invia sul file: decidono formato e nome scaricato. */
+  file?: { contentType?: string | undefined; fileName?: string | undefined } | undefined;
+  arGemi?: number | undefined;
+}
+
+function stubGemiApi(
+  documentsPayload: unknown,
+  options: StubOptions = {},
+): ReturnType<typeof vi.fn> {
+  const fetchMock = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
     const url = String(input);
     if (url.includes("/companies?")) {
       return new Response(
         JSON.stringify({
           searchResults: [
             {
-              arGemi: 178892854000,
+              arGemi: options.arGemi ?? 178892854000,
               afm: "802575874",
               coNameEl: "ARGI CORPORATION ΜΟΝΟΠΡΟΣΩΠΗ Ι.Κ.Ε.",
               legalType: { descr: "Ι.Κ.Ε." },
@@ -60,6 +70,13 @@ function stubGemiApi(documentsPayload: unknown): ReturnType<typeof vi.fn> {
         headers: { "Content-Type": "application/json" },
       });
     }
+    if (url.includes("/api/download/")) {
+      const headers = new Headers();
+      if (options.file?.contentType) headers.set("Content-Type", options.file.contentType);
+      if (options.file?.fileName)
+        headers.set("Content-Disposition", `attachment; filename="${options.file.fileName}"`);
+      return new Response(null, { status: init?.method === "HEAD" ? 200 : 206, headers });
+    }
     return new Response("{}", { status: 404 });
   });
   vi.stubGlobal("fetch", fetchMock);
@@ -74,15 +91,20 @@ afterEach(() => {
 describe("flusso Grecia: dalla ricerca al documento in pagina", () => {
   it("ΓΕΜΗ a 12 cifre → identità dal registro e bilancio scaricabile con un clic", async () => {
     process.env["GEMI_API_KEY"] = "chiave-di-prova";
-    stubGemiApi({
-      decision: [
-        {
-          decisionSubject: "Καταχώριση οικονομικών καταστάσεων χρήσης 2024",
-          dateRegistrated: "22/09/2025",
-          assemblyDecisionUrl: REAL_DOCUMENT_URL,
-        },
-      ],
-    });
+    stubGemiApi(
+      {
+        decision: [
+          {
+            decisionSubject: "Καταχώριση οικονομικών καταστάσεων χρήσης 2024",
+            dateRegistrated: "22/09/2025",
+            assemblyDecisionUrl: REAL_DOCUMENT_URL,
+          },
+        ],
+      },
+      // Il registro serve questo bilancio come file Excel: la scheda non deve
+      // promettere un riquadro di lettura.
+      { file: { contentType: "application/vnd.ms-excel", fileName: "ARGI-2024.xls" } },
+    );
 
     const result = await applyGreekDocuments(
       greekResponse("178892854000", "ARGI CORPORATION"),
@@ -106,10 +128,57 @@ describe("flusso Grecia: dalla ricerca al documento in pagina", () => {
     expect(documents[0]?.filedAt).toBe("22/09/2025");
     expect(result.financials?.documentUrl?.startsWith("/api/company-finder/document?")).toBe(true);
 
+    // Etichette: ciò che il registro dichiara, con la provenienza.
+    expect(documents[0]?.financial).toBe(true);
+    expect(documents[0]?.kind).toBe("Atto depositato (decisione organo)");
+    expect(result.financials?.documentTitle).toContain("Bilancio 2024");
+    expect(result.financials?.documentChannel).toBe("API aperta ΓΕΜΗ");
+
+    // Formato letto dagli header del registro: Excel → niente iframe illeggibile,
+    // il nome file scaricato è quello vero.
+    expect(documents[0]?.format).toBe("XLS");
+    expect(isViewableInPage(documents[0]?.format)).toBe(false);
+    expect(documents[0]?.fileName).toBe("ARGI-2024.xls");
+    expect(documents[0]?.downloadUrl).toContain("filename=ARGI-2024.xls");
+
     // Nessuna fonte terza proposta all'utente.
     expect(result.officialPage).toBeUndefined();
     // Nessuna chiave API nel payload che arriva al browser.
     expect(JSON.stringify(result)).not.toContain("chiave-di-prova");
+  });
+
+  it("un atto che non è un bilancio non viene presentato come bilancio", async () => {
+    process.env["GEMI_API_KEY"] = "chiave-di-prova";
+    // ΓΕΜΗ diverso dagli altri casi: la cache documenti è per ΓΕΜΗ.
+    stubGemiApi(
+      {
+        decision: [
+          {
+            decisionSubject: "Καταστατικό εταιρείας",
+            dateRegistrated: "10/01/2025",
+            assemblyDecisionUrl:
+              "https://publicity.businessportal.gr/api/download/statutes/998877?companyId=156478806000",
+          },
+        ],
+      },
+      { arGemi: 156478806000 },
+    );
+
+    const result = await applyGreekDocuments(
+      greekResponse("156478806000", "ALTRA SOCIETA IKE"),
+      "156478806000",
+      "",
+    );
+
+    const documents = result.financials?.documents ?? [];
+    expect(documents.length).toBe(1);
+    expect(documents[0]?.financial).toBe(false);
+    expect(documents[0]?.label).toContain("Καταστατικό");
+    // Il titolo ripete ciò che il registro ha pubblicato: niente "Bilancio".
+    expect(result.financials?.documentTitle ?? "").not.toContain("Bilancio");
+    expect(result.financials?.documentChannel).toBe("API aperta ΓΕΜΗ");
+    // Il download a un clic resta, anche se non è un bilancio.
+    expect(documents[0]?.downloadUrl).toContain("disposition=attachment");
   });
 
   it("il link incollato dall'utente diventa un documento in pagina", async () => {
