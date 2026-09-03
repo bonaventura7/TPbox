@@ -84,6 +84,17 @@ export interface FinancialYear {
   currency: string;
 }
 
+export type DocumentAvailability = "REGISTRY_ONLY" | "DOCUMENT_FOUND" | "DOCUMENT_DOWNLOADABLE";
+
+export type RestrictionCode =
+  | "CAPTCHA_REQUIRED"
+  | "AUTH_REQUIRED"
+  | "SESSION_BOUND"
+  | "SOURCE_RESTRICTION"
+  | "RATE_LIMITED"
+  | "SOURCE_UNAVAILABLE"
+  | "INVALID_DOCUMENT";
+
 export interface Financials {
   available: boolean;
   currency?: string | undefined;
@@ -98,6 +109,29 @@ export interface Financials {
   documentUrl?: string | undefined;
   /** Nome del documento (es. "Jahresabschluss 2024 — Siemens AG") */
   documentTitle?: string | undefined;
+  /**
+   * Stato esplicito della disponibilità documentale:
+   * REGISTRY_ONLY (solo consultazione), DOCUMENT_FOUND (riferimento noto),
+   * DOCUMENT_DOWNLOADABLE (scaricabile da endpoint interno TPBox).
+   */
+  availability?: DocumentAvailability | undefined;
+  /** Motivo per cui il download automatico non è possibile. */
+  restriction?: RestrictionCode | undefined;
+  /** Elenco dei bilanci individuati, senza URL o token della fonte. */
+  documents?: FinancialDocumentSummary[] | undefined;
+}
+
+/** Vista client di un documento: nessun URL, cookie o token del registro. */
+export interface FinancialDocumentSummary {
+  id: string;
+  year?: number | undefined;
+  kind: "ANNUAL_REPORT" | "BALANCE_SHEET" | "AUDIT_REPORT" | "OTHER";
+  format: "pdf" | "xbrl" | "xml" | "zip" | "html" | "unknown";
+  availability: DocumentAvailability;
+  restriction?: RestrictionCode | undefined;
+  title?: string | undefined;
+  /** Endpoint interno, presente solo se DOCUMENT_DOWNLOADABLE. */
+  downloadUrl?: string | undefined;
 }
 
 /**
@@ -108,12 +142,11 @@ export interface OfficialPageRef {
   url: string;
   label: string;
   note: string;
-  /**
-   * true = la pagina esige interazione umana (CAPTCHA, login) o rifiuta
-   * l'embedding: la UI la offre come link in nuova scheda, mai in iframe.
-   */
-  browserOnly?: boolean | undefined;
+  mode?: "embed" | "external" | undefined;
+  instructions?: string[] | undefined;
+  actionLabel?: string | undefined;
 }
+
 
 export interface SearchResponse {
   found: boolean;

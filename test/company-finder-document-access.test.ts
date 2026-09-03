@@ -68,11 +68,12 @@ describe("macchina a stati dell'accesso al documento", () => {
     const page = officialPageFor("HU", "", "OTP Bank");
     expect(page).toBeDefined();
     expect(page!.url).toBe("https://e-beszamolo.im.gov.hu/oldal/beszamolo_kereses");
-    expect(page!.browserOnly).toBe(true);
-    expect(page!.actionLabel).toBe("Apri il portale ufficiale");
+    expect(page!.mode).toBe("external");
+    expect(page!.actionLabel).toBe("Apri il registro ufficiale");
     expect(page!.note).toMatch(/CAPTCHA/);
     expect(page!.note).toMatch(/sessione/);
     expect(page!.note).toMatch(/beszamolo_allomany_ertekesitese/);
+    expect((page!.instructions ?? []).length).toBeGreaterThan(2);
   });
 
   it("i paesi 'registry' non sono offerti e non inventano una pagina", () => {
