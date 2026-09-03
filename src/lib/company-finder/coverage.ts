@@ -1,93 +1,52 @@
-// ---------- Copertura reale, misurata ----------
-// Tre livelli, non uno. La differenza conta perché cambia cosa vede l'utente.
+// ---------- Copertura reale, vista derivata dalla macchina a stati ----------
+// La classificazione vive in `document-access.ts` (DOCUMENT_AVAILABLE /
+// LIST_ONLY / SOURCE_RESTRICTED / REGISTRY_ONLY, con la prova per voce).
+// Questo modulo espone le tre viste storiche usate dal resto del codice,
+// derivate dalla stessa tabella: nessuna lista duplicata che possa divergere.
 //
 //  A. AUTOMATICO — il server dell'Osservatorio scarica documento o valori e li
 //     mostra in pagina. Nessun clic, nessuna chiave.
-//  B. CONSULTAZIONE — il bilancio è gratuito ma il registro rifiuta le chiamate
-//     da server (WAF, sessione, CAPTCHA). La sua pagina ufficiale viene
-//     incorporata: la carica il browser dell'utente, che passa. Verificato in
-//     Chrome che tutti i portali elencati accettano di essere incorporati.
+//  B. CONSULTAZIONE — il bilancio è gratuito ma il registro non è
+//     interrogabile da un server (WAF, sessione, CAPTCHA, condizioni d'uso).
+//     La pagina ufficiale viene incorporata quando possibile, altrimenti
+//     offerta come link con il percorso guidato.
 //  C. NESSUNA FONTE GRATUITA — il documento costa. Questi paesi NON sono
 //     offerti dal tool: promettere una copertura che non c'è è peggio che
 //     dichiararne l'assenza.
 
+import { DOCUMENT_ACCESS, documentTierFor, isOffered, type AccessInfo } from "./document-access";
+
+function isosOf(tier: AccessInfo["tier"]): string[] {
+  return Object.entries(DOCUMENT_ACCESS)
+    .filter(([, info]) => info.tier === tier)
+    .map(([iso]) => iso);
+}
+
 /** Livello A: bilancio recuperato dal server e mostrato in pagina. */
-export const AUTO_ISOS = ["DE", "NL", "DK", "UK", "FR"] as const;
+export const AUTO_ISOS = isosOf("document") as readonly string[];
 
 /**
- * Livello B: bilancio gratuito, consultazione ufficiale incorporata.
- * L'URL è la pagina da cui si arriva al documento depositato.
+ * Livello B: bilancio gratuito, consultazione ufficiale (incorporata o da
+ * aprire nel browser). L'URL è la pagina da cui si arriva al documento
+ * depositato; la `label` è l'etichetta ufficiale del portale.
  */
-export const CONSULT_PAGES: Record<string, { url: string; label: string }> = {
-  BE: {
-    url: "https://consult.cbso.nbb.be/",
-    label: "Centrale dei bilanci — Banca nazionale del Belgio",
-  },
-  PL: {
-    url: "https://ekrs.ms.gov.pl/rdf/pd/search_df",
-    label: "KRS — Repozytorium Dokumentów Finansowych",
-  },
-  LU: {
-    url: "https://www.lbr.lu/mjrcs-web-front/",
-    label: "LBR — Registre de commerce et des sociétés",
-  },
-  GR: {
-    url: "https://publicity.businessportal.gr/",
-    label: "ΓΕΜΗ — Registro generale del commercio",
-  },
-  CZ: { url: "https://or.justice.cz/ias/ui/rejstrik", label: "Obchodní rejstřík — Sbírka listin" },
-  EE: { url: "https://ariregister.rik.ee/eng", label: "e-Äriregister — Centro dei registri" },
-  FI: { url: "https://tietopalvelu.ytj.fi/", label: "YTJ / PRH — Servizio informazioni imprese" },
-  HU: {
-    url: "https://e-beszamolo.im.gov.hu/oldal/kezdolap",
-    label: "e-Beszámoló — Ministero della Giustizia",
-  },
-  SK: {
-    url: "https://www.registeruz.sk/cruz-public/domain/accountingentity/simplesearch",
-    label: "Register účtovných závierok",
-  },
-  SI: { url: "https://www.ajpes.si/jolp/", label: "AJPES JOLP — Bilanci annuali" },
-  LV: { url: "https://www.ur.gov.lv/lv/", label: "Uzņēmumu reģistrs — sezione pubblica" },
-  LT: {
-    url: "https://www.registrucentras.lt/jar/p/",
-    label: "Registrų centras — Registro imprese",
-  },
-  BG: {
-    url: "https://portal.registryagency.bg/CR/en/Reports/VerificationPersonOrg",
-    label: "Търговски регистър — Registry Agency",
-  },
-  PT: {
-    url: "https://publicacoes.mj.pt/Pesquisa.aspx",
-    label: "Publicações — Ministério da Justiça",
-  },
-  RO: {
-    url: "https://www.mfinante.gov.ro/domenii/informatii-contribuabili/persoane-juridice/info-pj-selectie-dupa-cui",
-    label: "Ministerul Finanțelor — Situații financiare",
-  },
-  HR: {
-    url: "https://rgfi.fina.hr/JavnaObjava-web/jsp/prijavaKorisnika.jsp",
-    label: "FINA RGFI — Registro dei bilanci",
-  },
-  NO: { url: "https://virksomhet.brreg.no/", label: "Brønnøysundregistrene — Regnskapsregisteret" },
-};
+export const CONSULT_PAGES: Record<string, { url: string; label: string }> = Object.fromEntries(
+  Object.entries(DOCUMENT_ACCESS)
+    .filter(([, info]) => (info.tier === "list" || info.tier === "restricted") && info.consult)
+    .map(([iso, info]) => [iso, { url: info.consult!.url, label: info.consult!.label }]),
+);
 
 /**
  * Livello C: il bilancio non è gratuito. Il tool non li offre; la nota dice
  * quanto costa e dove, così l'utente sa dove andare invece di girare a vuoto.
  */
-export const NO_FREE_SOURCE: Record<string, string> = {
-  IT: "I bilanci sono depositati presso le CCIAA: copia integrale 4,50–6 € su registroimprese.it. Gratis solo la propria impresa, via Impresa Italia con SPID.",
-  ES: "Le cuentas anuales del Registro Mercantil sono a pagamento. Gratuiti solo i conti auditati delle società quotate, sul portale CNMV.",
-  SE: "Bolagsverket rilascia l'årsredovisning a tariffa, circa 100 SEK a documento.",
-  CY: "Il fascicolo societario del DRCOR, che contiene i conti, costa 10 €.",
-  AT: "Il Firmenbuch consente la ricerca gratuita ma il documento Jahresabschluss costa circa 1,44 € a copia.",
-  IE: "Il CRO rilascia i documenti, conti inclusi, a tariffa per documento.",
-  MT: "Il Malta Business Registry applica un costo per la documentazione societaria.",
-  IS: "Nessun canale gratuito verificato per i bilanci islandesi.",
-  LI: "In Liechtenstein i conti annuali non sono pubblicati online.",
-};
+export const NO_FREE_SOURCE: Record<string, string> = Object.fromEntries(
+  Object.entries(DOCUMENT_ACCESS)
+    .filter(([, info]) => info.tier === "registry")
+    .map(([iso, info]) => [iso, info.reason]),
+);
 
-/** Il tool copre un paese solo se il bilancio è ottenibile gratis. */
+/** Il tool copre un paese solo se esiste un canale onesto verso il bilancio. */
 export function isCovered(iso: string): boolean {
-  return (AUTO_ISOS as readonly string[]).includes(iso) || iso in CONSULT_PAGES;
+  return documentTierFor(iso) !== undefined && isOffered(iso);
 }

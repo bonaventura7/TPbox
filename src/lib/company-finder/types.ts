@@ -108,6 +108,11 @@ export interface OfficialPageRef {
   url: string;
   label: string;
   note: string;
+  /**
+   * true = la pagina esige interazione umana (CAPTCHA, login) o rifiuta
+   * l'embedding: la UI la offre come link in nuova scheda, mai in iframe.
+   */
+  browserOnly?: boolean | undefined;
 }
 
 export interface SearchResponse {

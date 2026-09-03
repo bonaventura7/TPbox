@@ -31,6 +31,10 @@ export const ALLOWED_DOCUMENT_HOSTS = new Set([
   // GR — G.E.MI. / BusinessPortal iXBRL filings
   "filings.businessportal.gr",
   "publicity.businessportal.gr",
+  // ESEF — indice pubblico dei depositi quotati UE/SEE (report iXBRL,
+  // package ZIP, xBRL-JSON). Fonte aperta senza chiave; per HU e per i
+  // paesi SOURCE_RESTRICTED è l'unico canale documentale automatico lecito.
+  "filings.xbrl.org",
 ]);
 
 const HTTP_ONLY_HOSTS = new Set(["regnskaber.virk.dk"]);

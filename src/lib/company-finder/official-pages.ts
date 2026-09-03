@@ -1,7 +1,10 @@
 // ---------- Consultazione ufficiale nel browser dell'utente ----------
-// Alcuni registri richiedono un browser reale o una sessione ufficiale.
+// Le pagine che questo modulo propone derivano dalla macchina a stati di
+// `document-access.ts`: la nota che l'utente legge è la PROVA della
+// classificazione del paese, non un testo generico. Nessuna pagina promette
+// il documento quando il documento non è consegnabile dal tool.
 
-import { CONSULT_PAGES, NO_FREE_SOURCE } from "./coverage";
+import { documentAccessFor } from "./document-access";
 
 export interface OfficialPage {
   url: string;
@@ -11,6 +14,11 @@ export interface OfficialPage {
   balanceUrl?: string | undefined;
   /** Testo dell'azione primaria mostrata nel Company Finder. */
   actionLabel?: string | undefined;
+  /**
+   * true = non incorporare in iframe: la pagina esige interazione umana
+   * (CAPTCHA, login) o rifiuta l'embedding. Si offre solo il link.
+   */
+  browserOnly?: boolean | undefined;
 }
 
 function digits(value: string): string {
@@ -42,14 +50,18 @@ export function officialPageFor(
   const id = digits(localVat);
   const name = query.trim();
   const rawId = localVat.trim() || name;
+  const access = documentAccessFor(iso);
+
+  if (!access || access.tier === "registry") return undefined;
 
   const luRcs = iso === "LU" ? normalizeLuxembourgRcs(rawId) : undefined;
   if (luRcs) {
     return {
       url: `https://www.lbr.lu/mjrcs-web-front/consult-company/${luRcs}?tab=deposit`,
       label: "LBR — Luxembourg Business Registers",
-      actionLabel: "Apri bilancio",
-      note: "Apre direttamente la sezione depositi della società nel registro ufficiale. Se il deposito richiede autenticazione, la procedura prosegue sul portale LBR.",
+      actionLabel: "Apri la scheda depositi",
+      browserOnly: true,
+      note: "Apre direttamente la sezione depositi della società nel registro ufficiale. Se il deposito richiede autenticazione, la procedura prosegue nel portale LBR: completala lì, il tool non interviene.",
     };
   }
 
@@ -61,8 +73,9 @@ export function officialPageFor(
     return {
       url: `https://publicity.businessportal.gr/company/${grGemi}`,
       label: "G.E.MI. — Publicity",
-      actionLabel: "Apri bilancio",
-      note: "Apre direttamente la società nel portale ufficiale. Quando il record contiene il link al singolo documento iXBRL, quello viene usato come destinazione primaria.",
+      actionLabel: "Apri la scheda G.E.MI.",
+      browserOnly: true,
+      note: "Apre direttamente la società nel portale ufficiale, protetto da reCAPTCHA: la risoluzione del CAPTCHA e lo scaricamento del deposito avvengono manualmente nel browser. Quando il record contiene il link al singolo documento iXBRL, quello viene usato come destinazione primaria.",
     };
   }
 
@@ -71,8 +84,21 @@ export function officialPageFor(
     return {
       url: "https://rdf-przegladarka.ms.gov.pl/wyszukaj-podmiot",
       label: "RDF — Repozytorium Dokumentów Finansowych",
-      actionLabel: "Apri bilancio",
-      note: `Cerca KRS ${plKrs}, seleziona il periodo effettivo e quindi “Roczne sprawozdanie finansowe”. Il tool non inventa l'anno del deposito.`,
+      actionLabel: "Apri il Repozytorium",
+      browserOnly: true,
+      note: `Nel portale premi “Szukaj” e cerca il KRS ${plKrs}, seleziona il periodo effettivo del deposito e apri il documento “Roczne sprawozdanie finansowe”, quindi scaricalo con “Pobierz dokument”. Il tool non inventa l'anno del deposito e non scarica al posto tuo: il Repozytorium rifiuta le richieste da server.`,
+    };
+  }
+
+  if (iso === "HU") {
+    return {
+      url: access.consult?.url ?? "https://e-beszamolo.im.gov.hu/oldal/beszamolo_kereses",
+      label: access.consult?.label ?? "e-Beszámoló — Ministero della Giustizia (HU)",
+      actionLabel: "Apri il portale ufficiale",
+      browserOnly: true,
+      note:
+        `${access.reason} ` +
+        (access.bulk ? `${access.bulk.label}: ${access.bulk.note} (${access.bulk.url})` : ""),
     };
   }
 
@@ -108,16 +134,18 @@ export function officialPageFor(
     };
   }
 
-  const consult = CONSULT_PAGES[iso];
-  if (consult) {
+  if (access.consult) {
+    const restricted = access.tier === "restricted";
     return {
-      url: consult.url,
-      label: consult.label,
-      actionLabel: "Apri bilancio",
-      note: "Apre il punto di consultazione ufficiale del registro da cui è possibile accedere al documento di bilancio.",
+      url: access.consult.url,
+      label: access.consult.label,
+      actionLabel: restricted ? "Apri il portale ufficiale" : "Apri la pagina ufficiale",
+      browserOnly: access.consult.browserOnly,
+      note: restricted
+        ? `${access.reason} Il portale si apre in una nuova scheda: la ricerca e lo scaricamento del documento si completano lì, come persona.`
+        : `${access.reason} Da questa pagina si raggiunge il documento di bilancio depositato.`,
     };
   }
 
-  if (NO_FREE_SOURCE[iso]) return undefined;
   return undefined;
 }
