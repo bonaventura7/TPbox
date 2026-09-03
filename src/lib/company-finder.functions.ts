@@ -100,7 +100,6 @@ async function browserRegistryResponse(
         authority: country.registryAuthority,
         id: cleaned,
       },
-
     },
     financials: {
       available: false,

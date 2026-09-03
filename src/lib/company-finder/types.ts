@@ -147,7 +147,6 @@ export interface OfficialPageRef {
   actionLabel?: string | undefined;
 }
 
-
 export interface SearchResponse {
   found: boolean;
   company?: CompanyProfile | undefined;

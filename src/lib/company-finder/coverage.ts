@@ -16,12 +16,7 @@
 //     paesi NON sono offerti dal tool: promettere una copertura che non c'è è
 //     peggio che dichiararne l'assenza.
 
-import {
-  DOCUMENT_ACCESS,
-  documentTierFor,
-  isOffered,
-  type AccessInfo,
-} from "./document-access";
+import { DOCUMENT_ACCESS, documentTierFor, isOffered, type AccessInfo } from "./document-access";
 
 function isosOf(tier: AccessInfo["tier"]): string[] {
   return Object.entries(DOCUMENT_ACCESS)

@@ -746,7 +746,8 @@ export async function runSearch(req: SearchRequest, depth = 0): Promise<SearchRe
   // NL: 8 cifre pure nel campo IVA = KVK-nummer (NON un numero IVA) → no VIES.
   const nlKvkDirect = countryIso === "NL" && !!kvkFromInput(localVat);
   // HU: un cégjegyzékszám (NN-NN-NNNNNN) non è un numero IVA → mai al VIES.
-  const huRegistryNumber = countryIso === "HU" && /^\d{2}-?\d{2}-?\d{6}$/.test(localVat.replace(/\s/g, ""));
+  const huRegistryNumber =
+    countryIso === "HU" && /^\d{2}-?\d{2}-?\d{6}$/.test(localVat.replace(/\s/g, ""));
   // ---------- 2b. VIES (tutti i paesi con prefisso IVA) ----------
   if (hasVat && !pl8 && !pl10krs && !nlKvkDirect && !huRegistryNumber) {
     jobs.push(

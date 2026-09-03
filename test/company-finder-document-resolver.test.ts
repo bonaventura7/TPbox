@@ -51,8 +51,12 @@ describe("allowlist esatta e protezione SSRF", () => {
   });
 
   it("non segue un redirect verso un host fuori allowlist", async () => {
-    const fetchImpl = vi.fn(async () =>
-      new Response(null, { status: 302, headers: { Location: "https://attacker.example/doc.pdf" } }),
+    const fetchImpl = vi.fn(
+      async () =>
+        new Response(null, {
+          status: 302,
+          headers: { Location: "https://attacker.example/doc.pdf" },
+        }),
     );
     const token = issueDocumentToken({ url: "https://opendata.kvk.nl/doc.pdf", registry: "KVK" });
     const response = await handleFinancialDocumentRequest(request(token), {
@@ -121,9 +125,14 @@ describe("token opaco: nessun dato del registro verso il client", () => {
   });
 
   it("la risposta di errore non contiene mai l'URL della fonte", async () => {
-    const token = issueDocumentToken({ url: "https://opendata.kvk.nl/segreto.pdf", registry: "KVK" });
+    const token = issueDocumentToken({
+      url: "https://opendata.kvk.nl/segreto.pdf",
+      registry: "KVK",
+    });
     const response = await handleFinancialDocumentRequest(request(token), {
-      fetchImpl: vi.fn(async () => new Response("nope", { status: 404 })) as unknown as typeof fetch,
+      fetchImpl: vi.fn(
+        async () => new Response("nope", { status: 404 }),
+      ) as unknown as typeof fetch,
     });
     const body = await response.text();
     expect(body).not.toContain("segreto.pdf");
