@@ -18,13 +18,9 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { findCompany } from "@/lib/company-finder.functions";
 import { ALL_COUNTRIES } from "@/lib/company-finder/countries";
-import { AUTO_ISOS, CONSULT_PAGES, NO_FREE_SOURCE } from "@/lib/company-finder/coverage";
-import type {
-  CompanyProfile,
-  Financials,
-  OfficialPageRef,
-  SourceStatus,
-} from "@/lib/company-finder/types";
+import { isCovered } from "@/lib/company-finder/coverage";
+import type { CompanyProfile, Financials, OfficialPageRef } from "@/lib/company-finder/types";
+
 
 const TITLE = "Company Finder";
 const DESCRIPTION =
@@ -64,26 +60,13 @@ const EXAMPLES = [
   { label: "PROXIMUS · BE0202239951", query: "Proximus", vat: "BE0202239951", country: "BE" },
 ] as const;
 
-/** Paesi per cui il tool estrae il bilancio da una fonte ufficiale gratuita. */
-const FINANCIALS_REGISTRY: Record<string, string> = {
-  DE: "Jahresabschluss — documento ufficiale",
-  NL: "jaarrekeningen XBRL — valori per esercizio",
-  FR: "CA e risultato netto — fonte pubblica",
-  DK: "årsrapport — documento ufficiale",
-  BE: "conti annuali NBB — chiave gratuita",
-  UK: "annual accounts — documento ufficiale",
-};
-
 const NUMBER_FORMAT = new Intl.NumberFormat("it-IT", { maximumFractionDigits: 0 });
 const DATE_FORMAT = new Intl.DateTimeFormat("it-IT", {
   day: "2-digit",
   month: "2-digit",
   year: "numeric",
 });
-const TIMESTAMP_FORMAT = new Intl.DateTimeFormat("it-IT", {
-  dateStyle: "medium",
-  timeStyle: "short",
-});
+
 
 function fmtNum(value: number | undefined, currency: string | undefined): string {
   if (value === undefined) return "—";
@@ -129,129 +112,12 @@ function Field({ label, value }: { label: string; value?: string | null | undefi
   );
 }
 
-function SourceRow({ source }: { source: SourceStatus }) {
-  const icon = source.state === "ok" ? "✓" : source.state === "failed" ? "✕" : "–";
-  const color =
-    source.state === "ok"
-      ? "text-petrol"
-      : source.state === "failed"
-        ? "text-destructive"
-        : "text-muted-foreground";
-  return (
-    <li className="flex items-start justify-between gap-4 py-2">
-      <span className="flex items-start gap-2 text-sm">
-        <span
-          aria-hidden="true"
-          className={`mt-0.5 inline-block w-4 text-center font-semibold ${color}`}
-        >
-          {icon}
-        </span>
-        <span>
-          {source.label}
-          {source.detail ? (
-            <span className="block text-xs text-muted-foreground">{source.detail}</span>
-          ) : null}
-        </span>
-      </span>
-      {typeof source.ms === "number" ? (
-        <span className="text-xs tabular-nums text-muted-foreground">
-          {(source.ms / 1000).toFixed(2)}s
-        </span>
-      ) : null}
-    </li>
-  );
-}
+/**
+ * Unica fonte di verità per il dropdown: un paese compare solo se il tool ne
+ * ottiene il bilancio gratuitamente (isCovered in lib/company-finder/coverage).
+ */
+const COVERED_COUNTRIES = ALL_COUNTRIES.filter((country) => isCovered(country.iso));
 
-const COVERED_COUNTRIES = ALL_COUNTRIES.filter(
-  (country) =>
-    (AUTO_ISOS as readonly string[]).includes(country.iso) || country.iso in CONSULT_PAGES,
-);
-
-function CoverageRow({
-  flag,
-  name,
-  chip,
-  tone,
-}: {
-  flag: string;
-  name: string;
-  chip: string;
-  tone: "ok" | "neutral";
-}) {
-  return (
-    <li className="flex items-center justify-between gap-3 border-b border-border/60 py-1.5">
-      <span>
-        {flag} {name}
-      </span>
-      <Chip tone={tone}>{chip}</Chip>
-    </li>
-  );
-}
-
-function RegistryCoverage() {
-  const automatici = ALL_COUNTRIES.filter((c) => (AUTO_ISOS as readonly string[]).includes(c.iso));
-  const consultabili = ALL_COUNTRIES.filter((c) => c.iso in CONSULT_PAGES);
-  const esclusi = ALL_COUNTRIES.filter((c) => c.iso in NO_FREE_SOURCE);
-
-  return (
-    <section className="border border-border bg-card p-5 sm:p-6">
-      <p className="text-xs tracking-[0.18em] text-petrol uppercase">Copertura</p>
-      <h3 className="mt-1 font-serif text-xl">Dove il bilancio arriva, e come</h3>
-      <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">
-        Il tool copre i paesi in cui il bilancio depositato è gratuito. Dove il registro accetta
-        chiamate da server il documento compare da solo; dove le rifiuta, la sua pagina ufficiale
-        viene caricata qui dal tuo browser. I paesi in cui il documento si paga non sono coperti, e
-        sono elencati per non lasciarti cercare a vuoto.
-      </p>
-
-      <h4 className="mt-5 text-xs font-medium tracking-wide text-muted-foreground uppercase">
-        Bilancio recuperato dal server, mostrato in pagina
-      </h4>
-      <ul className="mt-2 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
-        {automatici.map((country) => (
-          <CoverageRow
-            key={country.iso}
-            flag={country.flag}
-            name={country.nameIt}
-            tone="ok"
-            chip={FINANCIALS_REGISTRY[country.iso] ?? "documento ufficiale"}
-          />
-        ))}
-      </ul>
-
-      <h4 className="mt-5 text-xs font-medium tracking-wide text-muted-foreground uppercase">
-        Bilancio gratuito, registro ufficiale caricato in pagina
-      </h4>
-      <ul className="mt-2 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
-        {consultabili.map((country) => (
-          <CoverageRow
-            key={country.iso}
-            flag={country.flag}
-            name={country.nameIt}
-            tone="neutral"
-            chip={CONSULT_PAGES[country.iso]?.label ?? "registro nazionale"}
-          />
-        ))}
-      </ul>
-
-      <h4 className="mt-5 text-xs font-medium tracking-wide text-muted-foreground uppercase">
-        Non coperti: il bilancio non è gratuito
-      </h4>
-      <ul className="mt-2 space-y-1.5 text-sm">
-        {esclusi.map((country) => (
-          <li key={country.iso} className="border-b border-border/60 py-1.5">
-            <span className="font-medium">
-              {country.flag} {country.nameIt}
-            </span>
-            <span className="ml-2 text-xs text-muted-foreground">
-              {NO_FREE_SOURCE[country.iso]}
-            </span>
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}
 
 function CompanyCard({ company }: { company: CompanyProfile }) {
   return (
@@ -638,9 +504,8 @@ function CompanyFinderPage() {
           </div>
         </form>
 
-        <div className="mt-6">
-          <RegistryCoverage />
-        </div>
+
+
 
         <div aria-live="polite" className="mt-6 space-y-6">
           {mutation.isPending ? (
@@ -687,27 +552,8 @@ function CompanyFinderPage() {
 
               {result.officialPage ? <OfficialPageCard page={result.officialPage} /> : null}
 
-              {result.sources.length > 0 ? (
-                <section className="border border-border bg-card p-5 sm:p-6">
-                  <p className="text-xs tracking-[0.18em] text-petrol uppercase">
-                    Trasparenza sulle fonti
-                  </p>
-                  <h3 className="mt-1 font-serif text-xl">Consultazioni eseguite dal server</h3>
-                  <ul className="mt-3 divide-y divide-border">
-                    {result.sources.map((source) => (
-                      <SourceRow key={source.id} source={source} />
-                    ))}
-                  </ul>
-                  <p className="mt-4 text-xs leading-relaxed text-muted-foreground">
-                    Data di consultazione:{" "}
-                    <span className="font-medium">
-                      {TIMESTAMP_FORMAT.format(new Date(result.searchedAt))}
-                    </span>
-                    . I dati appartengono ai rispettivi registri ufficiali; le persone fisiche
-                    possono risultare oscurate ai sensi del GDPR.
-                  </p>
-                </section>
-              ) : null}
+
+
             </>
           ) : null}
         </div>
