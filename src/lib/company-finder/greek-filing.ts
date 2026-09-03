@@ -18,7 +18,7 @@ export async function resolveGreekFilingUrl(
       Accept: "text/html,application/xhtml+xml",
     },
     redirect: "follow",
-    signal,
+    signal: signal ?? null,
   });
   if (!response.ok) return undefined;
   return extractGreekFilingUrl(await response.text());

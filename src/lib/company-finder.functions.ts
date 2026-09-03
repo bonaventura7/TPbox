@@ -91,8 +91,10 @@ async function browserRegistryResponse(
       country,
       registry: {
         name: officialPage.label,
+        authority: country.registryAuthority,
         id: cleaned,
       },
+
     },
     financials: {
       available: false,

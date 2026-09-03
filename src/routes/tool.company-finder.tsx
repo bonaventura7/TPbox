@@ -261,6 +261,39 @@ function FinancialsCard({ financials }: { financials: Financials | undefined }) 
         </p>
       ) : null}
 
+      {financials?.documents && financials.documents.length > 0 ? (
+        <div className="mt-5">
+          <h4 className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Bilanci individuati</h4>
+          <ul className="mt-2 divide-y divide-border border border-border">
+            {financials.documents.map((doc) => (
+              <li key={doc.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm">
+                <span>
+                  <span className="font-medium">{doc.year ?? "Esercizio non indicato"}</span>
+                  <span className="text-muted-foreground"> · {DOC_KIND_LABEL[doc.kind]} · {doc.format.toUpperCase()}</span>
+                </span>
+                {doc.availability === "DOCUMENT_DOWNLOADABLE" && doc.downloadUrl ? (
+                  <a
+                    href={doc.downloadUrl}
+                    className="border border-border bg-muted px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                  >
+                    Scarica bilancio
+                  </a>
+                ) : (
+                  <Chip>{doc.restriction ? RESTRICTION_LABEL[doc.restriction] : "Solo consultazione"}</Chip>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {financials?.availability === "REGISTRY_ONLY" && financials.restriction ? (
+        <p className="mt-4 max-w-3xl border border-border bg-muted/40 p-4 text-sm leading-relaxed text-muted-foreground">
+          <span className="font-medium text-foreground">{RESTRICTION_LABEL[financials.restriction]}.</span>{" "}
+          Il download non è eseguibile dal server: si completa nella pagina del registro ufficiale, senza aggirare i controlli della fonte.
+        </p>
+      ) : null}
+
       {financials?.documentUrl ? (
         <div className="mt-5">
           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -281,8 +314,27 @@ function FinancialsCard({ financials }: { financials: Financials | undefined }) 
   );
 }
 
+const DOC_KIND_LABEL: Record<string, string> = {
+  ANNUAL_REPORT: "Bilancio d'esercizio",
+  BALANCE_SHEET: "Stato patrimoniale",
+  AUDIT_REPORT: "Relazione di revisione",
+  OTHER: "Altro documento",
+};
+
+const RESTRICTION_LABEL: Record<string, string> = {
+  CAPTCHA_REQUIRED: "Il registro richiede una verifica anti-bot",
+  AUTH_REQUIRED: "Il registro richiede autenticazione",
+  SESSION_BOUND: "I riferimenti del registro sono legati alla sessione dell'utente",
+  SOURCE_RESTRICTION: "La fonte non consente il recupero automatico",
+  RATE_LIMITED: "Il registro ha limitato temporaneamente le richieste",
+  SOURCE_UNAVAILABLE: "Fonte ufficiale momentaneamente non raggiungibile",
+  INVALID_DOCUMENT: "Documento non valido restituito dalla fonte",
+};
+
 function OfficialPageCard({ page }: { page: OfficialPageRef }) {
-  const browserOnly = /lbr\.lu|businessportal\.gr|rdf-przegladarka\.ms\.gov\.pl/i.test(page.url);
+  const browserOnly =
+    page.mode === "external" ||
+    /lbr\.lu|businessportal\.gr|rdf-przegladarka\.ms\.gov\.pl|e-beszamolo\.im\.gov\.hu/i.test(page.url);
 
   return (
     <section className="border border-border bg-card p-5 sm:p-6">
@@ -303,7 +355,14 @@ function OfficialPageCard({ page }: { page: OfficialPageRef }) {
       <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">{page.note}</p>
       {browserOnly ? (
         <div className="mt-4 border border-border bg-muted/40 p-4 text-sm leading-relaxed text-muted-foreground">
-          <p>
+          {page.instructions && page.instructions.length > 0 ? (
+            <ol className="ml-4 list-decimal space-y-1">
+              {page.instructions.map((step) => (
+                <li key={step}>{step}</li>
+              ))}
+            </ol>
+          ) : null}
+          <p className={page.instructions?.length ? "mt-3" : undefined}>
             La consultazione viene eseguita nel portale ufficiale in una nuova scheda. Eventuali login, CAPTCHA o verifiche del browser devono essere completati manualmente sul sito del registro.
           </p>
         </div>
@@ -320,6 +379,7 @@ function OfficialPageCard({ page }: { page: OfficialPageRef }) {
           </p>
         </>
       )}
+
     </section>
   );
 }
