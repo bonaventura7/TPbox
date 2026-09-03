@@ -687,27 +687,8 @@ function CompanyFinderPage() {
 
               {result.officialPage ? <OfficialPageCard page={result.officialPage} /> : null}
 
-              {result.sources.length > 0 ? (
-                <section className="border border-border bg-card p-5 sm:p-6">
-                  <p className="text-xs tracking-[0.18em] text-petrol uppercase">
-                    Trasparenza sulle fonti
-                  </p>
-                  <h3 className="mt-1 font-serif text-xl">Consultazioni eseguite dal server</h3>
-                  <ul className="mt-3 divide-y divide-border">
-                    {result.sources.map((source) => (
-                      <SourceRow key={source.id} source={source} />
-                    ))}
-                  </ul>
-                  <p className="mt-4 text-xs leading-relaxed text-muted-foreground">
-                    Data di consultazione:{" "}
-                    <span className="font-medium">
-                      {TIMESTAMP_FORMAT.format(new Date(result.searchedAt))}
-                    </span>
-                    . I dati appartengono ai rispettivi registri ufficiali; le persone fisiche
-                    possono risultare oscurate ai sensi del GDPR.
-                  </p>
-                </section>
-              ) : null}
+
+
             </>
           ) : null}
         </div>
