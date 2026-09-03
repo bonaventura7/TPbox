@@ -1,4 +1,4 @@
-import type { Route as RouteType } from 'vite-plugin-ssr'
+import { createFileRoute } from "@tanstack/react-router";
 
 export async function POST(request: Request): Promise<Response> {
   try {
@@ -36,6 +36,10 @@ export async function POST(request: Request): Promise<Response> {
   }
 }
 
-export const Route: RouteType = {
-  method: 'POST'
-}
+export const Route = createFileRoute("/api/company-finder/upload-document")({
+  server: {
+    handlers: {
+      POST: async ({ request }: { request: Request }) => POST(request),
+    },
+  },
+});
