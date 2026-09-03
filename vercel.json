@@ -4,6 +4,6 @@
   "installCommand": "npm install",
   "framework": null,
   "functions": {
-    "maxDuration": 60
+    "maxDuration": 30
   }
 }
