@@ -321,7 +321,56 @@ const FINANCIALS_ROUTES: Record<
   string,
   { id: string; label: string; run: (ctx: FinCtx, job: Job, s: SourceStatus) => Promise<void> }
 > = {
+  // ---- Ungheria: e-Beszámoló (solo consultazione: verifica anti-bot) ----
+  HU: {
+    id: "fin-ebeszamolo",
+    label: "e-Beszámoló — Igazságügyi Minisztérium",
+    run: (ctx, job, s) =>
+      (async () => {
+        const { huAdapter } = await import("./registry/hu-ebeszamolo.server");
+        const ids = huAdapter.normalizeIdentifiers({ vat: ctx.localVat, query: ctx.query });
+        const outcome = await huAdapter.listFinancialDocuments(ids, {});
+        if (outcome.ok && outcome.data.length > 0) {
+          s.state = "ok";
+          s.detail = `${outcome.data.length} bilanci individuati`;
+          job.fin = () => ({
+            available: false,
+            years: [],
+            source: huAdapter.registryLabel,
+            availability: "DOCUMENT_FOUND",
+            documents: outcome.data.map((d) => ({
+              id: d.id,
+              year: d.year,
+              kind: d.kind,
+              format: d.format,
+              availability: d.availability,
+              restriction: d.restriction,
+              title: d.title,
+            })),
+          });
+          return;
+        }
+        const restriction = outcome.ok ? "SOURCE_RESTRICTION" : outcome.restriction;
+        s.state = "skipped";
+        s.detail =
+          restriction === "CAPTCHA_REQUIRED"
+            ? "il registro richiede una verifica anti-bot: consultazione nel browser"
+            : restriction === "SESSION_BOUND"
+              ? "i riferimenti del registro sono legati alla sessione dell'utente"
+              : "la fonte ufficiale non consente il recupero automatico";
+        job.fin = () => ({
+          available: false,
+          years: [],
+          source: huAdapter.registryLabel,
+          availability: "REGISTRY_ONLY",
+          restriction,
+          documents: [],
+          note: "Il registro ungherese e-Beszámoló pubblica i bilanci gratuitamente, ma protegge la ricerca con una verifica anti-bot e non consente l'incorporamento della pagina: il download si completa nella scheda del registro ufficiale.",
+        });
+      })(),
+  },
   // ---- Paesi Bassi: KVK Open Dataset Jaarrekeningen (ufficiale, senza chiave) ----
+
   NL: {
     id: "fin-kvk",
     label: "KVK — Open Dataset Jaarrekeningen",
@@ -652,8 +701,10 @@ export async function runSearch(req: SearchRequest, depth = 0): Promise<SearchRe
 
   // NL: 8 cifre pure nel campo IVA = KVK-nummer (NON un numero IVA) → no VIES.
   const nlKvkDirect = countryIso === "NL" && !!kvkFromInput(localVat);
+  // HU: un cégjegyzékszám (NN-NN-NNNNNN) non è un numero IVA → mai al VIES.
+  const huRegistryNumber = countryIso === "HU" && /^\d{2}-?\d{2}-?\d{6}$/.test(localVat.replace(/\s/g, ""));
   // ---------- 2b. VIES (tutti i paesi con prefisso IVA) ----------
-  if (hasVat && !pl8 && !pl10krs && !nlKvkDirect) {
+  if (hasVat && !pl8 && !pl10krs && !nlKvkDirect && !huRegistryNumber) {
     jobs.push(
       makeJob("vies", "VIES — Commissione Europea", async (job, s) => {
         const r = await checkVat(countryIso === "GR" ? "EL" : countryIso, localVat);
@@ -907,7 +958,7 @@ export async function runSearch(req: SearchRequest, depth = 0): Promise<SearchRe
     financials.find((f) => f.available) ||
     financials[0];
   const financialsOut: Financials =
-    fin && (fin.available || fin.documentUrl)
+    fin && (fin.available || fin.documentUrl || fin.availability)
       ? fin
       : {
           available: false,
@@ -927,8 +978,11 @@ export async function runSearch(req: SearchRequest, depth = 0): Promise<SearchRe
   // Il bilancio vale anche senza scheda società: se una fonte di bilancio ha
   // restituito dati, la risposta è "found" con una scheda minima.
   const hasFinancials = !!(fin && (fin.documentUrl || (fin.available && fin.years.length > 0)));
+  // Anche una restrizione dichiarata è un'informazione utile: la risposta resta
+  // "found" con scheda minima, così l'utente vede stato e pagina ufficiale.
+  const hasDocumentStatus = !!financialsOut.availability;
   if (!company || !company.name) {
-    if (hasFinancials) {
+    if (hasFinancials || hasDocumentStatus) {
       company = {
         name: query || localVat,
         country,

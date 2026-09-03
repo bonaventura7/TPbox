@@ -38,11 +38,8 @@ export const CONSULT_PAGES: Record<string, { url: string; label: string }> = {
   CZ: { url: "https://or.justice.cz/ias/ui/rejstrik", label: "Obchodní rejstřík — Sbírka listin" },
   EE: { url: "https://ariregister.rik.ee/eng", label: "e-Äriregister — Centro dei registri" },
   FI: { url: "https://tietopalvelu.ytj.fi/", label: "YTJ / PRH — Servizio informazioni imprese" },
-  HU: {
-    url: "https://e-beszamolo.im.gov.hu/oldal/kezdolap",
-    label: "e-Beszámoló — Ministero della Giustizia",
-  },
   SK: {
+
     url: "https://www.registeruz.sk/cruz-public/domain/accountingentity/simplesearch",
     label: "Register účtovných závierok",
   },
@@ -87,7 +84,25 @@ export const NO_FREE_SOURCE: Record<string, string> = {
   LI: "In Liechtenstein i conti annuali non sono pubblicati online.",
 };
 
+/**
+ * Livello B2 — SOLO BROWSER. Il bilancio è gratuito, ma il registro impone un
+ * controllo che va completato dalla persona (verifica anti-bot, sessione) e
+ * rifiuta di essere incorporato in un iframe (X-Frame-Options: DENY). Si apre
+ * quindi in una nuova scheda, con istruzioni: nessun controllo viene aggirato.
+ */
+export const BROWSER_ONLY_PAGES: Record<string, { url: string; label: string }> = {
+  HU: {
+    url: "https://e-beszamolo.im.gov.hu/oldal/beszamolo_kereses",
+    label: "e-Beszámoló — Ministero della Giustizia",
+  },
+};
+
 /** Il tool copre un paese solo se il bilancio è ottenibile gratis. */
 export function isCovered(iso: string): boolean {
-  return (AUTO_ISOS as readonly string[]).includes(iso) || iso in CONSULT_PAGES;
+  return (
+    (AUTO_ISOS as readonly string[]).includes(iso) ||
+    iso in CONSULT_PAGES ||
+    iso in BROWSER_ONLY_PAGES
+  );
 }
+
