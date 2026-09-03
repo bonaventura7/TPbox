@@ -4,6 +4,8 @@
 
 import { Link, createFileRoute } from "@tanstack/react-router";
 import {
+  Activity,
+  ArrowLeftRight,
   ArrowRight,
   Building,
   Calculator,
@@ -16,7 +18,7 @@ import {
 
 const TITLE = "Tool — Osservatorio Transfer Pricing";
 const DESCRIPTION =
-  "Strumenti operativi per il transfer pricing: Amount B del Pillar One, database BEPS MLI, ravvedimento, ricerca società e brevetti.";
+  "Strumenti operativi per il transfer pricing: Amount B del Pillar One, conversione di valuta dei benchmark, dati di mercato, database BEPS MLI, ravvedimento, ricerca società e brevetti.";
 
 export const Route = createFileRoute("/tool/")({
   head: () => ({
@@ -69,6 +71,15 @@ const CALCULATORS: readonly Tool[] = [
     detail: "Tassi legali 1997-2025 · dataset versionato",
   },
   {
+    href: "/tool/currency-benchmark",
+    title: "Currency-Adjusted Benchmark",
+    description:
+      "Converte le osservazioni di un benchmark nella valuta della transazione e ricalcola il range interquartile.",
+    icon: ArrowLeftRight,
+    status: "operativo",
+    detail: "Differenziale su curve governative · copertura EUR e USD",
+  },
+  {
     href: "/tool/valora",
     title: "Valora Suite",
     description:
@@ -97,6 +108,15 @@ const DATABASES: readonly Tool[] = [
     icon: Building,
     status: "operativo",
     detail: "Registri ufficiali UE, lato server",
+  },
+  {
+    href: "/tool/market-data",
+    title: "Dati di mercato",
+    description:
+      "Cambi di riferimento BCE, curve dei rendimenti, tassi Euribor e Treasury, spread creditizi e country risk premium.",
+    icon: Activity,
+    status: "operativo",
+    detail: "BCE, FRED e Damodaran · interrogate lato server",
   },
   {
     href: "/tool/patentscope",

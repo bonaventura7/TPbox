@@ -96,9 +96,35 @@ Ricerca tematica delle risposte pubblicate dall'Agenzia delle Entrate.
 
 ---
 
+### 6. Currency-Adjusted Benchmark
+
+**Route:** `/tool/currency-benchmark`  
+**Stato:** operativo  
+**Icona:** `ArrowLeftRight`  
+
+**Descrizione:**
+Converte le osservazioni di un benchmark nella valuta della transazione e ricalcola il range interquartile. Due metodi: differenziale dei tassi di riferimento governativi alla stessa scadenza, oppure aggiustamento manuale in basis point. Ogni riga riporta la base di calcolo, la provenienza dei tassi usati e lo stato del dato; le righe che non si possono convertire restano bloccate con il motivo.
+
+**Documentazione:** `docs/currency-benchmark-manifest.md`
+
+---
+
+### 7. Dati di mercato
+
+**Route:** `/tool/market-data` — API: `GET /api/market-data`  
+**Stato:** operativo  
+**Icona:** `Activity`  
+
+**Descrizione:**
+Cruscotto dei dati di mercato usati dagli strumenti: cambi di riferimento BCE con cross rate calcolato dalle due gambe in euro, curve dei rendimenti, Euribor, tassi bancari sulle nuove operazioni, Treasury, spread creditizi ICE BofA e country risk premium Damodaran. Le fonti sono interrogate dal server, mai dal browser, con dataset congelato come riserva e stato del dato dichiarato voce per voce.
+
+**Documentazione:** `docs/currency-benchmark-manifest.md`
+
+---
+
 ## Strumenti in Piano
 
-### 6. Country Profiles
+### 8. Country Profiles
 
 **Route:** `/tool/country-profiles` (pianificata)  
 **Stato:** Da implementare  
@@ -118,6 +144,8 @@ Profilo per paese con normative, trattati, e dati specifici.
 | Company Finder | `/tool/company-finder` | Implementato | `Building` | - |
 | Portale Interpelli | `/normativa/portale-interpelli` | Implementato | `ExternalLink` | - |
 | Country Profiles | `/tool/country-profiles` | Pianificato | `Globe` | - |
+| Currency-Adjusted Benchmark | `/tool/currency-benchmark` | Operativo | `ArrowLeftRight` | 1 file docs |
+| Dati di mercato | `/tool/market-data` | Operativo | `Activity` | 1 file docs |
 
 ## Note per Sviluppatori
 

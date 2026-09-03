@@ -17,6 +17,7 @@ import { Route as McpRouteImport } from './routes/mcp'
 import { Route as NormativaRouteImport } from './routes/normativa'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
+import { Route as ApiMarketDataRouteImport } from './routes/api.market-data'
 import { Route as AttualitaIndexRouteImport } from './routes/attualita.index'
 import { Route as AttualitaAreaRouteImport } from './routes/attualita.$area'
 import { Route as NormativaIndexRouteImport } from './routes/normativa.index'
@@ -28,11 +29,14 @@ import { Route as NormativaUnioneEuropeaRouteImport } from './routes/normativa.u
 import { Route as ToolIndexRouteImport } from './routes/tool.index'
 import { Route as ToolBilancioFinderRouteImport } from './routes/tool.bilancio-finder'
 import { Route as ToolCompanyFinderRouteImport } from './routes/tool.company-finder'
+import { Route as ToolCurrencyBenchmarkRouteImport } from './routes/tool.currency-benchmark'
+import { Route as ToolMarketDataRouteImport } from './routes/tool.market-data'
 import { Route as ToolRavvedimentoRouteImport } from './routes/tool.ravvedimento'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as ApiCompanyFinderDocumentRouteImport } from './routes/api.company-finder.document'
 import { Route as ApiCompanyFinderFinancialDocumentRouteImport } from './routes/api.company-finder.financial-document'
+import { Route as ApiCompanyFinderUploadDocumentRouteImport } from './routes/api.company-finder.upload-document'
 import { Route as AttualitaArticoloSlugRouteImport } from './routes/attualita.articolo.$slug'
 import { Route as NormativaPortaleInterpelliIndexRouteImport } from './routes/normativa.portale-interpelli.index'
 import { Route as NormativaPortaleInterpelliIdRouteImport } from './routes/normativa.portale-interpelli.$id'
@@ -46,6 +50,7 @@ import { Route as ToolPortaleInterpelliIndexRouteImport } from './routes/tool.po
 import { Route as ToolPortaleInterpelliIdRouteImport } from './routes/tool.portale-interpelli.$id'
 import { Route as ToolValoraIndexRouteImport } from './routes/tool.valora.index'
 import { Route as ToolValoraWaccRouteImport } from './routes/tool.valora.wacc'
+import { Route as ApiCompanyFinderHuSearchRouteImport } from './routes/api.company-finder.hu.search'
 import { Route as ToolBepsMliRisultatoIdRouteImport } from './routes/tool.beps-mli.risultato.$id'
 
 const IndexRoute = IndexRouteImport.update({
@@ -90,6 +95,11 @@ const Char91DotwellKnownChar93OauthProtectedResourceRoute =
     path: '/.well-known/oauth-protected-resource',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiMarketDataRoute = ApiMarketDataRouteImport.update({
+  id: '/api/market-data',
+  path: '/api/market-data',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AttualitaIndexRoute = AttualitaIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -146,6 +156,16 @@ const ToolCompanyFinderRoute = ToolCompanyFinderRouteImport.update({
   path: '/tool/company-finder',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ToolCurrencyBenchmarkRoute = ToolCurrencyBenchmarkRouteImport.update({
+  id: '/tool/currency-benchmark',
+  path: '/tool/currency-benchmark',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ToolMarketDataRoute = ToolMarketDataRouteImport.update({
+  id: '/tool/market-data',
+  path: '/tool/market-data',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ToolRavvedimentoRoute = ToolRavvedimentoRouteImport.update({
   id: '/tool/ravvedimento',
   path: '/tool/ravvedimento',
@@ -172,6 +192,12 @@ const ApiCompanyFinderFinancialDocumentRoute =
   ApiCompanyFinderFinancialDocumentRouteImport.update({
     id: '/api/company-finder/financial-document',
     path: '/api/company-finder/financial-document',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiCompanyFinderUploadDocumentRoute =
+  ApiCompanyFinderUploadDocumentRouteImport.update({
+    id: '/api/company-finder/upload-document',
+    path: '/api/company-finder/upload-document',
     getParentRoute: () => rootRouteImport,
   } as any)
 const AttualitaArticoloSlugRoute = AttualitaArticoloSlugRouteImport.update({
@@ -242,6 +268,12 @@ const ToolValoraWaccRoute = ToolValoraWaccRouteImport.update({
   path: '/tool/valora/wacc',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiCompanyFinderHuSearchRoute =
+  ApiCompanyFinderHuSearchRouteImport.update({
+    id: '/api/company-finder/hu/search',
+    path: '/api/company-finder/hu/search',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ToolBepsMliRisultatoIdRoute = ToolBepsMliRisultatoIdRouteImport.update({
   id: '/tool/beps-mli/risultato/$id',
   path: '/tool/beps-mli/risultato/$id',
@@ -257,6 +289,7 @@ export interface FileRoutesByFullPath {
   '/normativa': typeof NormativaRouteWithChildren
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/api/market-data': typeof ApiMarketDataRoute
   '/attualita/$area': typeof AttualitaAreaRoute
   '/normativa/country-profiles': typeof NormativaCountryProfilesRoute
   '/normativa/italia': typeof NormativaItaliaRoute
@@ -265,6 +298,8 @@ export interface FileRoutesByFullPath {
   '/normativa/unione-europea': typeof NormativaUnioneEuropeaRoute
   '/tool/bilancio-finder': typeof ToolBilancioFinderRoute
   '/tool/company-finder': typeof ToolCompanyFinderRoute
+  '/tool/currency-benchmark': typeof ToolCurrencyBenchmarkRoute
+  '/tool/market-data': typeof ToolMarketDataRoute
   '/tool/ravvedimento': typeof ToolRavvedimentoRoute
   '/attualita/': typeof AttualitaIndexRoute
   '/normativa/': typeof NormativaIndexRoute
@@ -273,6 +308,7 @@ export interface FileRoutesByFullPath {
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/company-finder/document': typeof ApiCompanyFinderDocumentRoute
   '/api/company-finder/financial-document': typeof ApiCompanyFinderFinancialDocumentRoute
+  '/api/company-finder/upload-document': typeof ApiCompanyFinderUploadDocumentRoute
   '/attualita/articolo/$slug': typeof AttualitaArticoloSlugRoute
   '/normativa/portale-interpelli/$id': typeof NormativaPortaleInterpelliIdRoute
   '/tool/amount-b/nuovo': typeof ToolAmountBNuovoRoute
@@ -286,6 +322,7 @@ export interface FileRoutesByFullPath {
   '/tool/patentscope/': typeof ToolPatentscopeIndexRoute
   '/tool/portale-interpelli/': typeof ToolPortaleInterpelliIndexRoute
   '/tool/valora/': typeof ToolValoraIndexRoute
+  '/api/company-finder/hu/search': typeof ApiCompanyFinderHuSearchRoute
   '/tool/beps-mli/risultato/$id': typeof ToolBepsMliRisultatoIdRoute
 }
 export interface FileRoutesByTo {
@@ -295,6 +332,7 @@ export interface FileRoutesByTo {
   '/mcp': typeof McpRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/api/market-data': typeof ApiMarketDataRoute
   '/attualita/$area': typeof AttualitaAreaRoute
   '/normativa/country-profiles': typeof NormativaCountryProfilesRoute
   '/normativa/italia': typeof NormativaItaliaRoute
@@ -303,6 +341,8 @@ export interface FileRoutesByTo {
   '/normativa/unione-europea': typeof NormativaUnioneEuropeaRoute
   '/tool/bilancio-finder': typeof ToolBilancioFinderRoute
   '/tool/company-finder': typeof ToolCompanyFinderRoute
+  '/tool/currency-benchmark': typeof ToolCurrencyBenchmarkRoute
+  '/tool/market-data': typeof ToolMarketDataRoute
   '/tool/ravvedimento': typeof ToolRavvedimentoRoute
   '/attualita': typeof AttualitaIndexRoute
   '/normativa': typeof NormativaIndexRoute
@@ -311,6 +351,7 @@ export interface FileRoutesByTo {
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/company-finder/document': typeof ApiCompanyFinderDocumentRoute
   '/api/company-finder/financial-document': typeof ApiCompanyFinderFinancialDocumentRoute
+  '/api/company-finder/upload-document': typeof ApiCompanyFinderUploadDocumentRoute
   '/attualita/articolo/$slug': typeof AttualitaArticoloSlugRoute
   '/normativa/portale-interpelli/$id': typeof NormativaPortaleInterpelliIdRoute
   '/tool/amount-b/nuovo': typeof ToolAmountBNuovoRoute
@@ -324,6 +365,7 @@ export interface FileRoutesByTo {
   '/tool/patentscope': typeof ToolPatentscopeIndexRoute
   '/tool/portale-interpelli': typeof ToolPortaleInterpelliIndexRoute
   '/tool/valora': typeof ToolValoraIndexRoute
+  '/api/company-finder/hu/search': typeof ApiCompanyFinderHuSearchRoute
   '/tool/beps-mli/risultato/$id': typeof ToolBepsMliRisultatoIdRoute
 }
 export interface FileRoutesById {
@@ -336,6 +378,7 @@ export interface FileRoutesById {
   '/normativa': typeof NormativaRouteWithChildren
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/api/market-data': typeof ApiMarketDataRoute
   '/attualita/$area': typeof AttualitaAreaRoute
   '/normativa/country-profiles': typeof NormativaCountryProfilesRoute
   '/normativa/italia': typeof NormativaItaliaRoute
@@ -344,6 +387,8 @@ export interface FileRoutesById {
   '/normativa/unione-europea': typeof NormativaUnioneEuropeaRoute
   '/tool/bilancio-finder': typeof ToolBilancioFinderRoute
   '/tool/company-finder': typeof ToolCompanyFinderRoute
+  '/tool/currency-benchmark': typeof ToolCurrencyBenchmarkRoute
+  '/tool/market-data': typeof ToolMarketDataRoute
   '/tool/ravvedimento': typeof ToolRavvedimentoRoute
   '/attualita/': typeof AttualitaIndexRoute
   '/normativa/': typeof NormativaIndexRoute
@@ -352,6 +397,7 @@ export interface FileRoutesById {
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/company-finder/document': typeof ApiCompanyFinderDocumentRoute
   '/api/company-finder/financial-document': typeof ApiCompanyFinderFinancialDocumentRoute
+  '/api/company-finder/upload-document': typeof ApiCompanyFinderUploadDocumentRoute
   '/attualita/articolo/$slug': typeof AttualitaArticoloSlugRoute
   '/normativa/portale-interpelli/$id': typeof NormativaPortaleInterpelliIdRoute
   '/tool/amount-b/nuovo': typeof ToolAmountBNuovoRoute
@@ -365,6 +411,7 @@ export interface FileRoutesById {
   '/tool/patentscope/': typeof ToolPatentscopeIndexRoute
   '/tool/portale-interpelli/': typeof ToolPortaleInterpelliIndexRoute
   '/tool/valora/': typeof ToolValoraIndexRoute
+  '/api/company-finder/hu/search': typeof ApiCompanyFinderHuSearchRoute
   '/tool/beps-mli/risultato/$id': typeof ToolBepsMliRisultatoIdRoute
 }
 export interface FileRouteTypes {
@@ -378,6 +425,7 @@ export interface FileRouteTypes {
     | '/normativa'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
+    | '/api/market-data'
     | '/attualita/$area'
     | '/normativa/country-profiles'
     | '/normativa/italia'
@@ -386,6 +434,8 @@ export interface FileRouteTypes {
     | '/normativa/unione-europea'
     | '/tool/bilancio-finder'
     | '/tool/company-finder'
+    | '/tool/currency-benchmark'
+    | '/tool/market-data'
     | '/tool/ravvedimento'
     | '/attualita/'
     | '/normativa/'
@@ -394,6 +444,7 @@ export interface FileRouteTypes {
     | '/.mcp/invoke-tool/$tool'
     | '/api/company-finder/document'
     | '/api/company-finder/financial-document'
+    | '/api/company-finder/upload-document'
     | '/attualita/articolo/$slug'
     | '/normativa/portale-interpelli/$id'
     | '/tool/amount-b/nuovo'
@@ -407,6 +458,7 @@ export interface FileRouteTypes {
     | '/tool/patentscope/'
     | '/tool/portale-interpelli/'
     | '/tool/valora/'
+    | '/api/company-finder/hu/search'
     | '/tool/beps-mli/risultato/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -416,6 +468,7 @@ export interface FileRouteTypes {
     | '/mcp'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
+    | '/api/market-data'
     | '/attualita/$area'
     | '/normativa/country-profiles'
     | '/normativa/italia'
@@ -424,6 +477,8 @@ export interface FileRouteTypes {
     | '/normativa/unione-europea'
     | '/tool/bilancio-finder'
     | '/tool/company-finder'
+    | '/tool/currency-benchmark'
+    | '/tool/market-data'
     | '/tool/ravvedimento'
     | '/attualita'
     | '/normativa'
@@ -432,6 +487,7 @@ export interface FileRouteTypes {
     | '/.mcp/invoke-tool/$tool'
     | '/api/company-finder/document'
     | '/api/company-finder/financial-document'
+    | '/api/company-finder/upload-document'
     | '/attualita/articolo/$slug'
     | '/normativa/portale-interpelli/$id'
     | '/tool/amount-b/nuovo'
@@ -445,6 +501,7 @@ export interface FileRouteTypes {
     | '/tool/patentscope'
     | '/tool/portale-interpelli'
     | '/tool/valora'
+    | '/api/company-finder/hu/search'
     | '/tool/beps-mli/risultato/$id'
   id:
     | '__root__'
@@ -456,6 +513,7 @@ export interface FileRouteTypes {
     | '/normativa'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
+    | '/api/market-data'
     | '/attualita/$area'
     | '/normativa/country-profiles'
     | '/normativa/italia'
@@ -464,6 +522,8 @@ export interface FileRouteTypes {
     | '/normativa/unione-europea'
     | '/tool/bilancio-finder'
     | '/tool/company-finder'
+    | '/tool/currency-benchmark'
+    | '/tool/market-data'
     | '/tool/ravvedimento'
     | '/attualita/'
     | '/normativa/'
@@ -472,6 +532,7 @@ export interface FileRouteTypes {
     | '/.mcp/invoke-tool/$tool'
     | '/api/company-finder/document'
     | '/api/company-finder/financial-document'
+    | '/api/company-finder/upload-document'
     | '/attualita/articolo/$slug'
     | '/normativa/portale-interpelli/$id'
     | '/tool/amount-b/nuovo'
@@ -485,6 +546,7 @@ export interface FileRouteTypes {
     | '/tool/patentscope/'
     | '/tool/portale-interpelli/'
     | '/tool/valora/'
+    | '/api/company-finder/hu/search'
     | '/tool/beps-mli/risultato/$id'
   fileRoutesById: FileRoutesById
 }
@@ -497,14 +559,18 @@ export interface RootRouteChildren {
   NormativaRoute: typeof NormativaRouteWithChildren
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  ApiMarketDataRoute: typeof ApiMarketDataRoute
   ToolBilancioFinderRoute: typeof ToolBilancioFinderRoute
   ToolCompanyFinderRoute: typeof ToolCompanyFinderRoute
+  ToolCurrencyBenchmarkRoute: typeof ToolCurrencyBenchmarkRoute
+  ToolMarketDataRoute: typeof ToolMarketDataRoute
   ToolRavvedimentoRoute: typeof ToolRavvedimentoRoute
   ToolIndexRoute: typeof ToolIndexRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   ApiCompanyFinderDocumentRoute: typeof ApiCompanyFinderDocumentRoute
   ApiCompanyFinderFinancialDocumentRoute: typeof ApiCompanyFinderFinancialDocumentRoute
+  ApiCompanyFinderUploadDocumentRoute: typeof ApiCompanyFinderUploadDocumentRoute
   ToolAmountBNuovoRoute: typeof ToolAmountBNuovoRoute
   ToolBepsMliRicercaRoute: typeof ToolBepsMliRicercaRoute
   ToolPatentscopeIdRoute: typeof ToolPatentscopeIdRoute
@@ -515,6 +581,7 @@ export interface RootRouteChildren {
   ToolPatentscopeIndexRoute: typeof ToolPatentscopeIndexRoute
   ToolPortaleInterpelliIndexRoute: typeof ToolPortaleInterpelliIndexRoute
   ToolValoraIndexRoute: typeof ToolValoraIndexRoute
+  ApiCompanyFinderHuSearchRoute: typeof ApiCompanyFinderHuSearchRoute
   ToolBepsMliRisultatoIdRoute: typeof ToolBepsMliRisultatoIdRoute
 }
 
@@ -574,6 +641,13 @@ declare module '@tanstack/react-router' {
       path: '/.well-known/oauth-protected-resource'
       fullPath: '/.well-known/oauth-protected-resource'
       preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/market-data': {
+      id: '/api/market-data'
+      path: '/api/market-data'
+      fullPath: '/api/market-data'
+      preLoaderRoute: typeof ApiMarketDataRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/attualita/': {
@@ -653,6 +727,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ToolCompanyFinderRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/tool/currency-benchmark': {
+      id: '/tool/currency-benchmark'
+      path: '/tool/currency-benchmark'
+      fullPath: '/tool/currency-benchmark'
+      preLoaderRoute: typeof ToolCurrencyBenchmarkRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tool/market-data': {
+      id: '/tool/market-data'
+      path: '/tool/market-data'
+      fullPath: '/tool/market-data'
+      preLoaderRoute: typeof ToolMarketDataRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/tool/ravvedimento': {
       id: '/tool/ravvedimento'
       path: '/tool/ravvedimento'
@@ -686,6 +774,13 @@ declare module '@tanstack/react-router' {
       path: '/api/company-finder/financial-document'
       fullPath: '/api/company-finder/financial-document'
       preLoaderRoute: typeof ApiCompanyFinderFinancialDocumentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/company-finder/upload-document': {
+      id: '/api/company-finder/upload-document'
+      path: '/api/company-finder/upload-document'
+      fullPath: '/api/company-finder/upload-document'
+      preLoaderRoute: typeof ApiCompanyFinderUploadDocumentRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/attualita/articolo/$slug': {
@@ -779,6 +874,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ToolValoraWaccRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/company-finder/hu/search': {
+      id: '/api/company-finder/hu/search'
+      path: '/api/company-finder/hu/search'
+      fullPath: '/api/company-finder/hu/search'
+      preLoaderRoute: typeof ApiCompanyFinderHuSearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/tool/beps-mli/risultato/$id': {
       id: '/tool/beps-mli/risultato/$id'
       path: '/tool/beps-mli/risultato/$id'
@@ -841,8 +943,11 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
+  ApiMarketDataRoute: ApiMarketDataRoute,
   ToolBilancioFinderRoute: ToolBilancioFinderRoute,
   ToolCompanyFinderRoute: ToolCompanyFinderRoute,
+  ToolCurrencyBenchmarkRoute: ToolCurrencyBenchmarkRoute,
+  ToolMarketDataRoute: ToolMarketDataRoute,
   ToolRavvedimentoRoute: ToolRavvedimentoRoute,
   ToolIndexRoute: ToolIndexRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
@@ -850,6 +955,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiCompanyFinderDocumentRoute: ApiCompanyFinderDocumentRoute,
   ApiCompanyFinderFinancialDocumentRoute:
     ApiCompanyFinderFinancialDocumentRoute,
+  ApiCompanyFinderUploadDocumentRoute: ApiCompanyFinderUploadDocumentRoute,
   ToolAmountBNuovoRoute: ToolAmountBNuovoRoute,
   ToolBepsMliRicercaRoute: ToolBepsMliRicercaRoute,
   ToolPatentscopeIdRoute: ToolPatentscopeIdRoute,
@@ -860,6 +966,7 @@ const rootRouteChildren: RootRouteChildren = {
   ToolPatentscopeIndexRoute: ToolPatentscopeIndexRoute,
   ToolPortaleInterpelliIndexRoute: ToolPortaleInterpelliIndexRoute,
   ToolValoraIndexRoute: ToolValoraIndexRoute,
+  ApiCompanyFinderHuSearchRoute: ApiCompanyFinderHuSearchRoute,
   ToolBepsMliRisultatoIdRoute: ToolBepsMliRisultatoIdRoute,
 }
 export const routeTree = rootRouteImport
