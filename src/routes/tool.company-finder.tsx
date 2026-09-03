@@ -638,9 +638,8 @@ function CompanyFinderPage() {
           </div>
         </form>
 
-        <div className="mt-6">
-          <RegistryCoverage />
-        </div>
+
+
 
         <div aria-live="polite" className="mt-6 space-y-6">
           {mutation.isPending ? (
