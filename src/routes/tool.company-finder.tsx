@@ -60,26 +60,13 @@ const EXAMPLES = [
   { label: "PROXIMUS · BE0202239951", query: "Proximus", vat: "BE0202239951", country: "BE" },
 ] as const;
 
-/** Paesi per cui il tool estrae il bilancio da una fonte ufficiale gratuita. */
-const FINANCIALS_REGISTRY: Record<string, string> = {
-  DE: "Jahresabschluss — documento ufficiale",
-  NL: "jaarrekeningen XBRL — valori per esercizio",
-  FR: "CA e risultato netto — fonte pubblica",
-  DK: "årsrapport — documento ufficiale",
-  BE: "conti annuali NBB — chiave gratuita",
-  UK: "annual accounts — documento ufficiale",
-};
-
 const NUMBER_FORMAT = new Intl.NumberFormat("it-IT", { maximumFractionDigits: 0 });
 const DATE_FORMAT = new Intl.DateTimeFormat("it-IT", {
   day: "2-digit",
   month: "2-digit",
   year: "numeric",
 });
-const TIMESTAMP_FORMAT = new Intl.DateTimeFormat("it-IT", {
-  dateStyle: "medium",
-  timeStyle: "short",
-});
+
 
 function fmtNum(value: number | undefined, currency: string | undefined): string {
   if (value === undefined) return "—";
