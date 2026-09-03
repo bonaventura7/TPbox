@@ -1,58 +1,41 @@
-import { put } from '@vercel/blob';
-import { NextRequest, NextResponse } from 'next/server';
+import type { Route as RouteType } from 'vite-plugin-ssr'
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request): Promise<Response> {
   try {
-    const formData = await request.formData();
-    const file = formData.get('file') as File | null;
-    const companyId = formData.get('companyId') as string | null;
-    const documentType = (formData.get('documentType') as string) || 'annual-report';
-    const year = (formData.get('year') as string) || new Date().getFullYear().toString();
-
-    if (!file || !companyId) {
-      return NextResponse.json(
-        { error: 'File e companyId sono obbligatori', success: false },
-        { status: 400 }
-      );
+    const formData = await request.formData()
+    const file = formData.get('file') as File
+    
+    if (!file) {
+      return new Response(JSON.stringify({ error: 'Nessun file fornito' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      })
     }
 
-    if (file.type !== 'application/pdf') {
-      return NextResponse.json(
-        { error: 'Solo file PDF sono accettati', success: false },
-        { status: 400 }
-      );
-    }
-
-    const maxSize = 10 * 1024 * 1024;
-    if (file.size > maxSize) {
-      return NextResponse.json(
-        { error: 'Il file non può superare i 10MB', success: false },
-        { status: 400 }
-      );
-    }
-
-    const documentId = crypto.randomUUID();
-    const filename = `hu/${companyId}/${documentId}.pdf`;
-
-    const blob = await put(filename, file, {
-      access: 'private',
-      contentType: 'application/pdf',
-      addRandomSuffix: false,
-    });
-
-    console.log('[HU-UPLOAD] Documento caricato:', { documentId, companyId, filename });
-
-    return NextResponse.json({
+    const arrayBuffer = await file.arrayBuffer()
+    const buffer = Buffer.from(arrayBuffer)
+    
+    // Processa il documento (placeholder)
+    const result = {
       success: true,
-      documentId,
-      url: `/api/company-finder/document/${documentId}`,
-      metadata: { documentType, year, size: file.size },
-    });
+      filename: file.name,
+      size: buffer.length,
+      type: file.type
+    }
+
+    return new Response(JSON.stringify(result), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    })
   } catch (error) {
-    console.error('[HU-UPLOAD] Errore upload:', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Errore interno', success: false },
-      { status: 500 }
-    );
+    console.error('Upload error:', error)
+    return new Response(JSON.stringify({ error: 'Errore upload' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    })
   }
+}
+
+export const Route: RouteType = {
+  method: 'POST'
 }

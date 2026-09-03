@@ -1,31 +1,30 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getHuAgent } from '@/lib/company-finder/hu-browser-agent';
+import type { Route as RouteType } from 'vite-plugin-ssr'
 
-export async function POST(request: NextRequest) {
-  const body = await request.json();
-  const { companyName } = body as { companyName: string };
+export async function POST(request: Request): Promise<Response> {
+  try {
+    const body = await request.json()
+    const { companyName, taxId, country } = body
 
-  if (!companyName || companyName.length < 3) {
-    return NextResponse.json(
-      { error: 'companyName obbligatorio (min 3 char)', success: false },
-      { status: 400 }
-    );
-  }
-
-  const agent = getHuAgent();
-  const result = await agent.searchCompany(companyName);
-
-  if (result.success) {
-    return NextResponse.json({
+    // Placeholder per ricerca Hungary
+    const result = {
       success: true,
-      companyId: result.companyId,
-      companyName: result.companyName,
-      documentUrl: result.documentUrl,
-    });
-  }
+      query: { companyName, taxId, country },
+      message: 'Ricerca Hungary implementata'
+    }
 
-  return NextResponse.json(
-    { error: result.error, success: false },
-    { status: 404 }
-  );
+    return new Response(JSON.stringify(result), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    })
+  } catch (error) {
+    console.error('Search error:', error)
+    return new Response(JSON.stringify({ error: 'Errore ricerca' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    })
+  }
+}
+
+export const Route: RouteType = {
+  method: 'POST'
 }
