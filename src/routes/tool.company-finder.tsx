@@ -1,7 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { Search } from "lucide-react";
+import { ExternalLink, Search } from "lucide-react";
 import { useState } from "react";
 
 import { PageHeader } from "@/components/site/SectionPage";
@@ -24,7 +24,7 @@ import type { CompanyProfile, Financials, OfficialPageRef } from "@/lib/company-
 
 const TITLE = "Company Finder";
 const DESCRIPTION =
-  "Identifica una società a partire dalla ragione sociale o dal numero di partita IVA e ne mostra la scheda e i conti annuali. I registri ufficiali sono interrogati dal server: nessun reindirizzamento verso siti esterni.";
+  "Identifica una società a partire dalla ragione sociale o dal numero di partita IVA e ne mostra la scheda e i conti annuali. Dove possibile i registri ufficiali sono interrogati dal server; per alcuni paesi la consultazione dei bilanci avviene direttamente sul portale ufficiale del registro, aperto nel tuo browser.";
 
 export const Route = createFileRoute("/tool/company-finder")({
   head: () => ({
@@ -340,34 +340,63 @@ function FinancialsCard({ financials }: { financials: Financials | undefined }) 
 }
 
 function OfficialPageCard({ page }: { page: OfficialPageRef }) {
+  // "external": autenticazione/CAPTCHA devono avvenire nel contesto principale
+  // del browser (LU, GR, PL) → niente iframe, solo apertura in nuova scheda.
+  const external = page.mode === "external";
   return (
     <section className="border border-border bg-card p-5 sm:p-6">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-xs tracking-[0.18em] text-petrol uppercase">Consultazione ufficiale</p>
           <h3 className="mt-1 font-serif text-xl">{page.label}</h3>
         </div>
-        <a
-          href={page.url}
-          target="_blank"
-          rel="noreferrer noopener"
-          className="border border-border bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-        >
-          Apri in una nuova scheda
-        </a>
+        {external ? (
+          <Button asChild className="min-h-11">
+            <a href={page.url} target="_blank" rel="noreferrer noopener">
+              <ExternalLink className="size-4" aria-hidden="true" />
+              Apri il registro ufficiale
+            </a>
+          </Button>
+        ) : (
+          <a
+            href={page.url}
+            target="_blank"
+            rel="noreferrer noopener"
+            className="border border-border bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+          >
+            Apri in una nuova scheda
+          </a>
+        )}
       </div>
       <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">{page.note}</p>
-      <iframe
-        title={`Registro ufficiale — ${page.label}`}
-        src={page.url}
-        className="mt-4 h-[680px] w-full border border-border bg-white"
-        referrerPolicy="no-referrer"
-      />
-      <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-        Pagina del registro ufficiale, caricata dal tuo browser e mostrata senza modifiche. A
-        differenza del resto della scheda, questo riquadro è l&apos;unico punto in cui il browser
-        contatta direttamente il sito del registro.
-      </p>
+      {page.instructions && page.instructions.length > 0 ? (
+        <ol className="mt-4 max-w-3xl list-decimal space-y-1.5 pl-5 text-sm leading-relaxed">
+          {page.instructions.map((step, index) => (
+            <li key={index}>{step}</li>
+          ))}
+        </ol>
+      ) : null}
+      {external ? (
+        <p className="mt-4 max-w-3xl text-xs leading-relaxed text-muted-foreground">
+          Il portale si apre in una nuova scheda del tuo browser. Eventuali autenticazioni o
+          verifiche CAPTCHA richieste dal registro si completano direttamente sul sito ufficiale:
+          questa applicazione non trasmette credenziali e non automatizza l&apos;accesso.
+        </p>
+      ) : (
+        <>
+          <iframe
+            title={`Registro ufficiale — ${page.label}`}
+            src={page.url}
+            className="mt-4 h-[680px] w-full border border-border bg-white"
+            referrerPolicy="no-referrer"
+          />
+          <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+            Pagina del registro ufficiale, caricata dal tuo browser e mostrata senza modifiche. A
+            differenza del resto della scheda, questo riquadro è l&apos;unico punto in cui il
+            browser contatta direttamente il sito del registro.
+          </p>
+        </>
+      )}
     </section>
   );
 }
