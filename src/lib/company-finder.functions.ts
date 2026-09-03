@@ -5,13 +5,6 @@ import type { SearchResponse } from "./company-finder/types";
 import { getCountry } from "./company-finder/countries";
 import { officialPageFor } from "./company-finder/official-pages";
 
-/**
- * Company Finder — punto di ingresso lato server.
- *
- * L'orchestratore consulta in parallelo le fonti ufficiali che funzionano lato
- * server. Alcuni registri, invece, devono essere aperti direttamente nel
- * browser dell'utente perché richiedono autenticazione, CAPTCHA o sessione.
- */
 const searchSchema = z.object({
   query: z.string().max(200).default(""),
   vat: z.string().max(40).default(""),
@@ -25,6 +18,25 @@ function emptyResponse(warning: string): SearchResponse {
     warnings: [warning],
     searchedAt: new Date().toISOString(),
   };
+}
+
+function toInPageDocumentUrl(documentUrl: string): string {
+  return `/api/company-finder/document?url=${encodeURIComponent(documentUrl)}`;
+}
+
+function prioritizeBalanceDocument(response: SearchResponse): SearchResponse {
+  const documentUrl = response.financials?.documentUrl;
+  if (!documentUrl) return response;
+
+  const current = response.officialPage;
+  response.officialPage = {
+    url: toInPageDocumentUrl(documentUrl),
+    label: current?.label ?? "Documento ufficiale di bilancio",
+    note: current?.note
+      ? `Bilancio ufficiale individuato: ${current.note}`
+      : "Documento ufficiale di bilancio individuato dalla fonte registrata.",
+  };
+  return response;
 }
 
 function browserRegistryResponse(
@@ -83,9 +95,6 @@ export const findCompany = createServerFn({ method: "POST" })
       return emptyResponse("Inserisci la ragione sociale oppure il numero di partita IVA.");
     }
 
-    // Workaround fail-safe: questi identificativi NON sono numeri IVA e non
-    // devono mai finire nel VIES. Li trattiamo come identificativi del registro
-    // e restituiamo direttamente la pagina ufficiale da aprire nel browser.
     if (country === "GR" && /^\d{10}$/.test(normalized)) {
       const direct = browserRegistryResponse("GR", normalized, query);
       if (direct) return direct;
@@ -98,7 +107,8 @@ export const findCompany = createServerFn({ method: "POST" })
 
     const { runSearch } = await import("./company-finder/orchestrator");
     try {
-      return await runSearch({ query, vat, country });
+      const response = await runSearch({ query, vat, country });
+      return prioritizeBalanceDocument(response);
     } catch (error) {
       console.error("[company-finder] errore orchestratore", error);
       return emptyResponse(
