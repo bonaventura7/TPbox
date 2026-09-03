@@ -23,7 +23,9 @@ import { searchUrAccounting } from "./sources/bilanci/ur-de";
 import { fetchPappersFinancials } from "./sources/bilanci/pappers-fr";
 import { fetchDkRegnskaber, cvrFromVat } from "./sources/bilanci/regnskaber-dk";
 import { fetchCbsoAccounts, cbeFromInput } from "./sources/bilanci/cbso-be";
+import { ESEF_ISOS, fetchEsefFinancials } from "./sources/bilanci/esef";
 import { NO_FREE_SOURCE } from "./coverage";
+import { documentTierFor } from "./document-access";
 import { officialPageFor } from "./official-pages";
 import { numericRegistryId, searchGleif } from "./sources/gleif";
 import { searchRechercheEntreprises } from "./sources/recherche-entreprises-fr";
@@ -699,10 +701,53 @@ export async function runSearch(req: SearchRequest, depth = 0): Promise<SearchRe
     jobs.push(makeJob(finAdapter.id, finAdapter.label, (job, s) => finAdapter.run(ctx, job, s)));
   }
 
+  // ---------- 2a-ter. ESEF: bilancio degli emittenti quotati ----------
+  // Dove il registro nazionale non consegna il documento a un server
+  // (SOURCE_RESTRICTED, REGISTRY_ONLY) o non lo consegna affatto, l'indice
+  // ESEF è la sola via automatica lecita verso un bilancio vero: per HU è
+  // OTP/MOL/Richter, per l'Italia le ~230 quotate. Nei paesi "document" la
+  // fonte nazionale è gia' piu' ricca, quindi non si duplica il lavoro.
+  if (ESEF_ISOS.has(countryIso) && documentTierFor(countryIso) !== "document") {
+    jobs.push(
+      makeJob("esef", "ESEF — filings.xbrl.org (emittenti quotati)", async (job, s) => {
+        // Il LEI arriva dal match GLEIF di testata quando il paese coincide;
+        // altrimenti si rifà la ricerca per nome (stessa API, senza chiave).
+        let lei = gleifMatch && gleifMatch.country === countryIso ? gleifMatch.lei : undefined;
+        if (!lei && query.length >= 3) {
+          const g = await searchGleif(query, countryIso);
+          if (g.ok && g.matches[0]) lei = g.matches[0].lei;
+        }
+        if (!lei) {
+          s.state = "skipped";
+          s.detail =
+            "nessun LEI associato alla denominazione: l'indice ESEF copre solo gli emittenti su mercati regolamentati (le controllate non quotate non vi compaiono)";
+          return;
+        }
+        const r = await fetchEsefFinancials(lei);
+        if (r.ok && r.data) {
+          s.state = "ok";
+          s.detail =
+            r.data.years.length > 0
+              ? `${r.data.years.length} esercizi dal deposito ESEF`
+              : r.data.documentTitle || "deposito ESEF disponibile";
+          const fin = r.data;
+          job.fin = () => fin;
+        } else if (r.skipped) {
+          s.state = "skipped";
+          s.detail = r.skipped;
+        } else {
+          s.state = "failed";
+          s.detail = r.error || "fonte non raggiungibile";
+        }
+      }),
+    );
+  }
+
   // NL: 8 cifre pure nel campo IVA = KVK-nummer (NON un numero IVA) → no VIES.
   const nlKvkDirect = countryIso === "NL" && !!kvkFromInput(localVat);
   // HU: un cégjegyzékszám (NN-NN-NNNNNN) non è un numero IVA → mai al VIES.
-  const huRegistryNumber = countryIso === "HU" && /^\d{2}-?\d{2}-?\d{6}$/.test(localVat.replace(/\s/g, ""));
+  const huRegistryNumber =
+    countryIso === "HU" && /^\d{2}-?\d{2}-?\d{6}$/.test(localVat.replace(/\s/g, ""));
   // ---------- 2b. VIES (tutti i paesi con prefisso IVA) ----------
   if (hasVat && !pl8 && !pl10krs && !nlKvkDirect && !huRegistryNumber) {
     jobs.push(

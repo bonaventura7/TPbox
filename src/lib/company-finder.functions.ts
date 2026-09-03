@@ -29,7 +29,10 @@ function firstRegistryIdentifier(response: SearchResponse, fallback: string): st
   return response.company?.registry?.id?.trim() || fallback.trim();
 }
 
-async function resolveGreekBalance(response: SearchResponse, fallbackId: string): Promise<SearchResponse> {
+async function resolveGreekBalance(
+  response: SearchResponse,
+  fallbackId: string,
+): Promise<SearchResponse> {
   if (response.company?.country.iso !== "GR" || response.financials?.documentUrl) {
     return response;
   }
@@ -59,7 +62,10 @@ async function resolveGreekBalance(response: SearchResponse, fallbackId: string)
   }
 }
 
-async function prioritizeBalanceDocument(response: SearchResponse, fallbackId: string): Promise<SearchResponse> {
+async function prioritizeBalanceDocument(
+  response: SearchResponse,
+  fallbackId: string,
+): Promise<SearchResponse> {
   const resolved = await resolveGreekBalance(response, fallbackId);
   const documentUrl = resolved.financials?.documentUrl;
   if (!documentUrl) return resolved;
@@ -94,7 +100,6 @@ async function browserRegistryResponse(
         authority: country.registryAuthority,
         id: cleaned,
       },
-
     },
     financials: {
       available: false,

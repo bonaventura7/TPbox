@@ -214,11 +214,12 @@ export const COUNTRIES: CountryInfo[] = [
     nameIt: "Ungheria",
     flag: "🇭🇺",
     vatPrefix: "HU",
-    registryName: "Cégjegyzék (Cégkapu)",
-    registryAuthority: "Tribunali (Megyei bíróság)",
+    registryName: "Cégjegyzék — e-Beszámoló",
+    registryAuthority:
+      "Tribunali (Megyei bíróság) — Ministero della Giustizia (Igazságügyi Minisztérium)",
     financials: {
       free: true,
-      note: "I rendiconti annuali (éves beszámolók) sono pubblici e gratuiti sul portale Cégkapu; l'accesso strutturato è in espansione.",
+      note: "I rendiconti annuali (éves beszámolók) sono pubblici e gratuiti sul portale e-Beszámoló del Ministero della Giustizia (e-beszamolo.im.gov.hu), ma la ricerca esige CAPTCHA e accettazione delle condizioni d'uso, e gli URL dei risultati sono legati alla sessione: consultazione solo manuale, da persona. Il canale massivo ufficiale (beszámoló állomány értékesítése) è a richiesta via e-mail dal 2016 in poi. Per gli emittenti quotati (OTP, MOL, Richter…) il tool recupera il deposito ESEF, gratuito e machine-readable.",
     },
   },
   {

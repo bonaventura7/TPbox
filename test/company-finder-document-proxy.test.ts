@@ -60,9 +60,26 @@ describe("proxy dei documenti di bilancio", () => {
     expect(res.status).not.toBe(403);
   });
 
-  it("non lascia entrare nella whitelist host generici", () => {
-    for (const host of ALLOWED_DOCUMENT_HOSTS) {
-      expect(host).toMatch(/\.(de|dk|nl|be|uk)$/);
-    }
+  it("la whitelist contiene esattamente i registri censiti, senza host generici", () => {
+    // Lista attesa, non pattern: chi aggiunge un host deve vedere questo test
+    // e decidere consapevolmente. Niente CDN, motori di ricerca o domini
+    // "a maglia larga": ogni host è una superficie SSRF.
+    expect([...ALLOWED_DOCUMENT_HOSTS].sort()).toEqual([
+      "bundesanzeiger.de",
+      "datacvr.virk.dk",
+      "filings.businessportal.gr",
+      "filings.xbrl.org",
+      "find-and-update.company-information.service.gov.uk",
+      "opendata.kvk.nl",
+      "publicity.businessportal.gr",
+      "publikations-plattform.de",
+      "regnskaber.virk.dk",
+      "unternehmensregister.de",
+      "ws.cbso.nbb.be",
+      "ws.uat2.cbso.nbb.be",
+      "www.bundesanzeiger.de",
+      "www.publikations-plattform.de",
+      "www.unternehmensregister.de",
+    ]);
   });
 });

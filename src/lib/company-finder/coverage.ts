@@ -1,108 +1,65 @@
-// ---------- Copertura reale, misurata ----------
-// Tre livelli, non uno. La differenza conta perché cambia cosa vede l'utente.
+// ---------- Copertura reale, vista derivata dalla macchina a stati ----------
+// La classificazione vive in `document-access.ts` (DOCUMENT_AVAILABLE /
+// LIST_ONLY / SOURCE_RESTRICTED / REGISTRY_ONLY, con la prova per voce).
+// Questo modulo espone le viste usate dal resto del codice, derivate dalla
+// stessa tabella: nessuna lista duplicata che possa divergere.
 //
-//  A. AUTOMATICO — il server dell'Osservatorio scarica documento o valori e li
-//     mostra in pagina. Nessun clic, nessuna chiave.
-//  B. CONSULTAZIONE — il bilancio è gratuito ma il registro rifiuta le chiamate
-//     da server (WAF, sessione, CAPTCHA). La sua pagina ufficiale viene
-//     incorporata: la carica il browser dell'utente, che passa. Verificato in
-//     Chrome che tutti i portali elencati accettano di essere incorporati.
-//  C. NESSUNA FONTE GRATUITA — il documento costa. Questi paesi NON sono
-//     offerti dal tool: promettere una copertura che non c'è è peggio che
-//     dichiararne l'assenza.
+//  A. AUTOMATICO (AUTO_ISOS) — il server dell'Osservatorio scarica documento
+//     o valori e li mostra in pagina. Nessun clic, nessuna chiave.
+//  B. CONSULTAZIONE (CONSULT_PAGES) — il bilancio è gratuito e il portale è
+//     pubblico: la pagina ufficiale viene incorporata o linkata.
+//  B2. SOLO BROWSER (BROWSER_ONLY_PAGES) — il bilancio è gratuito, ma la fonte
+//     impone un controllo che va completato dalla persona (verifica anti-bot,
+//     login, sessione) e/o rifiuta l'incorporamento (X-Frame-Options: DENY).
+//     Si apre in una nuova scheda, con istruzioni: nessun controllo aggirato.
+//  C. NESSUNA FONTE GRATUITA (NO_FREE_SOURCE) — il documento costa. Questi
+//     paesi NON sono offerti dal tool: promettere una copertura che non c'è è
+//     peggio che dichiararne l'assenza.
+
+import { DOCUMENT_ACCESS, documentTierFor, isOffered, type AccessInfo } from "./document-access";
+
+function isosOf(tier: AccessInfo["tier"]): string[] {
+  return Object.entries(DOCUMENT_ACCESS)
+    .filter(([, info]) => info.tier === tier)
+    .map(([iso]) => iso);
+}
+
+function pagesOf(tier: AccessInfo["tier"]): Record<string, { url: string; label: string }> {
+  return Object.fromEntries(
+    Object.entries(DOCUMENT_ACCESS)
+      .filter(([, info]) => info.tier === tier && info.consult)
+      .map(([iso, info]) => [iso, { url: info.consult!.url, label: info.consult!.label }]),
+  );
+}
 
 /** Livello A: bilancio recuperato dal server e mostrato in pagina. */
-export const AUTO_ISOS = ["DE", "NL", "DK", "UK", "FR"] as const;
+export const AUTO_ISOS = isosOf("document") as readonly string[];
 
 /**
- * Livello B: bilancio gratuito, consultazione ufficiale incorporata.
- * L'URL è la pagina da cui si arriva al documento depositato.
+ * Livello B: bilancio gratuito, portale pubblico. L'URL è la pagina da cui si
+ * arriva al documento depositato (livello LIST_ONLY della macchina a stati).
  */
-export const CONSULT_PAGES: Record<string, { url: string; label: string }> = {
-  BE: {
-    url: "https://consult.cbso.nbb.be/",
-    label: "Centrale dei bilanci — Banca nazionale del Belgio",
-  },
-  PL: {
-    url: "https://ekrs.ms.gov.pl/rdf/pd/search_df",
-    label: "KRS — Repozytorium Dokumentów Finansowych",
-  },
-  LU: {
-    url: "https://www.lbr.lu/mjrcs-web-front/",
-    label: "LBR — Registre de commerce et des sociétés",
-  },
-  GR: {
-    url: "https://publicity.businessportal.gr/",
-    label: "ΓΕΜΗ — Registro generale del commercio",
-  },
-  CZ: { url: "https://or.justice.cz/ias/ui/rejstrik", label: "Obchodní rejstřík — Sbírka listin" },
-  EE: { url: "https://ariregister.rik.ee/eng", label: "e-Äriregister — Centro dei registri" },
-  FI: { url: "https://tietopalvelu.ytj.fi/", label: "YTJ / PRH — Servizio informazioni imprese" },
-  SK: {
+export const CONSULT_PAGES: Record<string, { url: string; label: string }> = pagesOf("list");
 
-    url: "https://www.registeruz.sk/cruz-public/domain/accountingentity/simplesearch",
-    label: "Register účtovných závierok",
-  },
-  SI: { url: "https://www.ajpes.si/jolp/", label: "AJPES JOLP — Bilanci annuali" },
-  LV: { url: "https://www.ur.gov.lv/lv/", label: "Uzņēmumu reģistrs — sezione pubblica" },
-  LT: {
-    url: "https://www.registrucentras.lt/jar/p/",
-    label: "Registrų centras — Registro imprese",
-  },
-  BG: {
-    url: "https://portal.registryagency.bg/CR/en/Reports/VerificationPersonOrg",
-    label: "Търговски регистър — Registry Agency",
-  },
-  PT: {
-    url: "https://publicacoes.mj.pt/Pesquisa.aspx",
-    label: "Publicações — Ministério da Justiça",
-  },
-  RO: {
-    url: "https://www.mfinante.gov.ro/domenii/informatii-contribuabili/persoane-juridice/info-pj-selectie-dupa-cui",
-    label: "Ministerul Finanțelor — Situații financiare",
-  },
-  HR: {
-    url: "https://rgfi.fina.hr/JavnaObjava-web/jsp/prijavaKorisnika.jsp",
-    label: "FINA RGFI — Registro dei bilanci",
-  },
-  NO: { url: "https://virksomhet.brreg.no/", label: "Brønnøysundregistrene — Regnskapsregisteret" },
-};
+/**
+ * Livello B2: bilancio gratuito ma raggiungibile solo da una persona
+ * (livello SOURCE_RESTRICTED): mai in iframe, sempre in una nuova scheda con
+ * istruzioni. I due livelli sono disgiunti per costruzione.
+ */
+export const BROWSER_ONLY_PAGES: Record<string, { url: string; label: string }> =
+  pagesOf("restricted");
 
 /**
  * Livello C: il bilancio non è gratuito. Il tool non li offre; la nota dice
  * quanto costa e dove, così l'utente sa dove andare invece di girare a vuoto.
  */
-export const NO_FREE_SOURCE: Record<string, string> = {
-  IT: "I bilanci sono depositati presso le CCIAA: copia integrale 4,50–6 € su registroimprese.it. Gratis solo la propria impresa, via Impresa Italia con SPID.",
-  ES: "Le cuentas anuales del Registro Mercantil sono a pagamento. Gratuiti solo i conti auditati delle società quotate, sul portale CNMV.",
-  SE: "Bolagsverket rilascia l'årsredovisning a tariffa, circa 100 SEK a documento.",
-  CY: "Il fascicolo societario del DRCOR, che contiene i conti, costa 10 €.",
-  AT: "Il Firmenbuch consente la ricerca gratuita ma il documento Jahresabschluss costa circa 1,44 € a copia.",
-  IE: "Il CRO rilascia i documenti, conti inclusi, a tariffa per documento.",
-  MT: "Il Malta Business Registry applica un costo per la documentazione societaria.",
-  IS: "Nessun canale gratuito verificato per i bilanci islandesi.",
-  LI: "In Liechtenstein i conti annuali non sono pubblicati online.",
-};
+export const NO_FREE_SOURCE: Record<string, string> = Object.fromEntries(
+  Object.entries(DOCUMENT_ACCESS)
+    .filter(([, info]) => info.tier === "registry")
+    .map(([iso, info]) => [iso, info.reason]),
+);
 
-/**
- * Livello B2 — SOLO BROWSER. Il bilancio è gratuito, ma il registro impone un
- * controllo che va completato dalla persona (verifica anti-bot, sessione) e
- * rifiuta di essere incorporato in un iframe (X-Frame-Options: DENY). Si apre
- * quindi in una nuova scheda, con istruzioni: nessun controllo viene aggirato.
- */
-export const BROWSER_ONLY_PAGES: Record<string, { url: string; label: string }> = {
-  HU: {
-    url: "https://e-beszamolo.im.gov.hu/oldal/beszamolo_kereses",
-    label: "e-Beszámoló — Ministero della Giustizia",
-  },
-};
-
-/** Il tool copre un paese solo se il bilancio è ottenibile gratis. */
+/** Il tool copre un paese solo se esiste un canale onesto verso il bilancio. */
 export function isCovered(iso: string): boolean {
-  return (
-    (AUTO_ISOS as readonly string[]).includes(iso) ||
-    iso in CONSULT_PAGES ||
-    iso in BROWSER_ONLY_PAGES
-  );
+  return documentTierFor(iso) !== undefined && isOffered(iso);
 }
-
