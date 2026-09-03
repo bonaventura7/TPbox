@@ -8,6 +8,30 @@ import { officialPageFor } from "../src/lib/company-finder/official-pages";
  * puntare solo ai registri veri.
  */
 describe("consultazione ufficiale incorporata", () => {
+  it("Lussemburgo: RCS usa la scheda depositi LBR", () => {
+    expect(officialPageFor("LU", "B60814", "")?.url).toBe(
+      "https://www.lbr.lu/mjrcs-web-front/consult-company/B60814?tab=deposit",
+    );
+    expect(officialPageFor("LU", "B-60 814", "")?.url).toBe(
+      "https://www.lbr.lu/mjrcs-web-front/consult-company/B60814?tab=deposit",
+    );
+  });
+
+  it("Grecia: un GEMI a 10 cifre usa il link company/publicity", () => {
+    const page = officialPageFor("GR", "1797901000", "");
+    expect(page?.url).toBe("https://publicity.businessportal.gr/company/1797901000");
+    expect(page?.note).toContain("CAPTCHA");
+  });
+
+  it("Polonia: KRS apre RDF e guida al documento Roczne sprawozdanie finansowe", () => {
+    const page = officialPageFor("PL", "0000002594", "");
+    expect(page?.url).toBe("https://rdf-przegladarka.ms.gov.pl/wyszukaj-podmiot");
+    expect(page?.note).toContain("KRS 0000002594");
+    expect(page?.note).toContain("Szukaj");
+    expect(page?.note).toContain("Roczne sprawozdanie finansowe");
+    expect(page?.note).toContain("Pobierz dokument");
+  });
+
   it("Danimarca: per numero usa la scheda, senza numero la ricerca per nome", () => {
     expect(officialPageFor("DK", "58495913", "")?.url).toBe(
       "https://datacvr.virk.dk/enhed/virksomhed/58495913",
@@ -18,7 +42,6 @@ describe("consultazione ufficiale incorporata", () => {
   });
 
   it("Belgio: il numero BCE viene portato a dieci cifre", () => {
-    // 479523260 è il numero senza lo zero iniziale: la NBB vuole 0479523260.
     expect(officialPageFor("BE", "479523260", "")?.url).toBe(
       "https://consult.cbso.nbb.be/consult-enterprise/0479523260",
     );
@@ -32,10 +55,9 @@ describe("consultazione ufficiale incorporata", () => {
   });
 
   it("ogni pagina dichiara etichetta e motivo", () => {
-    // IT ed ES non compaiono: da quando la copertura è a tre livelli, i paesi
-    // in cui il bilancio si paga non ricevono una pagina (vedi coverage.ts).
-    for (const iso of ["DK", "BE", "DE", "LU"]) {
-      const page = officialPageFor(iso, "12345678", "Prova");
+    for (const iso of ["DK", "BE", "DE", "LU", "GR", "PL"]) {
+      const identifier = iso === "LU" ? "B60814" : iso === "GR" ? "1797901000" : "12345678";
+      const page = officialPageFor(iso, identifier, "Prova");
       expect(page, iso).toBeDefined();
       expect(page!.label.length, iso).toBeGreaterThan(3);
       expect(page!.note.length, iso).toBeGreaterThan(30);
