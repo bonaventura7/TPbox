@@ -28,17 +28,14 @@ export const ALLOWED_DOCUMENT_HOSTS = new Set([
   "ws.uat2.cbso.nbb.be",
   // UK — Companies House, sito pubblico (conti annuali depositati)
   "find-and-update.company-information.service.gov.uk",
+  // GR — G.E.MI. / BusinessPortal iXBRL filings
+  "filings.businessportal.gr",
+  "publicity.businessportal.gr",
 ]);
 
-/**
- * Host che pubblicano i documenti in chiaro e non rispondono su https
- * (verificato: regnskaber.virk.dk va in timeout su TLS). Sono documenti
- * pubblici di un registro statale, scaricati dal server e senza credenziali:
- * il downgrade non espone nulla dell'utente. Nessun altro host lo ottiene.
- */
 const HTTP_ONLY_HOSTS = new Set(["regnskaber.virk.dk"]);
 
-const MAX_BYTES = 30 * 1024 * 1024; // 30 MB
+const MAX_BYTES = 30 * 1024 * 1024;
 const TIMEOUT_MS = 45_000;
 const UA =
   "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36";
@@ -86,8 +83,6 @@ function serve(doc: Fetched): Response {
 export async function handleDocumentRequest(request: Request): Promise<Response> {
   const params = new URL(request.url).searchParams;
   const target = params.get("url");
-  // Alcune fonti (NBB CBSO) restituiscono PDF, XBRL o JSON a seconda di Accept:
-  // l'adapter lo propaga qui via query string.
   const accept = params.get("accept") || "*/*";
 
   if (!target) return fail("url mancante", 400);
