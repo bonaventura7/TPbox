@@ -2,6 +2,7 @@
 // Alcuni registri richiedono un browser reale o una sessione ufficiale.
 
 import { CONSULT_PAGES, NO_FREE_SOURCE } from "./coverage";
+import { normalizeGemi } from "./greece";
 
 export interface OfficialPage {
   url: string;
@@ -29,9 +30,13 @@ function normalizePolandKrs(value: string): string | undefined {
     : undefined;
 }
 
+/**
+ * ΓΕΜΗ nella forma usata negli URL pubblici del portale (senza zeri iniziali).
+ * Il numero canonico è a 12 cifre; il portale accetta anche la scrittura
+ * compatta a 10-11 cifre. Un ΑΦΜ (9 cifre) non è un ΓΕΜΗ e viene rifiutato.
+ */
 function normalizeGreeceGemi(value: string): string | undefined {
-  const normalized = value.replace(/\D/g, "");
-  return /^\d{10}$/.test(normalized) ? normalized : undefined;
+  return normalizeGemi(value)?.gemi;
 }
 
 export function officialPageFor(
@@ -55,14 +60,14 @@ export function officialPageFor(
 
   const grGemi = iso === "GR" ? normalizeGreeceGemi(rawId) : undefined;
   if (grGemi) {
-    // L'identificativo della società G.E.MI. e quello del filing iXBRL sono
-    // distinti. Il deep-link al filing viene costruito solo quando il provider
-    // restituisce esplicitamente il document URL; non inventiamo un UUID.
+    // Il ΓΕΜΗ a 12 cifre è l'identificativo canonico; il portale accetta anche
+    // la forma compatta. Il deep-link al singolo documento non si costruisce:
+    // l'id del deposito lo pubblica solo il registro.
     return {
       url: `https://publicity.businessportal.gr/company/${grGemi}`,
-      label: "G.E.MI. — Publicity",
+      label: "ΓΕΜΗ — Publicity",
       actionLabel: "Apri bilancio",
-      note: "Apre direttamente la società nel portale ufficiale. Quando il record contiene il link al singolo documento iXBRL, quello viene usato come destinazione primaria.",
+      note: "Apre la scheda della società nel portale ufficiale ΓΕΜΗ. La ricerca del portale è protetta da un CAPTCHA, quindi questa consultazione avviene nel browser dell'utente; quando invece il server riesce a leggere il documento depositato, il bilancio viene aperto e scaricato direttamente da questa pagina, con un clic.",
     };
   }
 
@@ -72,7 +77,7 @@ export function officialPageFor(
       url: "https://rdf-przegladarka.ms.gov.pl/wyszukaj-podmiot",
       label: "RDF — Repozytorium Dokumentów Finansowych",
       actionLabel: "Apri bilancio",
-      note: `Cerca KRS ${plKrs}, seleziona il periodo effettivo e quindi “Roczne sprawozdanie finansowe”. Il tool non inventa l'anno del deposito.`,
+      note: `Cerca KRS ${plKrs} con il pulsante “Szukaj”, apri il periodo effettivo e quindi la voce “Roczne sprawozdanie finansowe”: il file si ottiene con “Pobierz dokument”. Il tool non inventa l'anno del deposito.`,
     };
   }
 

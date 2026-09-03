@@ -41,5 +41,12 @@ export default defineConfig({
   nitro: process.env["VERCEL"] ? nitroVercel : false,
   vite: {
     plugins: [mcpPlugin()],
+    server: {
+      // Il dev server deve accettare l'host del preview (dominio generato):
+      // senza allowedHosts Vite risponde 403 "Blocked request. This host … is
+      // not allowed" e l'anteprima non si carica.
+      host: "0.0.0.0",
+      allowedHosts: true,
+    },
   },
 });

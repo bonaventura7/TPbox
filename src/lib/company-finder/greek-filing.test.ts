@@ -16,7 +16,9 @@ describe("extractGreekFilingUrl", () => {
 
   it("returns undefined when no Greek iXBRL filing is present", () => {
     expect(
-      extractGreekFilingUrl('<a href="https://publicity.businessportal.gr/company/1234567890">Company</a>'),
+      extractGreekFilingUrl(
+        '<a href="https://publicity.businessportal.gr/company/1234567890">Company</a>',
+      ),
     ).toBeUndefined();
   });
 });

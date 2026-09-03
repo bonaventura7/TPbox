@@ -4,12 +4,25 @@ import { z } from "zod";
 import type { SearchResponse } from "./company-finder/types";
 import { getCountry } from "./company-finder/countries";
 import { officialPageFor } from "./company-finder/official-pages";
-import { resolveGreekFilingUrl } from "./company-finder/greek-filing";
+import { documentViewerUrl } from "./company-finder/document-links";
+import {
+  extractGemiFromText,
+  isGreekDocumentUrl,
+  normalizeGemi,
+  normalizeGreekVat,
+} from "./company-finder/greece";
+import { applyGreekDocuments } from "./company-finder/greek-financials.server";
 
 const searchSchema = z.object({
   query: z.string().max(200).default(""),
   vat: z.string().max(40).default(""),
   country: z.string().max(2).default(""),
+  /**
+   * Link ufficiale del documento, quando l'utente lo ha già. Il server lo
+   * valida (solo host e path del registro) e lo serve in pagina: anche in
+   * questo caso l'utente non esce dal sito.
+   */
+  documentUrl: z.string().max(600).default(""),
 });
 
 function emptyResponse(warning: string): SearchResponse {
@@ -21,52 +34,27 @@ function emptyResponse(warning: string): SearchResponse {
   };
 }
 
-function toInPageDocumentUrl(documentUrl: string): string {
-  return `/api/company-finder/document?url=${encodeURIComponent(documentUrl)}`;
-}
-
 function firstRegistryIdentifier(response: SearchResponse, fallback: string): string {
   return response.company?.registry?.id?.trim() || fallback.trim();
 }
 
-async function resolveGreekBalance(response: SearchResponse, fallbackId: string): Promise<SearchResponse> {
-  if (response.company?.country.iso !== "GR" || response.financials?.documentUrl) {
-    return response;
+async function prioritizeBalanceDocument(
+  response: SearchResponse,
+  fallbackId: string,
+  attachedDocumentUrl: string,
+): Promise<SearchResponse> {
+  const resolved = await applyGreekDocuments(response, fallbackId, attachedDocumentUrl);
+  if (resolved.financials?.documents?.length) {
+    resolved.officialPage = undefined;
+    return resolved;
   }
 
-  const gemi = firstRegistryIdentifier(response, fallbackId).replace(/\D/g, "");
-  if (!/^\d{10}$/.test(gemi)) return response;
-
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 15_000);
-  try {
-    const filingUrl = await resolveGreekFilingUrl(gemi, controller.signal);
-    if (!filingUrl) return response;
-
-    response.financials = {
-      ...(response.financials ?? { available: false, years: [] }),
-      documentUrl: filingUrl,
-      documentTitle: "Bilancio ufficiale — ΓΕΜΗ / BusinessPortal iXBRL",
-      source: "ΓΕΜΗ — BusinessPortal iXBRL",
-      note: "Documento iXBRL ufficiale individuato direttamente per la società selezionata.",
-    };
-    response.officialPage = undefined;
-    return response;
-  } catch {
-    return response;
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-async function prioritizeBalanceDocument(response: SearchResponse, fallbackId: string): Promise<SearchResponse> {
-  const resolved = await resolveGreekBalance(response, fallbackId);
   const documentUrl = resolved.financials?.documentUrl;
   if (!documentUrl) return resolved;
 
   resolved.financials = {
     ...resolved.financials!,
-    documentUrl: toInPageDocumentUrl(documentUrl),
+    documentUrl: documentUrl.startsWith("/") ? documentUrl : documentViewerUrl(documentUrl),
   };
   resolved.officialPage = undefined;
   return resolved;
@@ -76,6 +64,7 @@ async function browserRegistryResponse(
   countryIso: string,
   identifier: string,
   query: string,
+  attachedDocumentUrl: string,
 ): Promise<SearchResponse | undefined> {
   const country = getCountry(countryIso);
   if (!country) return undefined;
@@ -91,6 +80,7 @@ async function browserRegistryResponse(
       country,
       registry: {
         name: officialPage.label,
+        authority: country.registryAuthority,
         id: cleaned,
       },
     },
@@ -115,7 +105,7 @@ async function browserRegistryResponse(
     officialPage,
   };
 
-  return prioritizeBalanceDocument(response, cleaned);
+  return prioritizeBalanceDocument(response, cleaned, attachedDocumentUrl);
 }
 
 export const findCompany = createServerFn({ method: "POST" })
@@ -125,25 +115,32 @@ export const findCompany = createServerFn({ method: "POST" })
     const vat = data.vat.trim();
     const country = data.country.trim().toUpperCase();
     const normalized = vat.replace(/[\s.-]/g, "").toUpperCase();
+    const attachedDocumentUrl = data.documentUrl.trim();
 
-    if (query.length === 0 && vat.length === 0) {
+    if (query.length === 0 && vat.length === 0 && attachedDocumentUrl.length === 0) {
       return emptyResponse("Inserisci la ragione sociale oppure il numero di partita IVA.");
     }
 
-    if (country === "GR" && /^\d{10}$/.test(normalized)) {
-      const direct = await browserRegistryResponse("GR", normalized, query);
-      if (direct) return direct;
+    if (country === "GR") {
+      const gemi =
+        normalizeGemi(normalized) ?? extractGemiFromText(normalized) ?? extractGemiFromText(query);
+      const greekVat = normalizeGreekVat(normalized);
+      const greekId = gemi?.gemi ?? greekVat ?? normalized;
+      if (gemi || greekVat || attachedDocumentUrl) {
+        const direct = await browserRegistryResponse("GR", greekId, query, attachedDocumentUrl);
+        if (direct) return direct;
+      }
     }
 
     if (country === "LU" && /^B\d+$/.test(normalized)) {
-      const direct = await browserRegistryResponse("LU", normalized, query);
+      const direct = await browserRegistryResponse("LU", normalized, query, attachedDocumentUrl);
       if (direct) return direct;
     }
 
     const { runSearch } = await import("./company-finder/orchestrator");
     try {
       const response = await runSearch({ query, vat, country });
-      return prioritizeBalanceDocument(response, normalized);
+      return prioritizeBalanceDocument(response, normalized, attachedDocumentUrl);
     } catch (error) {
       console.error("[company-finder] errore orchestratore", error);
       return emptyResponse(

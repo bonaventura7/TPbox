@@ -84,6 +84,28 @@ export interface FinancialYear {
   currency: string;
 }
 
+/**
+ * Un documento ufficiale depositato (bilancio, allegato, iXBRL).
+ * Entrambi gli URL sono SEMPRE stessa origine: il browser dell'utente non
+ * contatta il registro, il file lo scarica il server dell'Osservatorio.
+ */
+export interface FinancialDocumentRef {
+  /** Etichetta leggibile (oggetto del deposito). */
+  label: string;
+  /** Esercizio di riferimento, quando dichiarato dal registro. */
+  year?: string | undefined;
+  /** Data di deposito/pubblicazione, come pubblicata dal registro. */
+  filedAt?: string | undefined;
+  /** PDF / XLSX / XBRL / iXBRL — dedotto dal documento, mai presunto. */
+  format?: string | undefined;
+  /** Nome file proposto per il download. */
+  fileName?: string | undefined;
+  /** Apre il documento nel riquadro della scheda (inline). */
+  viewerUrl: string;
+  /** Scarica il documento con un clic (attachment). */
+  downloadUrl: string;
+}
+
 export interface Financials {
   available: boolean;
   currency?: string | undefined;
@@ -98,6 +120,13 @@ export interface Financials {
   documentUrl?: string | undefined;
   /** Nome del documento (es. "Jahresabschluss 2024 — Siemens AG") */
   documentTitle?: string | undefined;
+  /**
+   * Tutti i documenti depositati (più esercizi, più formati). Quando è
+   * presente, la scheda mostra l'elenco con download a un clic.
+   */
+  documents?: FinancialDocumentRef[] | undefined;
+  /** Motivo tecnico quando il documento non è disponibile (es. NO_KEY). */
+  restriction?: string | undefined;
 }
 
 /**

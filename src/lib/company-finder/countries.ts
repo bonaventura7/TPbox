@@ -239,10 +239,10 @@ export const COUNTRIES: CountryInfo[] = [
     flag: "🇬🇷",
     vatPrefix: "EL",
     registryName: "ΓΕΜΗ (GEMI) — Business Portal",
-    registryAuthority: "Ministero dello Sviluppo",
+    registryAuthority: "ΚΕΕΕ — Ministero dello Sviluppo",
     financials: {
-      free: false,
-      note: "Le pubblicazioni con i bilanci (Οικονομικές Καταστάσεις) sono scaricabili GRATIS dal portale GEMI (publicity.businessportal.gr), ma il portale è protetto da reCAPTCHA: l'estrazione automatica è in studio. In questa vista: identità e stato dal VIES.",
+      free: true,
+      note: "I bilanci depositati (Οικονομικές Καταστάσεις) sono gratuiti nel registro ΓΕΜΗ. Con la chiave API GEMI_API_KEY (gratuita, opendata.businessportal.gr) il tool li recupera dal registro e li serve in questa pagina: apertura in pagina e download con un clic, senza uscire dal sito. Senza chiave resta l'identità (VIES) e la consultazione ufficiale, protetta da reCAPTCHA.",
     },
   },
   {
