@@ -7,7 +7,7 @@
 import { lastObservationAtOrBefore, type Observation } from "./as-of";
 import { parseEcbCsv, parseFredCsv } from "./csv";
 import { ECB_BASE, FRED_CSV, type Metric } from "./registry";
-import { parseTreasuryXml, treasuryUrl, type TreasuryObservations } from "./treasury";
+import { parseTreasuryXml, treasuryUrl, type TreasuryObservations, type TreasurySeries } from "./treasury";
 
 const USER_AGENT = "TPbox/1.0 (portale transfer pricing; market data reader)";
 const LOOKBACK_DAYS = 420;
@@ -111,14 +111,15 @@ async function fetchTreasuryObservation(
   date: string,
   options: FetchOptions,
 ): Promise<Observation | null> {
+  const series = metric.series as TreasurySeries;
   const current = await treasuryData(treasuryUrl(date), options);
-  const observation = lastObservationAtOrBefore(current.get(metric.series as keyof TreasuryObservations) ?? [], date);
+  const observation = lastObservationAtOrBefore(current.get(series) ?? [], date);
   if (observation) return observation;
 
   // Se la data richiesta e' nei primissimi giorni del mese, la precedente
   // osservazione valida puo' appartenere al mese precedente (weekend/festivita').
   const previous = await treasuryData(treasuryUrl(shiftMonths(date, -1)), options);
-  return lastObservationAtOrBefore(previous.get(metric.series as keyof TreasuryObservations) ?? [], date);
+  return lastObservationAtOrBefore(previous.get(series) ?? [], date);
 }
 
 /** Osservazione della metrica valida alla data richiesta, scaricata dalla fonte. */
