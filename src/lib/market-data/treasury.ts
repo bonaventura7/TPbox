@@ -21,31 +21,8 @@ function xmlTag(properties: string, name: string): string | null {
   return match?.[1]?.trim() || null;
 }
 
-/** Parses the official Treasury OData XML feed into dated tenor observations. */
-export function parseTreasuryXml(xml: string): Observation[] & { readonly length: number } {
-  const observations: Observation[] = [];
-  const propertiesBlocks = xml.match(/<[^>]*:?properties\b[^>]*>[\s\S]*?<\/[^>]*:?properties>/gi) ?? [];
-
-  for (const properties of propertiesBlocks) {
-    const rawDate = xmlTag(properties, "NEW_DATE");
-    if (!rawDate) continue;
-    const date = rawDate.slice(0, 10);
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
-
-    for (const series of TENOR_FIELDS) {
-      const rawValue = xmlTag(properties, series);
-      if (!rawValue || /^N\/A$/i.test(rawValue)) continue;
-      const value = Number(rawValue.replace(/,/g, ""));
-      if (Number.isFinite(value)) observations.push({ period: date, value });
-    }
-  }
-
-  // The Observation contract carries the period/value pair only; the parser's
-  // public helper is intentionally one-series-at-a-time via the companion filter.
-  return observations;
-}
-
-export function treasurySeriesObservations(xml: string, series: TreasurySeries): Observation[] {
+/** Parses one Treasury CMT tenor from the official OData XML feed. */
+export function parseTreasuryXml(xml: string, series: TreasurySeries): Observation[] {
   const observations: Observation[] = [];
   const propertiesBlocks = xml.match(/<[^>]*:?properties\b[^>]*>[\s\S]*?<\/[^>]*:?properties>/gi) ?? [];
   for (const properties of propertiesBlocks) {
