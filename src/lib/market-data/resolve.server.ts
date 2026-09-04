@@ -3,11 +3,11 @@
  * richiesta, poi dataset congelato nel repository, poi voce UNAVAILABLE con il
  * motivo. Nessun passaggio produce stime.
  *
- * Il country risk Damodaran arriva solo dal dataset congelato: la fonte e' un
- * file xlsx aggiornato una volta l'anno e leggerlo a runtime richiederebbe una
- * dipendenza nuova per un dato che cambia a gennaio.
+ * Il country risk Damodaran arriva solo dal dataset congelato: il file xlsx e'
+ * aggiornato una volta l'anno e leggerlo a runtime richiederebbe una dipendenza
+ * nuova per un dato che cambia a gennaio.
  */
-import { periodEnd, todayIso } from "./as-of";
+import { periodEnd, todayIso, type Observation } from "./as-of";
 import { fetchObservation, pooled, SourceError } from "./connectors.server";
 import {
   ALL_METRICS,
@@ -34,36 +34,13 @@ import type {
   ResolvedEntry,
 } from "./types";
 
-/**
- * Un valore congelato e' dichiarato «da verificare» quando dista dalla data
- * richiesta piu' della lunghezza del suo periodo piu' questo margine. La soglia
- * dipende dalla frequenza: una media trimestrale vecchia di due mesi e' normale,
- * un cambio giornaliero vecchio di due mesi no.
- */
 const STALE_MARGIN_DAYS = 45;
-/**
- * Il dataset Damodaran esce una volta l'anno con la data del 1° gennaio: la
- * data dell'osservazione non racconta la sua frequenza, quindi la soglia e'
- * dichiarata a parte.
- */
 const COUNTRY_STALE_AFTER_DAYS = 410;
-/**
- * Tempo massimo dedicato alle fonti. La funzione su Vercel si ferma a 30 s e le
- * serie da interrogare sono 41: con sei richieste in parallelo e nove secondi a
- * testa il tetto si supera prima di finire (verificato in produzione, 504
- * FUNCTION_INVOCATION_TIMEOUT a 30,5 s). Le richieste sono piccole e vanno a due
- * soli host, quindi conviene allargare il parallelismo e stringere l'attesa.
- */
 export const DEFAULT_BUDGET_MS = 20_000;
-/**
- * L'attesa dipende dalla fonte. La data API della BCE risponde in meno di un
- * secondo; il CSV di FRED passa da una CDN piu' lenta e con quattro secondi non
- * arrivava mai (verificato in produzione: 26 serie BCE dal vivo, zero FRED).
- */
-const TIMEOUT_BY_SOURCE = { ECB: 5_000, FRED: 8_000, DAMODARAN: 8_000 } as const;
+/** Fonte-specific budgets: Treasury is a single primary XML feed for the USD curve. */
+const TIMEOUT_BY_SOURCE = { ECB: 5_000, FRED: 8_000, TREASURY: 5_000, DAMODARAN: 8_000 } as const;
 const CONCURRENCY = 20;
 
-/** Lunghezza in giorni del periodo dichiarato dall'osservazione. */
 function periodLengthDays(period: string): number {
   if (/^\d{4}-\d{2}-\d{2}$/.test(period)) return 1;
   if (/^\d{4}-\d{2}$/.test(period)) return 31;
@@ -96,12 +73,7 @@ function provenance(metric: Metric, requestedDate: string, retrievedAt: string) 
   };
 }
 
-function missing(
-  metric: Metric,
-  requestedDate: string,
-  retrievedAt: string,
-  reason: string,
-): MissingEntry {
+function missing(metric: Metric, requestedDate: string, retrievedAt: string, reason: string): MissingEntry {
   return { status: "UNAVAILABLE", ...provenance(metric, requestedDate, retrievedAt), reason };
 }
 
@@ -114,21 +86,11 @@ function fromSnapshot(
 ): MarketEntry {
   const prefix = liveReason === null ? "" : `fonte non raggiungibile (${liveReason}); `;
   if (point === undefined) {
-    return missing(
-      metric,
-      requestedDate,
-      retrievedAt,
-      `${prefix}serie non presente nel dataset congelato del ${SNAPSHOT_DATE}`,
-    );
+    return missing(metric, requestedDate, retrievedAt, `${prefix}serie non presente nel dataset congelato del ${SNAPSHOT_DATE}`);
   }
   const gap = daysFromPeriodTo(point.asOf, requestedDate);
   if (gap < 0) {
-    return missing(
-      metric,
-      requestedDate,
-      retrievedAt,
-      `${prefix}il dataset congelato riporta l'osservazione al ${point.asOf}, successiva alla data richiesta: per una data anteriore serve la fonte`,
-    );
+    return missing(metric, requestedDate, retrievedAt, `${prefix}il dataset congelato riporta l'osservazione al ${point.asOf}, successiva alla data richiesta: per una data anteriore serve la fonte`);
   }
   return {
     status: "OK",
@@ -145,13 +107,7 @@ function snapshotPointFor(metric: Metric): SnapshotPoint | undefined {
   return SNAPSHOT_RATES[metric.id];
 }
 
-function live(
-  metric: Metric,
-  requestedDate: string,
-  retrievedAt: string,
-  period: string,
-  value: number,
-): ResolvedEntry {
+function live(metric: Metric, requestedDate: string, retrievedAt: string, period: string, value: number): ResolvedEntry {
   return {
     status: "OK",
     ...provenance(metric, requestedDate, retrievedAt),
@@ -165,12 +121,7 @@ function live(
 function countryEntry(requestedDate: string, retrievedAt: string): CountryEntry {
   const gap = daysFromPeriodTo(SNAPSHOT_COUNTRY.asOf, requestedDate);
   if (gap < 0) {
-    return missing(
-      COUNTRY_METRIC,
-      requestedDate,
-      retrievedAt,
-      `il dataset disponibile è l'aggiornamento del ${SNAPSHOT_COUNTRY.asOf}: per una data anteriore serve il file Damodaran dell'anno corrispondente`,
-    );
+    return missing(COUNTRY_METRIC, requestedDate, retrievedAt, `il dataset disponibile è l'aggiornamento del ${SNAPSHOT_COUNTRY.asOf}: per una data anteriore serve il file Damodaran dell'anno corrispondente`);
   }
   return {
     status: "OK",
@@ -184,7 +135,6 @@ function countryEntry(requestedDate: string, retrievedAt: string): CountryEntry 
 
 export interface BundleOptions {
   readonly date: string;
-  /** `false` salta la rete e restituisce solo il dataset congelato. */
   readonly live: boolean;
   readonly budgetMs: number;
 }
@@ -209,18 +159,10 @@ export async function buildMarketBundle(options: BundleOptions): Promise<MarketB
               signal: controller.signal,
               deadlineAt,
             });
-            if (observation === null) {
-              return [
-                metric,
-                { ok: false, reason: `nessuna osservazione entro il ${requestedDate}` },
-              ];
-            }
+            if (observation === null) return [metric, { ok: false, reason: `nessuna osservazione entro il ${requestedDate}` }];
             return [metric, { ok: true, period: observation.period, value: observation.value }];
           } catch (error) {
-            const reason =
-              error instanceof SourceError
-                ? error.message
-                : ((error as { message?: string })?.message ?? "errore di rete");
+            const reason = error instanceof SourceError ? error.message : ((error as { message?: string })?.message ?? "errore di rete");
             return [metric, { ok: false, reason }];
           }
         }),
@@ -231,13 +173,7 @@ export async function buildMarketBundle(options: BundleOptions): Promise<MarketB
           metric.id,
           outcome.ok
             ? live(metric, requestedDate, retrievedAt, outcome.period, outcome.value)
-            : fromSnapshot(
-                metric,
-                snapshotPointFor(metric),
-                requestedDate,
-                retrievedAt,
-                outcome.reason,
-              ),
+            : fromSnapshot(metric, snapshotPointFor(metric), requestedDate, retrievedAt, outcome.reason),
         );
       }
     } finally {
@@ -247,16 +183,7 @@ export async function buildMarketBundle(options: BundleOptions): Promise<MarketB
 
   for (const metric of fetchable) {
     if (resolved.has(metric.id)) continue;
-    resolved.set(
-      metric.id,
-      fromSnapshot(
-        metric,
-        snapshotPointFor(metric),
-        requestedDate,
-        retrievedAt,
-        options.live ? "tempo disponibile esaurito" : null,
-      ),
-    );
+    resolved.set(metric.id, fromSnapshot(metric, snapshotPointFor(metric), requestedDate, retrievedAt, options.live ? "tempo disponibile esaurito" : null));
   }
 
   const fx: Record<string, MarketEntry> = {};
@@ -282,42 +209,17 @@ export async function buildMarketBundle(options: BundleOptions): Promise<MarketB
     unavailable: all.filter((entry) => entry.status === "UNAVAILABLE").length,
   };
 
-  if (counts.unavailable > 0) {
-    warnings.push(
-      counts.unavailable === 1
-        ? `1 serie su ${all.length} non risolta: la voce riporta il motivo.`
-        : `${counts.unavailable} serie su ${all.length} non risolte: le voci riportano il motivo.`,
-    );
-  }
-  const stale = all.filter(
-    (entry) => entry.status === "OK" && entry.cacheStatus === "CACHED_STALE",
-  ).length;
-  if (stale > 0) {
-    warnings.push(
-      stale === 1
-        ? `1 valore del dataset congelato del ${SNAPSHOT_DATE} dista dalla data richiesta più della lunghezza del suo periodo: da verificare alla fonte prima dell'uso.`
-        : `${stale} valori del dataset congelato del ${SNAPSHOT_DATE} distano dalla data richiesta più della lunghezza del loro periodo: da verificare alla fonte prima dell'uso.`,
-    );
-  }
+  if (counts.unavailable > 0) warnings.push(counts.unavailable === 1 ? `1 serie su ${all.length} non risolta: la voce riporta il motivo.` : `${counts.unavailable} serie su ${all.length} non risolte: le voci riportano il motivo.`);
+  const stale = all.filter((entry) => entry.status === "OK" && entry.cacheStatus === "CACHED_STALE").length;
+  if (stale > 0) warnings.push(stale === 1 ? `1 valore del dataset congelato del ${SNAPSHOT_DATE} dista dalla data richiesta più della lunghezza del suo periodo: da verificare alla fonte prima dell'uso.` : `${stale} valori del dataset congelato del ${SNAPSHOT_DATE} distano dalla data richiesta più della lunghezza del loro periodo: da verificare alla fonte prima dell'uso.`);
 
-  return {
-    requestedDate,
-    generatedAt: retrievedAt,
-    mode: options.live ? "live" : "snapshot",
-    dataset: DATASET,
-    fx,
-    rates,
-    country,
-    counts,
-    warnings,
-  };
+  return { requestedDate, generatedAt: retrievedAt, mode: options.live ? "live" : "snapshot", dataset: DATASET, fx, rates, country, counts, warnings };
 }
 
 type Observationish =
   | { readonly ok: true; readonly period: string; readonly value: number }
   | { readonly ok: false; readonly reason: string };
 
-/** Numero di metriche interrogabili dal vivo (per i test e la pagina cruscotto). */
 export const FETCHABLE_METRICS = ALL_METRICS.filter((metric) => metric.kind !== "country").length;
 
 export function defaultDate(): string {
