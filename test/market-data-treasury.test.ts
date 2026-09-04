@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { buildDifferential } from "../src/lib/currency-benchmark/differential";
 import { clearTreasuryMonths, fetchObservation } from "../src/lib/market-data/connectors.server";
+import { handleMarketDataRequest } from "../src/lib/market-data/handler.server";
+import { referenceRateId, type TenorId } from "../src/lib/market-data/registry";
+import { isResolved, type MarketBundle } from "../src/lib/market-data/types";
 import { SourceFormatError } from "../src/lib/market-data/csv";
 import { metricById, RATE_METRICS, sourceUrlFor } from "../src/lib/market-data/registry";
 import { SNAPSHOT_RATES } from "../src/lib/market-data/snapshots/2026-09-03";
@@ -15,9 +19,10 @@ import {
  * Il feed del Tesoro USA e' un documento Atom con gli elementi del dataset in un
  * namespace: i valori stanno in `<d:BC_5YEAR>`, una riga al giorno, tutte le
  * scadenze sulla stessa riga. La fixture riproduce quella struttura — prefissi,
- * `NEW_DATE` con l'ora, `N/A` sulle scadenze non pubblicate — e usa i valori
- * reali della riga del 2026-09-01, gli stessi gia' congelati nello snapshot per
- * 2Y, 5Y e 10Y tramite FRED.
+ * attributi `m:type`, `NEW_DATE` con l'ora, `N/A` sulle scadenze non pubblicate —
+ * e usa i valori reali della riga del 2026-09-01, gli stessi gia' congelati nello
+ * snapshot per 2Y, 5Y e 10Y tramite FRED. Il parser e' stato provato anche su un
+ * documento reale del feed (annata 2022), da cui questa fixture e' ricalcata.
  */
 function feedXml(
   rows: readonly (readonly [string, Record<string, string>])[],
@@ -26,7 +31,9 @@ function feedXml(
   const body = rows
     .map(([date, fields]) => {
       const cells = Object.entries(fields)
-        .map(([name, value]) => `<${prefix}:${name}>${value}</${prefix}:${name}>`)
+        .map(
+          ([name, value]) => `<${prefix}:${name} m:type="Edm.Double">${value}</${prefix}:${name}>`,
+        )
         .join("");
       return [
         "<entry>",
@@ -35,7 +42,7 @@ function feedXml(
         `<title type="text">${date}</title>`,
         '<content type="application/xml">',
         `<${prefix}:DocumentElement>`,
-        `<${prefix}:NEW_DATE>${date}T00:00:00</${prefix}:NEW_DATE>`,
+        `<${prefix}:NEW_DATE m:type="Edm.DateTime">${date}T00:00:00</${prefix}:NEW_DATE>`,
         cells,
         `</${prefix}:DocumentElement>`,
         "</content>",
@@ -43,7 +50,13 @@ function feedXml(
       ].join("");
     })
     .join("");
-  return `<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom">${body}</feed>`;
+  return (
+    `<?xml version="1.0" encoding="utf-8" standalone="yes" ?>` +
+    `<feed xml:base="https://home.treasury.gov/resource-center/data-chart-center/interest-rates/pages/xml"` +
+    ` xmlns:d="http://schemas.microsoft.com/ado/2007/08/dataservices"` +
+    ` xmlns:m="http://schemas.microsoft.com/ado/2007/08/dataservices/metadata"` +
+    ` xmlns="http://www.w3.org/2005/Atom">${body}</feed>`
+  );
 }
 
 /** Riga reale del feed, 2026-09-01: 1M, 1,5M, 2M, 3M, 4M, 6M, 1Y, 2Y, 3Y, 5Y, 7Y, 10Y, 20Y, 30Y. */
@@ -256,5 +269,58 @@ describe("provenienza dichiarata", () => {
       "BC_10YEAR",
     ]);
     expect(curve.every((metric) => metric.verified)).toBe(true);
+  });
+});
+
+describe("endpoint /api/market-data con la curva in dollari dal vivo", () => {
+  /** CSV minimo nella forma della data API BCE: due colonne, una osservazione. */
+  const ECB_CSV = "TIME_PERIOD,OBS_VALUE\n2026-09-03,3.05\n";
+
+  /**
+   * Il caso che ha portato alla migrazione: con FRED irraggiungibile il
+   * differenziale si bloccava a 3M, 6M, 1Y, 3Y e 7Y. Qui la BCE risponde, FRED
+   * no e il Tesoro risponde: la gamba in dollari deve arrivare dal vivo su tutte
+   * e otto le scadenze con una sola chiamata al feed, e il differenziale deve
+   * costruirsi su tutte le scadenze.
+   */
+  it("serve tutte le scadenze e sblocca il differenziale", async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("home.treasury.gov")) {
+        return new Response(feedXml([["2026-09-03", ROW_0901]]), { status: 200 });
+      }
+      if (url.includes("data-api.ecb.europa.eu")) {
+        return new Response(ECB_CSV, { status: 200 });
+      }
+      return new Response("fonte non raggiungibile", { status: 500 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await handleMarketDataRequest(
+      new Request("https://tpbox.test/api/market-data?date=2026-09-03&live=1"),
+    );
+    expect(response.status).toBe(200);
+    const bundle = (await response.json()) as unknown as MarketBundle;
+
+    const tenors: TenorId[] = ["3M", "6M", "1Y", "2Y", "3Y", "5Y", "7Y", "10Y"];
+    for (const tenor of tenors) {
+      const metricId = referenceRateId("USD", tenor);
+      const entry = metricId === null ? undefined : bundle.rates[metricId];
+      expect(isResolved(entry), `USD ${tenor}`).toBe(true);
+      if (isResolved(entry)) {
+        expect(entry.cacheStatus, `USD ${tenor}`).toBe("LIVE");
+        expect(entry.source, `USD ${tenor}`).toBe("TREASURY");
+        expect(entry.asOf, `USD ${tenor}`).toBe("2026-09-03");
+        expect(entry.sourceUrl, `USD ${tenor}`).toContain("field_tdr_date_value_month=202609");
+      }
+      const outcome = buildDifferential(bundle, "EUR", "USD", tenor);
+      expect(outcome.ok, `differenziale EUR/USD ${tenor}`).toBe(true);
+    }
+
+    const treasury = fetchMock.mock.calls.filter(([url]) =>
+      String(url).includes("home.treasury.gov"),
+    );
+    expect(treasury).toHaveLength(1);
+    expect(String(treasury[0]?.[0])).toContain("field_tdr_date_value_month=202609");
   });
 });
