@@ -40,12 +40,14 @@ Stati della cache:
 
 ## Risoluzione a livelli
 
-1. richiesta alle fonti per la data indicata (finestra di 420 giorni, timeout 4 s
-   per fonte, un tentativo di ripetizione su 429/5xx/rete solo se resta tempo,
-   budget complessivo 14 s, fino a 14 richieste contemporanee). I parametri
-   stanno dentro il tetto di 30 s della funzione: con 41 serie, sei richieste in
-   parallelo e nove secondi a testa la produzione rispondeva 504
-   FUNCTION_INVOCATION_TIMEOUT;
+1. richiesta alle fonti per la data indicata (finestra di 420 giorni, budget
+   complessivo 20 s, fino a 20 richieste contemporanee, un tentativo di
+   ripetizione solo se resta tempo per completarlo). L'attesa dipende dalla
+   fonte: 5 s per la BCE, 8 s per FRED, che passa da una CDN piu' lenta. I
+   parametri stanno dentro il tetto di 30 s della funzione: con 41 serie, sei
+   richieste in parallelo e nove secondi a testa la produzione rispondeva 504
+   FUNCTION_INVOCATION_TIMEOUT, e con quattro secondi uguali per tutti nessuna
+   serie FRED arrivava in tempo;
 2. dataset congelato nel repository, dichiarato come tale;
 3. voce `UNAVAILABLE` con il motivo.
 

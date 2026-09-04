@@ -54,9 +54,14 @@ const COUNTRY_STALE_AFTER_DAYS = 410;
  * FUNCTION_INVOCATION_TIMEOUT a 30,5 s). Le richieste sono piccole e vanno a due
  * soli host, quindi conviene allargare il parallelismo e stringere l'attesa.
  */
-export const DEFAULT_BUDGET_MS = 14_000;
-const PER_SOURCE_TIMEOUT_MS = 4_000;
-const CONCURRENCY = 14;
+export const DEFAULT_BUDGET_MS = 20_000;
+/**
+ * L'attesa dipende dalla fonte. La data API della BCE risponde in meno di un
+ * secondo; il CSV di FRED passa da una CDN piu' lenta e con quattro secondi non
+ * arrivava mai (verificato in produzione: 26 serie BCE dal vivo, zero FRED).
+ */
+const TIMEOUT_BY_SOURCE = { ECB: 5_000, FRED: 8_000, DAMODARAN: 8_000 } as const;
+const CONCURRENCY = 20;
 
 /** Lunghezza in giorni del periodo dichiarato dall'osservazione. */
 function periodLengthDays(period: string): number {
@@ -200,7 +205,7 @@ export async function buildMarketBundle(options: BundleOptions): Promise<MarketB
         fetchable.map((metric) => async (): Promise<[Metric, Observationish]> => {
           try {
             const observation = await fetchObservation(metric, requestedDate, {
-              timeoutMs: PER_SOURCE_TIMEOUT_MS,
+              timeoutMs: TIMEOUT_BY_SOURCE[metric.source],
               signal: controller.signal,
               deadlineAt,
             });
