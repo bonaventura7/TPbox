@@ -15,26 +15,34 @@ const TENOR_FIELDS = [
 ] as const;
 
 export type TreasurySeries = (typeof TENOR_FIELDS)[number];
+export type TreasuryObservations = ReadonlyMap<TreasurySeries, Observation[]>;
 
 function xmlTag(properties: string, name: string): string | null {
   const match = new RegExp(`<[^>]*:${name}[^>]*>([^<]*)</[^>]*:${name}>`).exec(properties);
   return match?.[1]?.trim() || null;
 }
 
-/** Parses one Treasury CMT tenor from the official OData XML feed. */
-export function parseTreasuryXml(xml: string, series: TreasurySeries): Observation[] {
-  const observations: Observation[] = [];
+/** Parses one Treasury CMT XML document for all supported tenors in one pass. */
+export function parseTreasuryXml(xml: string): TreasuryObservations {
+  const observations = new Map<TreasurySeries, Observation[]>(
+    TENOR_FIELDS.map((series) => [series, []]),
+  );
   const propertiesBlocks = xml.match(/<[^>]*:?properties\b[^>]*>[\s\S]*?<\/[^>]*:?properties>/gi) ?? [];
+
   for (const properties of propertiesBlocks) {
     const rawDate = xmlTag(properties, "NEW_DATE");
-    const rawValue = xmlTag(properties, series);
-    if (!rawDate || !rawValue || /^N\/A$/i.test(rawValue)) continue;
+    if (!rawDate) continue;
     const date = rawDate.slice(0, 10);
-    const value = Number(rawValue.replace(/,/g, ""));
-    if (/^\d{4}-\d{2}-\d{2}$/.test(date) && Number.isFinite(value)) {
-      observations.push({ period: date, value });
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
+
+    for (const series of TENOR_FIELDS) {
+      const rawValue = xmlTag(properties, series);
+      if (!rawValue || /^N\/A$/i.test(rawValue)) continue;
+      const value = Number(rawValue.replace(/,/g, ""));
+      if (Number.isFinite(value)) observations.get(series)?.push({ period: date, value });
     }
   }
+
   return observations;
 }
 

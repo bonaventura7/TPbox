@@ -7,13 +7,16 @@
 import { lastObservationAtOrBefore, type Observation } from "./as-of";
 import { parseEcbCsv, parseFredCsv } from "./csv";
 import { ECB_BASE, FRED_CSV, type Metric } from "./registry";
-import { parseTreasuryXml, treasuryUrl } from "./treasury";
+import { parseTreasuryXml, treasuryUrl, type TreasuryObservations, type TreasurySeries } from "./treasury";
 
 const USER_AGENT = "TPbox/1.0 (portale transfer pricing; market data reader)";
 const LOOKBACK_DAYS = 420;
-const TREASURY_CACHE_TTL_MS = 5 * 60 * 1000;
+export const TREASURY_CACHE_TTL_MS = 15 * 60 * 1000;
 
-type TreasuryCacheEntry = { readonly expiresAt: number; readonly text: string };
+type TreasuryCacheEntry = {
+  readonly expiresAt: number;
+  readonly observations: TreasuryObservations;
+};
 const treasuryCache = new Map<string, Promise<TreasuryCacheEntry>>();
 
 export class SourceError extends Error {}
@@ -81,18 +84,22 @@ export function fredUrl(metric: Metric, date: string): string {
   return `${FRED_CSV}${metric.series}&cosd=${start}`;
 }
 
-async function treasuryText(url: string, options: FetchOptions): Promise<string> {
+async function treasuryData(url: string, options: FetchOptions): Promise<TreasuryObservations> {
   const now = Date.now();
   const cached = treasuryCache.get(url);
   if (cached) {
     const entry = await cached;
-    if (entry.expiresAt > now) return entry.text;
+    if (entry.expiresAt > now) return entry.observations;
     treasuryCache.delete(url);
   }
-  const pending = getText(url, options).then((text) => ({ expiresAt: Date.now() + TREASURY_CACHE_TTL_MS, text }));
+
+  const pending = getText(url, options).then((text) => ({
+    expiresAt: Date.now() + TREASURY_CACHE_TTL_MS,
+    observations: parseTreasuryXml(text),
+  }));
   treasuryCache.set(url, pending);
   try {
-    return (await pending).text;
+    return (await pending).observations;
   } catch (error) {
     treasuryCache.delete(url);
     throw error;
@@ -104,16 +111,15 @@ async function fetchTreasuryObservation(
   date: string,
   options: FetchOptions,
 ): Promise<Observation | null> {
-  const currentUrl = treasuryUrl(date);
-  const current = parseTreasuryXml(await treasuryText(currentUrl, options), metric.series as Parameters<typeof parseTreasuryXml>[1]);
-  const observation = lastObservationAtOrBefore(current, date);
+  const series = metric.series as TreasurySeries;
+  const current = await treasuryData(treasuryUrl(date), options);
+  const observation = lastObservationAtOrBefore(current.get(series) ?? [], date);
   if (observation) return observation;
 
   // Se la data richiesta e' nei primissimi giorni del mese, la precedente
   // osservazione valida puo' appartenere al mese precedente (weekend/festivita').
-  const previousUrl = treasuryUrl(shiftMonths(date, -1));
-  const previous = parseTreasuryXml(await treasuryText(previousUrl, options), metric.series as Parameters<typeof parseTreasuryXml>[1]);
-  return lastObservationAtOrBefore(previous, date);
+  const previous = await treasuryData(treasuryUrl(shiftMonths(date, -1)), options);
+  return lastObservationAtOrBefore(previous.get(series) ?? [], date);
 }
 
 /** Osservazione della metrica valida alla data richiesta, scaricata dalla fonte. */
