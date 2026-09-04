@@ -11,6 +11,7 @@ import {
   Calculator,
   Database,
   LineChart,
+  Repeat,
   Scale,
   Search,
   type LucideIcon,
@@ -78,6 +79,15 @@ const CALCULATORS: readonly Tool[] = [
     icon: ArrowLeftRight,
     status: "operativo",
     detail: "Differenziale su curve governative · copertura EUR e USD",
+  },
+  {
+    href: "/tool/swap",
+    title: "Interest Rate Swap",
+    description:
+      "Scadenzario dei pagamenti e interessi di periodo di uno swap, dalle convenzioni di mercato: swap date, day count e pay frequency.",
+    icon: Repeat,
+    status: "operativo",
+    detail: "ISDA 2006 §4.16 · nessuna curva di sconto",
   },
   {
     href: "/tool/valora",

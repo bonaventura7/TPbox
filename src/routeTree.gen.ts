@@ -32,6 +32,7 @@ import { Route as ToolCompanyFinderRouteImport } from './routes/tool.company-fin
 import { Route as ToolCurrencyBenchmarkRouteImport } from './routes/tool.currency-benchmark'
 import { Route as ToolMarketDataRouteImport } from './routes/tool.market-data'
 import { Route as ToolRavvedimentoRouteImport } from './routes/tool.ravvedimento'
+import { Route as ToolSwapRouteImport } from './routes/tool.swap'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as ApiCompanyFinderDocumentRouteImport } from './routes/api.company-finder.document'
@@ -171,6 +172,11 @@ const ToolRavvedimentoRoute = ToolRavvedimentoRouteImport.update({
   path: '/tool/ravvedimento',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ToolSwapRoute = ToolSwapRouteImport.update({
+  id: '/tool/swap',
+  path: '/tool/swap',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
   id: '/.lovable/oauth/consent',
   path: '/.lovable/oauth/consent',
@@ -301,6 +307,7 @@ export interface FileRoutesByFullPath {
   '/tool/currency-benchmark': typeof ToolCurrencyBenchmarkRoute
   '/tool/market-data': typeof ToolMarketDataRoute
   '/tool/ravvedimento': typeof ToolRavvedimentoRoute
+  '/tool/swap': typeof ToolSwapRoute
   '/attualita/': typeof AttualitaIndexRoute
   '/normativa/': typeof NormativaIndexRoute
   '/tool/': typeof ToolIndexRoute
@@ -344,6 +351,7 @@ export interface FileRoutesByTo {
   '/tool/currency-benchmark': typeof ToolCurrencyBenchmarkRoute
   '/tool/market-data': typeof ToolMarketDataRoute
   '/tool/ravvedimento': typeof ToolRavvedimentoRoute
+  '/tool/swap': typeof ToolSwapRoute
   '/attualita': typeof AttualitaIndexRoute
   '/normativa': typeof NormativaIndexRoute
   '/tool': typeof ToolIndexRoute
@@ -390,6 +398,7 @@ export interface FileRoutesById {
   '/tool/currency-benchmark': typeof ToolCurrencyBenchmarkRoute
   '/tool/market-data': typeof ToolMarketDataRoute
   '/tool/ravvedimento': typeof ToolRavvedimentoRoute
+  '/tool/swap': typeof ToolSwapRoute
   '/attualita/': typeof AttualitaIndexRoute
   '/normativa/': typeof NormativaIndexRoute
   '/tool/': typeof ToolIndexRoute
@@ -437,6 +446,7 @@ export interface FileRouteTypes {
     | '/tool/currency-benchmark'
     | '/tool/market-data'
     | '/tool/ravvedimento'
+    | '/tool/swap'
     | '/attualita/'
     | '/normativa/'
     | '/tool/'
@@ -480,6 +490,7 @@ export interface FileRouteTypes {
     | '/tool/currency-benchmark'
     | '/tool/market-data'
     | '/tool/ravvedimento'
+    | '/tool/swap'
     | '/attualita'
     | '/normativa'
     | '/tool'
@@ -525,6 +536,7 @@ export interface FileRouteTypes {
     | '/tool/currency-benchmark'
     | '/tool/market-data'
     | '/tool/ravvedimento'
+    | '/tool/swap'
     | '/attualita/'
     | '/normativa/'
     | '/tool/'
@@ -565,6 +577,7 @@ export interface RootRouteChildren {
   ToolCurrencyBenchmarkRoute: typeof ToolCurrencyBenchmarkRoute
   ToolMarketDataRoute: typeof ToolMarketDataRoute
   ToolRavvedimentoRoute: typeof ToolRavvedimentoRoute
+  ToolSwapRoute: typeof ToolSwapRoute
   ToolIndexRoute: typeof ToolIndexRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -746,6 +759,13 @@ declare module '@tanstack/react-router' {
       path: '/tool/ravvedimento'
       fullPath: '/tool/ravvedimento'
       preLoaderRoute: typeof ToolRavvedimentoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tool/swap': {
+      id: '/tool/swap'
+      path: '/tool/swap'
+      fullPath: '/tool/swap'
+      preLoaderRoute: typeof ToolSwapRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/.lovable/oauth/consent': {
@@ -949,6 +969,7 @@ const rootRouteChildren: RootRouteChildren = {
   ToolCurrencyBenchmarkRoute: ToolCurrencyBenchmarkRoute,
   ToolMarketDataRoute: ToolMarketDataRoute,
   ToolRavvedimentoRoute: ToolRavvedimentoRoute,
+  ToolSwapRoute: ToolSwapRoute,
   ToolIndexRoute: ToolIndexRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,

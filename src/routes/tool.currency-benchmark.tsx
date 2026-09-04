@@ -487,6 +487,35 @@ function CurrencyBenchmarkPage() {
         </aside>
 
         <div className="space-y-12">
+          {/*
+            Il calcolo di questo tool e' continuo: non esiste un pulsante di
+            avvio perche' non c'e' nulla da avviare. La riga dichiara che il
+            risultato mostrato e' quello dei parametri correnti, altrimenti
+            l'assenza del pulsante si legge come un calcolo mai partito.
+          */}
+          <section
+            aria-live="polite"
+            className="rounded-lg border border-rule bg-muted/40 px-4 py-3 text-sm"
+          >
+            <p className="font-medium">
+              {rows.length === 0
+                ? "In attesa delle osservazioni"
+                : `Risultato aggiornato — ${valid} righe convertite su ${rows.length}`}
+            </p>
+            <p className="mt-1 text-muted-foreground">
+              Il calcolo è continuo: ogni modifica ai parametri o alle osservazioni si riflette
+              subito nelle tabelle qui sotto, senza premere alcun pulsante.
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Metodo {METHOD_LABELS[settings.method]} · dati{" "}
+              {bundle?.dataset.version ?? "in caricamento"} · alla data {date} · motore{" "}
+              {ENGINE_VERSION}
+              {settings.differential?.asOfMismatch === true
+                ? " · le due gambe del differenziale hanno date di osservazione diverse"
+                : ""}
+            </p>
+          </section>
+
           <section aria-labelledby="osservazioni">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <h2 id="osservazioni" className="font-serif text-2xl">
