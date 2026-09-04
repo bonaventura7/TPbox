@@ -19,4 +19,4 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Run source, quality, authorization and LLM guardrails
-        run: npx vitest run test/source-gate.test.ts test/source-registry-sync.test.ts test/feed-primary-url.test.ts test/draft-quality.test.ts test/error-message.test.ts test/auth-policy.test.ts test/llm-provider.test.ts test/auth-before-llm.test.ts src/lib/company-finder/greek-filing.test.ts
+        run: npx vitest run test/source-gate.test.ts test/source-registry-sync.test.ts test/feed-primary-url.test.ts test/draft-quality.test.ts test/error-message.test.ts test/auth-policy.test.ts test/llm-provider.test.ts test/auth-before-llm.test.ts src/lib/company-finder/greek-filing.test.ts src/lib/market-data/treasury.test.ts src/lib/market-data/treasury-registry.test.ts
