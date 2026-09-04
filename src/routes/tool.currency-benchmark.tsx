@@ -653,7 +653,14 @@ function CurrencyBenchmarkPage() {
                         </td>
                         <td className="px-3 py-1.5">
                           {result.status === "VALID" && (
-                            <span className="text-xs text-muted-foreground">convertita</span>
+                            <span className="text-xs text-muted-foreground">
+                              convertita
+                              {result.warning !== null && (
+                                <span className="mt-0.5 block max-w-56 text-gold-foreground">
+                                  {result.warning}
+                                </span>
+                              )}
+                            </span>
                           )}
                           {result.status === "BLOCKED" && (
                             <span

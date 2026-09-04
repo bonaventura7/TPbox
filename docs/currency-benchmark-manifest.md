@@ -89,8 +89,25 @@ registry, con l'etichetta «serie non verificata» in pagina:
 
 | Serie | Fonte | Chiave | Nota |
 |---|---|---|---|
-| Curva dei rendimenti area euro, titoli AAA, spot 3M–10Y | BCE SDMX `YC` | `B.U2.EUR.4F.G_N_A.SV_C_YM.SR_{3M,6M,1Y,2Y,3Y,5Y,7Y,10Y}` | [DA VERIFICARE] chiave del dataflow YC |
-| Treasury 3M, 6M, 1Y, 3Y, 7Y | FRED | `DGS3MO`, `DGS6MO`, `DGS1`, `DGS3`, `DGS7` | [DA VERIFICARE] famiglia DGS constant maturity |
+| Treasury 3M, 6M, 1Y, 3Y, 7Y | FRED | `DGS3MO`, `DGS6MO`, `DGS1`, `DGS3`, `DGS7` | [DA VERIFICARE] famiglia DGS constant maturity: da Vercel FRED va in timeout, quindi non è stato possibile provarle |
+
+Verificate in produzione dopo il primo deploy: le otto serie della curva dei
+rendimenti dell'area euro (dataflow `YC`,
+`B.U2.EUR.4F.G_N_A.SV_C_YM.SR_{3M,6M,1Y,2Y,3Y,5Y,7Y,10Y}`) rispondono con dati
+— per esempio 5Y a 3,0593% al 2026-09-02.
+
+### FRED non raggiungibile dalla funzione
+
+Dalla regione `iad1` di Vercel nessuna delle 15 serie FRED arriva in tempo: 26
+serie BCE su 26 tornano dal vivo, zero FRED, con motivo `timeout` anche a 8 s.
+Le dieci serie presenti nel dataset congelato continuano a servire il valore con
+stato dichiarato «dataset»; le altre cinque restano non disponibili. Il
+differenziale funziona quindi a 2Y, 5Y e 10Y (gamba USD dal dataset, gamba EUR
+dal vivo, con l'avviso sulle date diverse) e resta bloccato a 3M, 6M, 1Y, 3Y e
+7Y. Passare la gamba USD all'API keyless del Tesoro statunitense
+(`api.fiscaldata.treasury.gov`, daily treasury par yield curve) è la strada per
+renderlo interamente dal vivo, e sostituirebbe una fonte di terza parte con la
+fonte primaria.
 
 Se una di queste chiavi fosse errata la metrica risulta `UNAVAILABLE` con il
 motivo restituito dalla fonte, e il differenziale che la usa si blocca. Nessun

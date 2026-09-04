@@ -239,8 +239,8 @@ function ecbYieldCurve(tenor: TenorId, suffix: string): Metric {
     flow: "YC",
     unit: "percent",
     pair: "",
-    note: "Curva dei rendimenti dell'area euro, titoli di stato con rating AAA, tasso spot. Chiave del dataflow YC non verificata in sessione.",
-    verified: false,
+    note: "Curva dei rendimenti dell'area euro, titoli di stato con rating AAA, tasso spot. Chiave verificata in produzione: la serie risponde con dati.",
+    verified: true,
   };
 }
 
