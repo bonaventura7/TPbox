@@ -27,6 +27,8 @@ function shiftDays(isoDate: string, days: number): string {
 interface FetchOptions {
   readonly timeoutMs: number;
   readonly signal: AbortSignal | null;
+  /** Istante oltre il quale non si ritenta: la funzione ha un tetto di durata. */
+  readonly deadlineAt: number;
 }
 
 async function getText(url: string, options: FetchOptions): Promise<string> {
@@ -58,6 +60,8 @@ async function getText(url: string, options: FetchOptions): Promise<string> {
       clearTimeout(timer);
       options.signal?.removeEventListener("abort", onAbort);
     }
+    // Un secondo tentativo si fa solo se resta tempo per completarlo.
+    if (Date.now() + options.timeoutMs > options.deadlineAt) break;
   }
   throw new SourceError(lastError);
 }

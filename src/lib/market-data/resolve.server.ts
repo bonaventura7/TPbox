@@ -47,10 +47,16 @@ const STALE_MARGIN_DAYS = 45;
  * dichiarata a parte.
  */
 const COUNTRY_STALE_AFTER_DAYS = 410;
-/** Tempo massimo dedicato alle fonti: la funzione su Vercel ha 30 s. */
-export const DEFAULT_BUDGET_MS = 18_000;
-const PER_SOURCE_TIMEOUT_MS = 9_000;
-const CONCURRENCY = 6;
+/**
+ * Tempo massimo dedicato alle fonti. La funzione su Vercel si ferma a 30 s e le
+ * serie da interrogare sono 41: con sei richieste in parallelo e nove secondi a
+ * testa il tetto si supera prima di finire (verificato in produzione, 504
+ * FUNCTION_INVOCATION_TIMEOUT a 30,5 s). Le richieste sono piccole e vanno a due
+ * soli host, quindi conviene allargare il parallelismo e stringere l'attesa.
+ */
+export const DEFAULT_BUDGET_MS = 14_000;
+const PER_SOURCE_TIMEOUT_MS = 4_000;
+const CONCURRENCY = 14;
 
 /** Lunghezza in giorni del periodo dichiarato dall'osservazione. */
 function periodLengthDays(period: string): number {
@@ -186,6 +192,7 @@ export async function buildMarketBundle(options: BundleOptions): Promise<MarketB
   const resolved = new Map<string, MarketEntry>();
 
   if (options.live) {
+    const deadlineAt = Date.now() + options.budgetMs;
     const controller = new AbortController();
     const budget = setTimeout(() => controller.abort(), options.budgetMs);
     try {
@@ -195,6 +202,7 @@ export async function buildMarketBundle(options: BundleOptions): Promise<MarketB
             const observation = await fetchObservation(metric, requestedDate, {
               timeoutMs: PER_SOURCE_TIMEOUT_MS,
               signal: controller.signal,
+              deadlineAt,
             });
             if (observation === null) {
               return [

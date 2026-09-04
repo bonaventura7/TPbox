@@ -40,9 +40,12 @@ Stati della cache:
 
 ## Risoluzione a livelli
 
-1. richiesta alle fonti per la data indicata (finestra di 420 giorni, timeout 9 s
-   per fonte, un tentativo di ripetizione su 429/5xx/rete, budget complessivo
-   18 s, massimo 6 richieste contemporanee);
+1. richiesta alle fonti per la data indicata (finestra di 420 giorni, timeout 4 s
+   per fonte, un tentativo di ripetizione su 429/5xx/rete solo se resta tempo,
+   budget complessivo 14 s, fino a 14 richieste contemporanee). I parametri
+   stanno dentro il tetto di 30 s della funzione: con 41 serie, sei richieste in
+   parallelo e nove secondi a testa la produzione rispondeva 504
+   FUNCTION_INVOCATION_TIMEOUT;
 2. dataset congelato nel repository, dichiarato come tale;
 3. voce `UNAVAILABLE` con il motivo.
 
