@@ -29,6 +29,9 @@ export const Route = createFileRoute("/tool/market-data")({
 });
 
 const ECB_RATE_IDS = RATE_METRICS.filter((metric) => metric.source === "ECB").map((m) => m.id);
+const TREASURY_RATE_IDS = RATE_METRICS.filter((metric) => metric.source === "TREASURY").map(
+  (m) => m.id,
+);
 const FRED_RATE_IDS = RATE_METRICS.filter((metric) => metric.source === "FRED").map((m) => m.id);
 
 function MarketDataPage() {
@@ -224,13 +227,21 @@ function MarketDataPage() {
         </div>
       </section>
 
-      <section aria-labelledby="tassi-fred" className="mt-12">
-        <h2 id="tassi-fred" className="font-serif text-2xl">
+      <section aria-labelledby="tassi-usa" className="mt-12">
+        <h2 id="tassi-usa" className="font-serif text-2xl">
           Tassi statunitensi e spread creditizi
         </h2>
         <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-          Serie della Federal Reserve Bank of St. Louis: tassi overnight, curva Treasury e
-          option-adjusted spread degli indici ICE BofA.
+          Curva a scadenza costante dal feed XML ufficiale del Dipartimento del Tesoro: fonte
+          primaria, senza chiavi API, pubblicata ogni giorno lavorativo con tutte le scadenze sulla
+          stessa riga.
+        </p>
+        <div className="mt-4">
+          <RatesTable rates={bundle?.rates ?? null} ids={TREASURY_RATE_IDS} loading={loading} />
+        </div>
+        <p className="mt-6 max-w-2xl text-sm text-muted-foreground">
+          Serie della Federal Reserve Bank of St. Louis: tassi overnight e option-adjusted spread
+          degli indici ICE BofA.
         </p>
         <div className="mt-4">
           <RatesTable rates={bundle?.rates ?? null} ids={FRED_RATE_IDS} loading={loading} />
@@ -252,10 +263,9 @@ function MarketDataPage() {
       <div className="mt-14 space-y-3 rounded-lg border border-rule bg-muted/40 p-4 text-xs text-muted-foreground">
         <p>
           Le fonti vengono interrogate dal server, mai dal browser. Ogni valore è l&apos;ultima
-          osservazione della serie non successiva alla data di riferimento. Le serie marcate come
-          non verificate appartengono a famiglie note (Treasury constant maturity) ma non sono state
-          interrogate in fase di sviluppo: se la chiave fosse errata la metrica compare come non
-          disponibile, senza stime.
+          osservazione della serie non successiva alla data di riferimento. Se una chiave non
+          risponde, la metrica compare come non disponibile con il motivo: nessun percorso produce
+          un valore stimato o una scadenza diversa da quella richiesta.
         </p>
         <p>
           Lo strumento ha finalità tecnico-funzionali e di supporto all&apos;analisi: non

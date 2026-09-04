@@ -43,11 +43,11 @@ Stati della cache:
 1. richiesta alle fonti per la data indicata (finestra di 420 giorni, budget
    complessivo 20 s, fino a 20 richieste contemporanee, un tentativo di
    ripetizione solo se resta tempo per completarlo). L'attesa dipende dalla
-   fonte: 5 s per la BCE, 8 s per FRED, che passa da una CDN piu' lenta. I
-   parametri stanno dentro il tetto di 30 s della funzione: con 41 serie, sei
-   richieste in parallelo e nove secondi a testa la produzione rispondeva 504
-   FUNCTION_INVOCATION_TIMEOUT, e con quattro secondi uguali per tutti nessuna
-   serie FRED arrivava in tempo;
+   fonte: 5 s per la BCE, 8 s per FRED, che passa da una CDN piu' lenta, 8 s per
+   il feed del Tesoro USA. I parametri stanno dentro il tetto di 30 s della
+   funzione: con 41 serie, sei richieste in parallelo e nove secondi a testa la
+   produzione rispondeva 504 FUNCTION_INVOCATION_TIMEOUT, e con quattro secondi
+   uguali per tutti nessuna serie FRED arrivava in tempo;
 2. dataset congelato nel repository, dichiarato come tale;
 3. voce `UNAVAILABLE` con il motivo.
 
@@ -78,40 +78,54 @@ valori presenti nello snapshot congelato):
 | Euribor 3M/6M/12M mensili, 12M trimestrale | BCE SDMX `FM` | `M.U2.EUR.RT.MM.EURIBOR{3M,6M,1Y}D_.HSTA` |
 | Tassi bancari IT e area euro, imprese oltre 1 mln, fixing fino a 3M | BCE SDMX `MIR` | `M.{IT,U2}.B.A2A.D.R.1.2240.EUR.N` |
 | SOFR, SONIA | FRED | `SOFR`, `IUDSOIA` |
-| Treasury 2Y/5Y/10Y | FRED | `DGS2`, `DGS5`, `DGS10` |
+| Curva Treasury 3M, 6M, 1Y, 2Y, 3Y, 5Y, 7Y, 10Y | Tesoro USA, feed XML | `BC_3MONTH`, `BC_6MONTH`, `BC_1YEAR`, `BC_2YEAR`, `BC_3YEAR`, `BC_5YEAR`, `BC_7YEAR`, `BC_10YEAR` |
 | Rendimenti corporate Aaa/Baa, OAS high yield e investment grade | FRED | `AAA`, `DBAA`, `BAMLHE00EHYIOAS`, `BAMLH0A0HYM2`, `BAMLC0A0CM` |
 | Country risk Italia | Damodaran, NYU Stern | `ctryprem.xlsx`, aggiornamento 2026-01-01 |
 
-**Non verificate in questa sessione** (rete non raggiungibile verso le fonti dal
-contenitore di sviluppo): le chiavi aggiunte per estendere la copertura dei
-tenor. Appartengono a famiglie note e sono marcate `verified: false` nel
-registry, con l'etichetta «serie non verificata» in pagina:
-
-| Serie | Fonte | Chiave | Nota |
-|---|---|---|---|
-| Treasury 3M, 6M, 1Y, 3Y, 7Y | FRED | `DGS3MO`, `DGS6MO`, `DGS1`, `DGS3`, `DGS7` | [DA VERIFICARE] famiglia DGS constant maturity: da Vercel FRED va in timeout, quindi non è stato possibile provarle |
+Nessuna serie del registry e' marcata `verified: false`: le cinque scadenze che
+restavano da verificare (3M, 6M, 1Y, 3Y, 7Y) sono passate alla fonte primaria
+insieme al resto della curva in dollari. La verifica dei campi `BC_*` e' del
+2026-09-04: i nomi sono quelli dello schema del feed e i valori della riga
+2026-09-01 (2Y 4,39 — 5Y 4,55 — 10Y 4,79) coincidono al centesimo con le serie
+FRED `DGS2`, `DGS5`, `DGS10` congelate nello snapshot, che da quella stessa
+curva derivano.
 
 Verificate in produzione dopo il primo deploy: le otto serie della curva dei
 rendimenti dell'area euro (dataflow `YC`,
 `B.U2.EUR.4F.G_N_A.SV_C_YM.SR_{3M,6M,1Y,2Y,3Y,5Y,7Y,10Y}`) rispondono con dati
 — per esempio 5Y a 3,0593% al 2026-09-02.
 
-### FRED non raggiungibile dalla funzione
+### Gamba in dollari: dal ripiego FRED alla fonte primaria
 
-Dalla regione `iad1` di Vercel nessuna delle 15 serie FRED arriva in tempo: 26
-serie BCE su 26 tornano dal vivo, zero FRED, con motivo `timeout` anche a 8 s.
-Le dieci serie presenti nel dataset congelato continuano a servire il valore con
-stato dichiarato «dataset»; le altre cinque restano non disponibili. Il
-differenziale funziona quindi a 2Y, 5Y e 10Y (gamba USD dal dataset, gamba EUR
-dal vivo, con l'avviso sulle date diverse) e resta bloccato a 3M, 6M, 1Y, 3Y e
-7Y. Passare la gamba USD all'API keyless del Tesoro statunitense
-(`api.fiscaldata.treasury.gov`, daily treasury par yield curve) è la strada per
-renderlo interamente dal vivo, e sostituirebbe una fonte di terza parte con la
-fonte primaria.
+Dalla regione `iad1` di Vercel nessuna delle 15 serie FRED arrivava in tempo: 26
+serie BCE su 26 tornavano dal vivo, zero FRED, con motivo `timeout` anche a 8 s.
+Il differenziale funzionava solo a 2Y, 5Y e 10Y (gamba USD dal dataset, gamba EUR
+dal vivo, con l'avviso sulle date diverse) e restava bloccato a 3M, 6M, 1Y, 3Y e
+7Y.
 
-Se una di queste chiavi fosse errata la metrica risulta `UNAVAILABLE` con il
-motivo restituito dalla fonte, e il differenziale che la usa si blocca. Nessun
-percorso produce un valore stimato. La verifica va fatta aprendo la rotta
+La curva in dollari ora legge il feed XML ufficiale del Dipartimento del Tesoro
+(`home.treasury.gov`, dataset `daily_treasury_yield_curve`, senza chiavi API),
+fonte primaria da cui le serie FRED `DGS` derivano:
+
+- il feed pubblica **un mese per volta** e una riga al giorno contiene tutte le
+  scadenze, quindi le otto metriche della curva condividono **una sola**
+  richiesta (promessa condivisa, valida quanto la cache della rotta);
+- se il mese della data richiesta non ha ancora osservazioni utili — primo del
+  mese, festivita' statunitense, pubblicazione il giorno lavorativo successivo —
+  si legge il mese precedente: al massimo due richieste, la seconda solo quando
+  serve;
+- i campi si leggono per **nome** (`BC_5YEAR`), non per posizione: un campo
+  rinominato o riordinato dalla fonte non sposta i valori su un'altra scadenza,
+  semplicemente non vengono trovati e la metrica risulta non disponibile;
+- il dataset congelato resta il secondo livello e ora copre tutte e otto le
+  scadenze, quindi un'interruzione della fonte non blocca piu' il differenziale.
+
+FRED resta in uso per SOFR, SONIA, i rendimenti corporate e gli OAS: sette serie,
+nessuna delle quali entra nel differenziale.
+
+Se una chiave non risponde la metrica risulta `UNAVAILABLE` con il motivo
+restituito dalla fonte, e il differenziale che la usa si blocca. Nessun percorso
+produce un valore stimato. La verifica va fatta aprendo la rotta
 `/api/market-data` in produzione e controllando lo stato di quelle serie.
 
 ## Metodo di conversione
@@ -127,9 +141,9 @@ Metodi disponibili:
 
   Le due gambe devono essere omogenee, altrimenti il differenziale incorpora
   anche la differenza fra strumenti: si usano rendimenti di titoli di stato alla
-  stessa scadenza su entrambi i lati (curva area euro AAA per l'euro, Treasury
-  constant maturity per il dollaro), non un tasso interbancario contro un titolo
-  di stato. Le due gambe possono avere date `asOf` diverse: quando succede la
+  stessa scadenza su entrambi i lati (curva area euro AAA per l'euro, curva a
+  scadenza costante del Tesoro USA per il dollaro), non un tasso interbancario
+  contro un titolo di stato. Le due gambe possono avere date `asOf` diverse: quando succede la
   riga riporta l'avviso e la tabella mostra entrambe le date.
 
 - **Aggiustamento manuale** (`MANUAL_ADJUSTMENT`): scostamento in basis point
@@ -201,6 +215,10 @@ recente.
 - `test/market-data-resolve.test.ts` — risoluzione dal dataset, rifiuto di
   un'osservazione successiva alla data richiesta, `CACHED_STALE`, serie assenti,
   country risk, finestra richiesta alle fonti, validazione dell'endpoint.
+- `test/market-data-treasury.test.ts` — chiavi di mese del feed, lettura dei
+  campi con prefisso di namespace e dei valori `N/A`, errore su struttura
+  inattesa, una sola richiesta per le otto scadenze, ripiego sul mese
+  precedente, scadenza non pubblicata, coincidenza con i valori congelati.
 - `test/currency-benchmark-engine.test.ts` — lettura dei numeri incollati,
   conversioni, blocchi sui tipi di metrica, percentili, export CSV, costruzione
   del differenziale.

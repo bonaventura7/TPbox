@@ -1,8 +1,9 @@
 /**
  * Accesso alle fonti pubbliche, solo lato server.
  *
- * Nessuna chiave API: BCE SDMX e FRED espongono CSV pubblici. Il browser non
- * interroga mai le fonti direttamente (la richiesta parte da `/api/market-data`).
+ * Nessuna chiave API: BCE SDMX e FRED espongono CSV pubblici, il Tesoro USA un
+ * feed XML pubblico. Il browser non interroga mai le fonti direttamente (la
+ * richiesta parte da `/api/market-data`).
  *
  * Ogni chiamata ha timeout proprio, un tentativo di ripetizione sui soli errori
  * ripetibili (429, 5xx, rete) e una finestra temporale ristretta: si scaricano
@@ -11,6 +12,7 @@
 import { lastObservationAtOrBefore, type Observation } from "./as-of";
 import { parseEcbCsv, parseFredCsv } from "./csv";
 import { ECB_BASE, FRED_CSV, type Metric } from "./registry";
+import { parseTreasuryXml, previousMonthKey, treasuryFeedUrl, treasuryMonthKey } from "./treasury";
 
 const USER_AGENT = "TPbox/1.0 (portale transfer pricing; market data reader)";
 /** Storia scaricata prima della data richiesta: copre anche le serie mensili. */
@@ -29,6 +31,8 @@ interface FetchOptions {
   readonly signal: AbortSignal | null;
   /** Istante oltre il quale non si ritenta: la funzione ha un tetto di durata. */
   readonly deadlineAt: number;
+  /** Tipo di risposta atteso: CSV per BCE e FRED, XML per il Tesoro. */
+  readonly accept?: string;
 }
 
 async function getText(url: string, options: FetchOptions): Promise<string> {
@@ -40,7 +44,10 @@ async function getText(url: string, options: FetchOptions): Promise<string> {
     const timer = setTimeout(() => controller.abort(), options.timeoutMs);
     try {
       const response = await fetch(url, {
-        headers: { "User-Agent": USER_AGENT, Accept: "text/csv,*/*" },
+        headers: {
+          "User-Agent": USER_AGENT,
+          Accept: options.accept ?? "text/csv,*/*",
+        },
         signal: controller.signal,
         redirect: "follow",
       });
@@ -79,6 +86,63 @@ export function fredUrl(metric: Metric, date: string): string {
   return `${FRED_CSV}${metric.series}&cosd=${start}`;
 }
 
+type TreasuryMonth = Readonly<Record<string, readonly Observation[]>>;
+
+/**
+ * Il feed del Tesoro pubblica un mese per volta con tutte le scadenze sulla
+ * stessa riga: le otto metriche della curva in dollari leggono lo stesso
+ * documento. La promessa viene condivisa per non scaricare otto volte lo stesso
+ * mese, e resta valida quanto la cache della rotta (un quarto d'ora).
+ *
+ * Se la richiesta fallisce la voce viene tolta, cosi' la metrica successiva
+ * riprova invece di ereditare l'errore per tutta la finestra di validita'.
+ */
+const treasuryMonths = new Map<
+  string,
+  { readonly at: number; readonly data: Promise<TreasuryMonth> }
+>();
+const TREASURY_MONTH_TTL_MS = 900_000;
+const TREASURY_ACCEPT = "application/xml,text/xml,*/*";
+
+/** Svuota la memoria dei mesi: serve ai test e al riuso dell'istanza. */
+export function clearTreasuryMonths(): void {
+  treasuryMonths.clear();
+}
+
+function loadTreasuryMonth(monthKey: string, options: FetchOptions): Promise<TreasuryMonth> {
+  const cached = treasuryMonths.get(monthKey);
+  if (cached !== undefined && Date.now() - cached.at < TREASURY_MONTH_TTL_MS) return cached.data;
+  const data = getText(treasuryFeedUrl(monthKey), { ...options, accept: TREASURY_ACCEPT })
+    .then(parseTreasuryXml)
+    .catch((error: unknown) => {
+      treasuryMonths.delete(monthKey);
+      throw error;
+    });
+  treasuryMonths.set(monthKey, { at: Date.now(), data });
+  return data;
+}
+
+/**
+ * Osservazione della curva del Tesoro valida alla data richiesta.
+ *
+ * Il mese pubblicato e' quello della data; quando non contiene ancora
+ * osservazioni utili — primo del mese, festivita' statunitense, pubblicazione il
+ * giorno lavorativo successivo — si legge il mese precedente. Al massimo due
+ * richieste, e la seconda solo quando serve.
+ */
+async function treasuryObservation(
+  field: string,
+  date: string,
+  options: FetchOptions,
+): Promise<Observation | null> {
+  const monthKey = treasuryMonthKey(date);
+  const current = (await loadTreasuryMonth(monthKey, options))[field];
+  const found = current === undefined ? null : lastObservationAtOrBefore(current, date);
+  if (found !== null) return found;
+  const earlier = (await loadTreasuryMonth(previousMonthKey(monthKey), options))[field];
+  return earlier === undefined ? null : lastObservationAtOrBefore(earlier, date);
+}
+
 /**
  * Osservazione della metrica valida alla data richiesta, scaricata dalla fonte.
  * `null` se la serie risponde ma non ha osservazioni entro la data.
@@ -95,6 +159,9 @@ export async function fetchObservation(
   if (metric.source === "FRED") {
     const text = await getText(fredUrl(metric, date), options);
     return lastObservationAtOrBefore(parseFredCsv(text), date);
+  }
+  if (metric.source === "TREASURY") {
+    return treasuryObservation(metric.series, date, options);
   }
   throw new SourceError(
     `fonte ${metric.source} non interrogabile dal vivo: il valore arriva dal dataset congelato`,

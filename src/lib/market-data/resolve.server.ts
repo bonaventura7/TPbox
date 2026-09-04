@@ -58,9 +58,12 @@ export const DEFAULT_BUDGET_MS = 20_000;
 /**
  * L'attesa dipende dalla fonte. La data API della BCE risponde in meno di un
  * secondo; il CSV di FRED passa da una CDN piu' lenta e con quattro secondi non
- * arrivava mai (verificato in produzione: 26 serie BCE dal vivo, zero FRED).
+ * arrivava mai (verificato in produzione: 26 serie BCE dal vivo, zero FRED), e
+ * il resto della curva in dollari e' passato al feed del Tesoro proprio perche'
+ * da `iad1` FRED non rispondeva. Il Tesoro pubblica un mese per volta con tutte
+ * le scadenze sulla stessa riga: una richiesta, condivisa fra le otto metriche.
  */
-const TIMEOUT_BY_SOURCE = { ECB: 5_000, FRED: 8_000, DAMODARAN: 8_000 } as const;
+const TIMEOUT_BY_SOURCE = { ECB: 5_000, FRED: 8_000, TREASURY: 8_000, DAMODARAN: 8_000 } as const;
 const CONCURRENCY = 20;
 
 /** Lunghezza in giorni del periodo dichiarato dall'osservazione. */
@@ -83,7 +86,12 @@ function daysFromPeriodTo(period: string, isoDate: string): number {
   return Math.round((to - from) / 86_400_000);
 }
 
-function provenance(metric: Metric, requestedDate: string, retrievedAt: string) {
+function provenance(
+  metric: Metric,
+  requestedDate: string,
+  retrievedAt: string,
+  observedAt?: string,
+) {
   return {
     metricId: metric.id,
     label: metric.label,
@@ -91,7 +99,9 @@ function provenance(metric: Metric, requestedDate: string, retrievedAt: string) 
     unit: metric.unit,
     source: metric.source,
     series: metric.series,
-    sourceUrl: sourceUrlFor(metric),
+    // Le fonti a finestra (il feed del Tesoro pubblica un mese per volta) hanno
+    // un indirizzo che dipende dal periodo osservato, non dalla data richiesta.
+    sourceUrl: sourceUrlFor(metric, observedAt ?? requestedDate),
     retrievedAt,
   };
 }
@@ -132,7 +142,7 @@ function fromSnapshot(
   }
   return {
     status: "OK",
-    ...provenance(metric, requestedDate, retrievedAt),
+    ...provenance(metric, requestedDate, retrievedAt, point.asOf),
     value: point.value,
     asOf: point.asOf,
     cacheStatus: gap > staleAfterDays(point.asOf) ? "CACHED_STALE" : "CACHED",
@@ -154,7 +164,7 @@ function live(
 ): ResolvedEntry {
   return {
     status: "OK",
-    ...provenance(metric, requestedDate, retrievedAt),
+    ...provenance(metric, requestedDate, retrievedAt, period),
     value,
     asOf: period,
     cacheStatus: "LIVE",

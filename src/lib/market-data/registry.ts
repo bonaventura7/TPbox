@@ -4,12 +4,16 @@
  * Ogni metrica dichiara fonte, chiave della serie, unita' e stato di verifica.
  * `verified: true` significa che la chiave e' stata interrogata e ha risposto
  * con dati (BCE e FRED, verifica del 2026-09-03, riportata nello snapshot
- * congelato). `verified: false` marca le serie aggiunte per estendere la
- * copertura dei tenor senza una verifica diretta: se la chiave fosse errata la
- * metrica risulta UNAVAILABLE, mai un valore stimato.
+ * congelato; Tesoro USA, verifica del 2026-09-04 descritta in
+ * `US_TREASURY_NOTE`). `verified: false` marca le serie aggiunte per estendere
+ * la copertura dei tenor senza una verifica diretta: se la chiave fosse errata
+ * la metrica risulta UNAVAILABLE, mai un valore stimato.
  *
- * Nessuna chiave API: BCE SDMX e FRED CSV sono endpoint pubblici.
+ * Nessuna chiave API: BCE SDMX e FRED espongono CSV pubblici, il Tesoro USA un
+ * feed XML pubblico.
  */
+import { todayIso } from "./as-of";
+import { treasuryFeedUrl, treasuryMonthKey, type TreasuryField } from "./treasury";
 import type { MarketSource, MetricKind } from "./types";
 
 export const ECB_BASE = "https://data-api.ecb.europa.eu/service/data";
@@ -21,9 +25,9 @@ export interface Metric {
   readonly label: string;
   readonly kind: MetricKind;
   readonly source: MarketSource;
-  /** Chiave SDMX (BCE) oppure series id (FRED). */
+  /** Chiave SDMX (BCE), series id (FRED) oppure campo del feed (Tesoro USA). */
   readonly series: string;
-  /** Dataflow SDMX: EXR, FM, MIR. Vuoto per FRED. */
+  /** Dataflow SDMX: EXR, FM, MIR. Vuoto per FRED e per il Tesoro. */
   readonly flow: string;
   readonly unit: string;
   /** Coppia di cambio, solo per le metriche fx. */
@@ -32,9 +36,15 @@ export interface Metric {
   readonly verified: boolean;
 }
 
-export function sourceUrlFor(metric: Metric): string {
+export function sourceUrlFor(metric: Metric, at: string = todayIso()): string {
   if (metric.source === "ECB") return `${ECB_BASE}/${metric.flow}/${metric.series}`;
   if (metric.source === "FRED") return `${FRED_CSV}${metric.series}`;
+  if (metric.source === "TREASURY") {
+    // Il feed pubblica un mese per volta: l'indirizzo punta al mese della
+    // osservazione, non a quello di oggi, perche' sia quello che la contiene.
+    const month = /^\d{4}-\d{2}/.test(at) ? treasuryMonthKey(at) : treasuryMonthKey(todayIso());
+    return treasuryFeedUrl(month);
+  }
   return DAMODARAN_CTRYPREM;
 }
 
@@ -104,6 +114,32 @@ function fredRate(
   };
 }
 
+/**
+ * Curva a scadenza costante del Tesoro USA, dal feed XML ufficiale.
+ *
+ * Verifica del 2026-09-04: i campi `BC_*` sono quelli dello schema del feed e i
+ * valori letti alla riga del 2026-09-01 (2Y 4,39 — 5Y 4,55 — 10Y 4,79) sono
+ * identici a quelli delle serie FRED `DGS2`, `DGS5`, `DGS10` congelate nello
+ * snapshot, che da quella stessa curva derivano.
+ */
+const US_TREASURY_NOTE =
+  "Curva dei rendimenti a scadenza costante del Tesoro USA (daily par yield curve), feed XML ufficiale: stessa fonte primaria da cui derivano le serie DGS.";
+
+function treasuryRate(id: string, label: string, field: TreasuryField, tenor: string): Metric {
+  return {
+    id,
+    label,
+    kind: "rate",
+    source: "TREASURY",
+    series: field,
+    flow: "",
+    unit: "percent",
+    pair: "",
+    note: `${US_TREASURY_NOTE} Scadenza ${tenor}.`,
+    verified: true,
+  };
+}
+
 const MONEY_AND_CREDIT_METRICS: readonly Metric[] = [
   ecbRate(
     "EURIBOR_3M_M",
@@ -159,44 +195,14 @@ const MONEY_AND_CREDIT_METRICS: readonly Metric[] = [
     "IUDSOIA",
     "Sterling Overnight Index Average, Bank of England via FRED.",
   ),
-  fredRate(
-    "US_TREASURY_3M",
-    "Treasury USA 3 mesi",
-    "DGS3MO",
-    "Constant maturity. Chiave della famiglia DGS non verificata in sessione.",
-    false,
-  ),
-  fredRate(
-    "US_TREASURY_6M",
-    "Treasury USA 6 mesi",
-    "DGS6MO",
-    "Constant maturity. Chiave della famiglia DGS non verificata in sessione.",
-    false,
-  ),
-  fredRate(
-    "US_TREASURY_1Y",
-    "Treasury USA 1 anno",
-    "DGS1",
-    "Constant maturity. Chiave della famiglia DGS non verificata in sessione.",
-    false,
-  ),
-  fredRate("US_TREASURY_2Y", "Treasury USA 2 anni", "DGS2", "Constant maturity, giornaliera."),
-  fredRate(
-    "US_TREASURY_3Y",
-    "Treasury USA 3 anni",
-    "DGS3",
-    "Constant maturity. Chiave della famiglia DGS non verificata in sessione.",
-    false,
-  ),
-  fredRate("US_TREASURY_5Y", "Treasury USA 5 anni", "DGS5", "Constant maturity, giornaliera."),
-  fredRate(
-    "US_TREASURY_7Y",
-    "Treasury USA 7 anni",
-    "DGS7",
-    "Constant maturity. Chiave della famiglia DGS non verificata in sessione.",
-    false,
-  ),
-  fredRate("US_TREASURY_10Y", "Treasury USA 10 anni", "DGS10", "Constant maturity, giornaliera."),
+  treasuryRate("US_TREASURY_3M", "Treasury USA 3 mesi", "BC_3MONTH", "3 mesi"),
+  treasuryRate("US_TREASURY_6M", "Treasury USA 6 mesi", "BC_6MONTH", "6 mesi"),
+  treasuryRate("US_TREASURY_1Y", "Treasury USA 1 anno", "BC_1YEAR", "1 anno"),
+  treasuryRate("US_TREASURY_2Y", "Treasury USA 2 anni", "BC_2YEAR", "2 anni"),
+  treasuryRate("US_TREASURY_3Y", "Treasury USA 3 anni", "BC_3YEAR", "3 anni"),
+  treasuryRate("US_TREASURY_5Y", "Treasury USA 5 anni", "BC_5YEAR", "5 anni"),
+  treasuryRate("US_TREASURY_7Y", "Treasury USA 7 anni", "BC_7YEAR", "7 anni"),
+  treasuryRate("US_TREASURY_10Y", "Treasury USA 10 anni", "BC_10YEAR", "10 anni"),
   fredRate(
     "MOODYS_BAA_D",
     "Corporate Baa — rendimento (giornaliero)",
@@ -321,7 +327,8 @@ export const TENORS: readonly { readonly id: TenorId; readonly years: number }[]
  * contro un titolo di stato.
  *
  * EUR: curva dei rendimenti dell'area euro, titoli AAA (BCE, dataflow YC).
- * USD: Treasury constant maturity (FRED, famiglia DGS).
+ * USD: curva a scadenza costante del Tesoro USA (feed XML ufficiale, campi
+ * `BC_*`), fonte primaria e senza chiavi API.
  *
  * La copertura e' dichiarata: dove manca una serie per la valuta e il tenor il
  * metodo si blocca, senza ripiegare su una scadenza diversa. Le altre valute
@@ -357,7 +364,7 @@ export function referenceRateId(currency: string, tenor: TenorId): string | null
 
 /** Basi del differenziale, per la nota metodologica in pagina. */
 export const REFERENCE_BASIS_NOTE =
-  "Rendimenti di titoli di stato alla stessa scadenza: curva dell'area euro (titoli AAA, BCE) per l'euro, Treasury constant maturity (FRED) per il dollaro.";
+  "Rendimenti di titoli di stato alla stessa scadenza: curva dell'area euro (titoli AAA, BCE) per l'euro, curva a scadenza costante del Tesoro USA (feed XML ufficiale, fonte primaria senza chiavi API) per il dollaro.";
 
 /** Valute con almeno un tasso di riferimento a termine nel registry. */
 export const DIFFERENTIAL_CURRENCIES: readonly string[] = Object.keys(REFERENCE_RATES);

@@ -8,7 +8,15 @@
  *  - dare un dataset deterministico ai test.
  *
  * Snapshot di origine: hash f8dbe7840479569bbe14239ded2a5ec5bdb94078016d6c63ed4098ffc8f048f4
- * (12 cambi, 16 tassi e il country risk, tutti con stato OK).
+ * (12 cambi, 16 tassi e il country risk, tutti con stato OK). L'hash descrive
+ * quel download, non le integrazioni successive dichiarate qui sotto.
+ *
+ * Integrazione del 2026-09-04: le cinque scadenze della curva in dollari che lo
+ * snapshot di origine non aveva (3M, 6M, 1Y, 3Y, 7Y) sono state lette dal feed
+ * XML ufficiale del Tesoro USA alla riga del 2026-09-01, la stessa da cui
+ * provengono 2Y, 5Y e 10Y gia' presenti — i tre valori coincidono al centesimo
+ * con le serie FRED congelate, che da quella curva derivano. Non sono stime:
+ * servono solo quando la fonte non risponde, e restano dichiarate CACHED.
  *
  * Le serie aggiunte al registry dopo questa data non compaiono qui: si
  * risolvono solo dal vivo, altrimenti restano UNAVAILABLE.
@@ -51,8 +59,13 @@ export const SNAPSHOT_RATES: Readonly<Record<string, SnapshotPoint>> = {
   MIR_U2_NFC_GT1M_U3M: { value: 3.49, asOf: "2026-07" },
   SOFR: { value: 3.65, asOf: "2026-09-02" },
   SONIA: { value: 3.7302, asOf: "2026-09-01" },
+  US_TREASURY_3M: { value: 3.92, asOf: "2026-09-01" },
+  US_TREASURY_6M: { value: 4, asOf: "2026-09-01" },
+  US_TREASURY_1Y: { value: 4.18, asOf: "2026-09-01" },
   US_TREASURY_2Y: { value: 4.39, asOf: "2026-09-01" },
+  US_TREASURY_3Y: { value: 4.46, asOf: "2026-09-01" },
   US_TREASURY_5Y: { value: 4.55, asOf: "2026-09-01" },
+  US_TREASURY_7Y: { value: 4.66, asOf: "2026-09-01" },
   US_TREASURY_10Y: { value: 4.79, asOf: "2026-09-01" },
   MOODYS_BAA_D: { value: 6.37, asOf: "2026-09-01" },
   MOODYS_AAA_M: { value: 5.88, asOf: "2026-08-01" },
