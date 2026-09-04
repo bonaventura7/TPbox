@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { buildMarketBundle } from "../src/lib/market-data/resolve.server";
 import { handleMarketDataRequest } from "../src/lib/market-data/handler.server";
 import { ecbUrl, fredUrl } from "../src/lib/market-data/connectors.server";
-import { metricById } from "../src/lib/market-data/registry";
+import { metricById, sourceUrlFor } from "../src/lib/market-data/registry";
 import { isResolved } from "../src/lib/market-data/types";
 
 /**
@@ -108,12 +108,21 @@ describe("indirizzi delle fonti", () => {
   });
 
   it("restringe la finestra richiesta a FRED", () => {
-    const metric = metricById("US_TREASURY_10Y");
+    const metric = metricById("SOFR");
     expect(metric).not.toBeNull();
     if (metric === null) return;
     const url = fredUrl(metric, "2026-09-03");
-    expect(url).toContain("id=DGS10");
+    expect(url).toContain("id=SOFR");
     expect(url).toContain("cosd=2025-07");
+  });
+
+  it("punta al mese dell'osservazione sul feed del Tesoro", () => {
+    const metric = metricById("US_TREASURY_5Y");
+    expect(metric).not.toBeNull();
+    if (metric === null) return;
+    const url = sourceUrlFor(metric, "2026-09-03");
+    expect(url).toContain("data=daily_treasury_yield_curve");
+    expect(url).toContain("field_tdr_date_value_month=202609");
   });
 });
 

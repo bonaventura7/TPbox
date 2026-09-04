@@ -116,7 +116,7 @@ const DATABASES: readonly Tool[] = [
       "Cambi di riferimento BCE, curve dei rendimenti, tassi Euribor e Treasury, spread creditizi e country risk premium.",
     icon: Activity,
     status: "operativo",
-    detail: "BCE, FRED e Damodaran · interrogate lato server",
+    detail: "BCE, Tesoro USA, FRED e Damodaran · interrogate lato server",
   },
   {
     href: "/tool/patentscope",

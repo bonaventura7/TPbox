@@ -7,7 +7,7 @@
  * una voce `UNAVAILABLE` con il motivo.
  */
 
-export type MarketSource = "ECB" | "FRED" | "DAMODARAN";
+export type MarketSource = "ECB" | "FRED" | "TREASURY" | "DAMODARAN";
 
 export type MetricKind = "fx" | "rate" | "country";
 

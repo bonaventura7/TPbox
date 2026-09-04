@@ -19,7 +19,7 @@ import { resolveFxPair } from "../src/lib/market-data/fx";
 import type { MarketEntry } from "../src/lib/market-data/types";
 
 /** Hash della forma canonica del dataset congelato: cambia solo se cambiano i valori. */
-const SNAPSHOT_FINGERPRINT = "6d574f4d8d620c70f70e0ca197a30e5b42fc6fbb2e37f589307e6cffd7d24368";
+const SNAPSHOT_FINGERPRINT = "a02d1440e521fa06eecd9ab357a04219a577b95af1ecd56de51259fc7856d28f";
 
 describe("registry delle metriche", () => {
   it("non ha identificativi duplicati", () => {
@@ -33,6 +33,10 @@ describe("registry delle metriche", () => {
       expect(url.startsWith("https://"), metric.id).toBe(true);
       if (metric.source === "ECB") expect(url).toContain(`/${metric.flow}/${metric.series}`);
       if (metric.source === "FRED") expect(url).toContain(metric.series);
+      if (metric.source === "TREASURY") {
+        expect(url).toContain("daily_treasury_yield_curve");
+        expect(url).toContain("field_tdr_date_value_month=");
+      }
     }
   });
 
