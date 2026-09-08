@@ -1,0 +1,33 @@
+name: Temporary Germany full suite verification
+
+on:
+  push:
+    branches:
+      - feat/company-finder-germany-end-to-end
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx vitest run
+      - run: npm run build
+      - name: Remove temporary workflow and commit
+        shell: bash
+        run: |
+          rm .github/workflows/_tmp-germany-fulltest.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/workflows/_tmp-germany-fulltest.yml
+          git commit -m "test(company-finder): verify full suite on Germany branch"
+          git push origin HEAD:feat/company-finder-germany-end-to-end
