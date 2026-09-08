@@ -39,6 +39,19 @@ export const Route = createFileRoute("/api/company-finder/document")({
       return errorResponse(detail || `bilancio ${year} non disponibile nel KRS RDF`, relay.status >= 400 ? 502 : 502);
     }
 
+    if (country === "EE") {
+      const code = company.replace(/\D/g, "");
+      if (!/^\d{8}$/.test(code)) return errorResponse("registrikood non valido", 400);
+      const { fetchEeFileDocument, resolveEeFiling } = await import("@/lib/company-finder/sources/bilanci/ariregister-ee");
+      const filing = await resolveEeFiling(code, year);
+      if (!filing.ok || !filing.fileId) return errorResponse(filing.error ?? `bilancio ${year} non disponibile`, 502);
+      const doc = await fetchEeFileDocument(code, filing.fileId);
+      if (!doc.ok || !doc.bytes) return errorResponse(doc.error ?? `bilancio ${year} non disponibile`, 502);
+      const isPdf = (doc.contentType ?? "").includes("pdf");
+      const ext = isPdf ? "pdf" : "html";
+      return new Response(doc.bytes, { status: 200, headers: { "Content-Type": doc.contentType ?? (isPdf ? "application/pdf" : "text/html; charset=utf-8"), "Content-Disposition": `${download ? "attachment" : "inline"}; filename="bilancio-EE-${code}-${year}.${ext}"`, "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" } });
+    }
+
     if (country === "FR") {
       const siren = url.searchParams.get("siren")?.replace(/\D/g, "") ?? "";
       if (!/^\d{9}$/.test(siren)) return errorResponse("SIREN non valido", 400);

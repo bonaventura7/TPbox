@@ -43,6 +43,8 @@ export const ALLOWED_DOCUMENT_HOSTS = new Set([
   // GR — G.E.MI. / BusinessPortal iXBRL filings
   "filings.businessportal.gr",
   "publicity.businessportal.gr",
+  // EE — e-Äriregister (RIK): schede e bilanci pubblici
+  "ariregister.rik.ee",
 ]);
 
 const MAX_BYTES = 30 * 1024 * 1024;

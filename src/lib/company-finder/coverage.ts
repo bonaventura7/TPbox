@@ -12,7 +12,7 @@
 //     dichiararne l'assenza.
 
 /** Livello A: bilancio recuperato dal server e mostrato in pagina. */
-export const AUTO_ISOS = ["DE", "NL", "DK", "UK", "FR"] as const;
+export const AUTO_ISOS = ["DE", "NL", "DK", "UK", "FR", "EE"] as const;
 
 /**
  * Livello B: bilancio gratuito, consultazione ufficiale incorporata.
@@ -36,7 +36,6 @@ export const CONSULT_PAGES: Record<string, { url: string; label: string }> = {
     label: "ΓΕΜΗ — Registro generale del commercio",
   },
   CZ: { url: "https://or.justice.cz/ias/ui/rejstrik", label: "Obchodní rejstřík — Sbírka listin" },
-  EE: { url: "https://ariregister.rik.ee/eng", label: "e-Äriregister — Centro dei registri" },
   FI: { url: "https://tietopalvelu.ytj.fi/", label: "YTJ / PRH — Servizio informazioni imprese" },
   SK: {
     url: "https://www.registeruz.sk/cruz-public/domain/accountingentity/simplesearch",

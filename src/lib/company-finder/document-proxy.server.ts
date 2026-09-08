@@ -15,6 +15,8 @@ export const ALLOWED_DOCUMENT_HOSTS = new Set([
   "publicity.businessportal.gr",
   "www.pappers.fr",
   "pappers.fr",
+  // EE — e-Äriregister (RIK): schede e bilanci pubblici
+  "ariregister.rik.ee",
 ]);
 const HTTP_ONLY_HOSTS = new Set(["regnskaber.virk.dk"]);
 const MAX_BYTES = 30 * 1024 * 1024;

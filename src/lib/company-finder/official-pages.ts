@@ -145,6 +145,36 @@ export function officialPageFor(
     };
   }
 
+  if (iso === "EE") {
+    // Deep-link alla scheda: la tabella "Annual reports" elenca i bilanci con
+    // il pulsante PDF per ogni esercizio. Usato solo se il recupero
+    // automatico non riesce; in caso contrario il documento è già in pagina.
+    const code = /^\d{8}$/.test(id)
+      ? id
+      : /^\d{8}$/.test(name.replace(/\D/g, ""))
+        ? name.replace(/\D/g, "")
+        : undefined;
+    return {
+      url: code
+        ? `https://ariregister.rik.ee/eng/company/${code}`
+        : "https://ariregister.rik.ee/eng",
+      label: "e-Äriregister — Centro dei registri (RIK)",
+      actionLabel: "Apri bilancio",
+      mode: "embed",
+      note: code
+        ? `Apre direttamente la scheda ${code} nel registro ufficiale: la tabella “Annual reports” elenca i bilanci depositati, con il pulsante PDF per scaricare ogni esercizio.`
+        : "Apre il punto di consultazione ufficiale del registro da cui è possibile accedere al documento di bilancio.",
+      ...(code
+        ? {
+            instructions: [
+              "Scorri fino alla tabella “Annual reports”.",
+              "Scegli l'esercizio e premi “PDF” per aprire il bilancio ufficiale.",
+            ],
+          }
+        : {}),
+    };
+  }
+
   if (iso === "DE") {
     return {
       url: "https://www.unternehmensregister.de/ureg/",
