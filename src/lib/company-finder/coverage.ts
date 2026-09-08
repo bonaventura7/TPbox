@@ -12,7 +12,7 @@
 //     dichiararne l'assenza.
 
 /** Livello A: bilancio recuperato dal server e mostrato in pagina. */
-export const AUTO_ISOS = ["DE", "NL", "DK", "UK", "FR", "EE"] as const;
+export const AUTO_ISOS = ["DE", "NL", "DK", "UK", "FR", "EE", "NO"] as const;
 
 /**
  * Livello B: bilancio gratuito, consultazione ufficiale incorporata.
@@ -63,7 +63,6 @@ export const CONSULT_PAGES: Record<string, { url: string; label: string }> = {
     url: "https://rgfi.fina.hr/JavnaObjava-web/jsp/prijavaKorisnika.jsp",
     label: "FINA RGFI — Registro dei bilanci",
   },
-  NO: { url: "https://virksomhet.brreg.no/", label: "Brønnøysundregistrene — Regnskapsregisteret" },
 };
 
 /**
