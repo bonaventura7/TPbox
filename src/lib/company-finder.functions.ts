@@ -22,6 +22,7 @@ function emptyResponse(warning: string): SearchResponse {
 }
 
 function toInPageDocumentUrl(documentUrl: string): string {
+  if (documentUrl.startsWith("/api/company-finder/document?")) return documentUrl;
   return `/api/company-finder/document?url=${encodeURIComponent(documentUrl)}`;
 }
 
