@@ -71,6 +71,25 @@ export const Route = createFileRoute("/api/company-finder/document")({
           });
         }
 
+        if (country === "NO") {
+          const orgnr = company.replace(/\D/g, "");
+          if (!/^\d{9}$/.test(orgnr)) return errorResponse("org.nr norvegese non valido", 400);
+          const { fetchBrregAnnualReportDocument } = await import("@/lib/company-finder/sources/bilanci/brreg-no");
+          const doc = await fetchBrregAnnualReportDocument(orgnr, year, 30000);
+          if (!doc.ok || !doc.bytes) {
+            return errorResponse(doc.error ?? `bilancio ${year} non disponibile`, 502, { fallback: "official-registry" });
+          }
+          return new Response(doc.bytes, {
+            status: 200,
+            headers: {
+              "Content-Type": "application/pdf",
+              "Content-Disposition": `${download ? "attachment" : "inline"}; filename="bilancio-NO-${orgnr}-${year}.pdf"`,
+              "Cache-Control": "no-store",
+              "X-Content-Type-Options": "nosniff",
+            },
+          });
+        }
+
         if (country === "FR") {
           const siren = url.searchParams.get("siren")?.replace(/\D/g, "") ?? "";
           if (!/^\d{9}$/.test(siren)) return errorResponse("SIREN non valido", 400);
