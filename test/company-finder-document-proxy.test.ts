@@ -19,9 +19,7 @@ describe("proxy dei documenti di bilancio", () => {
   it("accetta solo i registri ufficiali censiti", () => {
     expect(isAllowedDocumentHost(new URL("https://www.unternehmensregister.de/x.pdf"))).toBe(true);
     expect(isAllowedDocumentHost(new URL("https://opendata.kvk.nl/api/v1/kvknummer/1"))).toBe(true);
-    // ekrs.ms.gov.pl non è più in whitelist: il repository polacco risponde
-    // 403 a qualunque server, quindi il documento non passa dal proxy ma
-    // dalla consultazione ufficiale incorporata (vedi coverage.ts).
+    expect(isAllowedDocumentHost(new URL("https://www.pappers.fr/entreprise/acme-123456789/comptes/acme.pdf"))).toBe(true);
     expect(isAllowedDocumentHost(new URL("https://ekrs.ms.gov.pl/rdf/pd/x"))).toBe(false);
   });
 
@@ -51,8 +49,6 @@ describe("proxy dei documenti di bilancio", () => {
   });
 
   it("ammette http solo per regnskaber.virk.dk, che non risponde su TLS", async () => {
-    // Non deve fermarsi al controllo di protocollo: qui il rifiuto sarebbe un
-    // 400, mentre la chiamata deve proseguire (e fallire in rete, non prima).
     const res = await handleDocumentRequest(
       get("?url=http%3A%2F%2Fregnskaber.virk.dk%2F123%2Fdoc.pdf"),
     );
@@ -62,7 +58,7 @@ describe("proxy dei documenti di bilancio", () => {
 
   it("non lascia entrare nella whitelist host generici", () => {
     for (const host of ALLOWED_DOCUMENT_HOSTS) {
-      expect(host).toMatch(/\.(de|dk|nl|be|uk|gr)$/);
+      expect(host).toMatch(/\.(de|dk|nl|be|uk|gr|fr)$/);
     }
   });
 });
