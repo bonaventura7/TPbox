@@ -9,6 +9,7 @@ export interface GleifMatch {
   name: string;
   country: Iso2;
   registeredAs?: string | undefined;
+  registeredAt?: string | undefined;
   address?: string | undefined;
   status?: string | undefined;
 }
@@ -26,10 +27,16 @@ interface GleifAddress {
   country?: string | undefined;
 }
 
+interface GleifRegisteredAt {
+  id?: string | undefined;
+  other?: string | undefined;
+}
+
 interface GleifEntity {
   legalName?: { name?: string | undefined } | undefined;
   legalAddress?: GleifAddress | undefined;
   registeredAs?: string | undefined;
+  registeredAt?: GleifRegisteredAt | undefined;
   status?: string | undefined;
 }
 
@@ -43,15 +50,6 @@ function formatAddress(address: GleifAddress | undefined): string | undefined {
     (part): part is string => Boolean(part && part.trim()),
   );
   return parts.length > 0 ? parts.join(", ").toLowerCase() : undefined;
-}
-
-function normalizeLegalName(value: string): string {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
 }
 
 /**
@@ -70,12 +68,18 @@ export function gleifNameRelevance(query: string, candidate: string): number {
   const common = qTokens.filter((token) => cTokens.includes(token)).length;
   const precision = common / Math.max(cTokens.length, 1);
   const recall = common / Math.max(qTokens.length, 1);
-  // Precisione e richiamo moltiplicati: i token estranei nel candidato
-  // (es. "HEALTHINEERS") abbassano il punteggio sotto la soglia di rilevanza,
-  // così le omonimie parziali non vengono scambiate per la società cercata.
   const tokenScore = Math.round(100 * precision * recall);
 
   return tokenScore;
+}
+
+function normalizeLegalName(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
 }
 
 export function rankRelevantGleifMatches(query: string, matches: GleifMatch[]): GleifMatch[] {
@@ -121,6 +125,7 @@ export async function searchGleif(
           name: legalName,
           country: iso.toUpperCase(),
           registeredAs: entity?.registeredAs,
+          registeredAt: entity?.registeredAt?.id,
           address: formatAddress(entity?.legalAddress),
           status: entity?.status ? entity.status.toLowerCase() : undefined,
         };
