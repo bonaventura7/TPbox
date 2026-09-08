@@ -25,6 +25,8 @@ describe("Unternehmensregister current search contract", () => {
 
         if (url.includes("/de/suche?areas=all")) {
           expect(headers.get("cookie")).toContain("URSESSION=session-123");
+          const parsed = new URL(url);
+          expect(parsed.searchParams.get("companySearchTerm")).toBe("ORI MARTIN GMBH");
           const html = `self.__next_f.push([1,"{\\"companyDto\\":{\\"name\\":\\"ORI MARTIN GMBH\\"},\\"publicationDto\\":{\\"companyNameAtTimeOfPublication\\":\\"ORI MARTIN GMBH\\",\\"title\\":\\"Jahresabschluss zum Geschäftsjahr 2024\\",\\"sourceDate\\":\\"2026-06-16\\",\\"hasPdf\\":true,\\"payload\\":\\"abc123\\"}}"])`;
           return {
             ok: true,
@@ -42,7 +44,6 @@ describe("Unternehmensregister current search contract", () => {
             status: 200,
             headers: new Headers({ "content-type": "text/html" }),
             text: async () => '<html><body><a href="/download/document.pdf">PDF</a></body></html>',
-            arrayBuffer: async () => new TextEncoder().encode('<html><body><a href="/download/document.pdf">PDF</a></body></html>').buffer,
           } as unknown as Response;
         }
 
@@ -63,7 +64,7 @@ describe("Unternehmensregister current search contract", () => {
 
     const result = await searchUrAccounting("ORI MARTIN GMBH");
 
-    expect(requests.some((r) => r.url.includes("areas=all") && r.url.includes("companySearchTerm=ORI%20MARTIN%20GMBH"))).toBe(true);
+    expect(requests.some((r) => r.url.includes("areas=all"))).toBe(true);
     expect(result.data?.available).toBe(true);
     expect(result.data?.documentUrl).toContain("download/document.pdf");
   });
