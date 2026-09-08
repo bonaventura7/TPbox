@@ -1,15 +1,15 @@
 // ---------- Francia: Recherche d'entreprises (API pubblica dello Stato) ----------
 // https://recherche-entreprises.api.gouv.fr — gratuita, senza chiave, senza
-// registrazione. Da una denominazione restituisce in UNA sola chiamata: SIREN,
-// denominazione ufficiale, sede, attività, dirigenti e — questo è il punto —
-// il blocco `finances` con chiffre d'affaires e résultat net per esercizio.
-//
-// Non è il bilancio completo (mancano stato patrimoniale e patrimonio netto:
-// per quelli serve l'API INPI RNE, che vuole un account). È però l'unica fonte
-// francese che risponde a un server, senza credenziali, partendo dal nome.
+// registrazione. Da una denominazione restituisce SIREN, denominazione ufficiale,
+// sede, attività, dirigenti e il blocco `finances` con chiffre d'affaires e
+// résultat net per esercizio.
 
 import { getCountry } from "../countries";
 import type { CompanyProfile, Financials, FinancialYear, Officer } from "../types";
+import {
+  findPappersAnnualReports,
+  toInternalPappersDocuments,
+} from "./bilanci/pappers-public-fr.server";
 
 const BASE = "https://recherche-entreprises.api.gouv.fr/search";
 
@@ -52,7 +52,6 @@ interface ApiCompany {
   finances?: Record<string, ApiFinance> | undefined;
 }
 
-/** SIREN dalle 9 cifre digitate o dalle ultime 9 dell'IVA francese (FR xx SIREN). */
 export function sirenFromInput(localVat: string): string | undefined {
   const digits = localVat.replace(/\D/g, "");
   if (/^\d{9}$/.test(digits)) return digits;
@@ -80,7 +79,7 @@ function toFinancials(finances: Record<string, ApiFinance> | undefined): Financi
     note:
       "Cifra d'affari e risultato netto dai conti depositati, pubblicati dall'API di Stato francese. " +
       "Stato patrimoniale e patrimonio netto non sono esposti da questa fonte: il documento integrale " +
-      "resta sul registro nazionale (INPI), che richiede un account.",
+      "è recuperabile dal repertorio pubblico Pappers quando disponibile.",
   };
 }
 
@@ -104,18 +103,36 @@ function toProfile(company: ApiCompany): CompanyProfile | undefined {
     identifiers: [{ key: "SIREN", value: siren }],
   };
   if (company.nature_juridique) profile.legalForm = company.nature_juridique;
-  if (company.etat_administratif) {
-    profile.status = company.etat_administratif === "A" ? "attiva" : "cessata";
-  }
+  if (company.etat_administratif) profile.status = company.etat_administratif === "A" ? "attiva" : "cessata";
   if (company.date_creation) profile.registeredSince = company.date_creation;
   if (company.siege?.adresse) profile.address = company.siege.adresse.toLowerCase();
-  if (company.activite_principale) {
-    profile.activityCodes = [{ code: company.activite_principale, label: "codice NAF" }];
-  }
-  if (company.siege?.siret)
-    profile.identifiers?.push({ key: "SIRET (sede)", value: company.siege.siret });
+  if (company.activite_principale) profile.activityCodes = [{ code: company.activite_principale, label: "codice NAF" }];
+  if (company.siege?.siret) profile.identifiers?.push({ key: "SIRET (sede)", value: company.siege.siret });
   if (officers.length > 0) profile.officers = officers;
   return profile;
+}
+
+function mergePublicDocuments(
+  financials: Financials | undefined,
+  documents: Awaited<ReturnType<typeof findPappersAnnualReports>>,
+  companyName: string,
+  siren: string,
+): Financials | undefined {
+  if (!documents.ok || !documents.documents?.length) return financials;
+  const summaries = toInternalPappersDocuments(companyName, siren, documents.documents);
+  const base: Financials = financials ?? { available: false, years: [], currency: "EUR" };
+  return {
+    ...base,
+    available: base.available || summaries.length > 0,
+    source: base.source ?? "Pappers — comptes sociaux pubblici",
+    documentUrl: summaries[0]?.downloadUrl,
+    documentTitle: summaries[0]?.title,
+    availability: summaries.length ? "DOCUMENT_DOWNLOADABLE" : base.availability,
+    documents: summaries,
+    note: base.note
+      ? `${base.note} Sono disponibili anche i documenti annuali pubblici indicizzati da Pappers.`
+      : "Documenti annuali pubblici indicizzati da Pappers.",
+  };
 }
 
 export async function searchRechercheEntreprises(
@@ -136,14 +153,20 @@ export async function searchRechercheEntreprises(
 
     const json = (await res.json()) as { results?: ApiCompany[] | undefined };
     const results = json.results ?? [];
-    // Con il SIREN la corrispondenza è esatta; col nome si prende il primo
-    // risultato, che l'API ordina già per pertinenza.
     const company = siren ? results.find((c) => c.siren === siren) : results[0];
     if (!company) return { ok: false, error: "nessuna impresa francese corrisponde" };
 
     const profile = toProfile(company);
     if (!profile) return { ok: false, error: "risposta priva di SIREN o denominazione" };
-    return { ok: true, profile, financials: toFinancials(company.finances) };
+
+    const baseFinancials = toFinancials(company.finances);
+    let financials = baseFinancials;
+    // Pappers è usato come repertorio pubblico documentale: nessuna API key.
+    // Un eventuale errore non deve invalidare i dati ufficiali già restituiti.
+    const publicDocs = await findPappersAnnualReports(profile.name ?? query, company.siren ?? "", 10000);
+    financials = mergePublicDocuments(financials, publicDocs, profile.name ?? query, company.siren ?? "");
+
+    return { ok: true, profile, financials };
   } catch (e) {
     const err = e as { name?: string | undefined; message?: string | undefined };
     return {
