@@ -7,10 +7,23 @@ l'approvazione della sottoscrizione, due passaggi non delegabili a un agente.
 
 ## 1. Cosa è già pronto nel codice
 
-- `fetchCbsoAccounts` (`sources/bilanci/cbso-be.ts`): risolve i riferimenti di
-  deposito dal CBE e costruisce l'URL del PDF ufficiale già proxato, con
-  `accept=application/pdf` (il gateway CBSO sceglie la rappresentazione solo
-  dall'header `Accept`).
+Due strati, in degradazione elegante:
+
+- **Senza chiave** — `fetchBePappers`
+  (`sources/bilanci/pappers-public-be.server.ts`, stessa strategia
+  dell'adapter FR): un solo fetch della scheda pubblica gratuita Pappers.be
+  (fonti dichiarate: BCE/KBO, conti BNB, Moniteur belge) per anagrafica,
+  valori per esercizio (ricavi esatti, utile netto, patrimonio…) ed elenco
+  dei conti depositati. Se il markup espone ancore PDF dirette, sono servite
+  in pagina via proxy interno; altrimenti i depositi risultano
+  `DOCUMENT_FOUND` (riferimento noto, nessun link inventato). Fallback via
+  reader pubblico in caso di 403, come per la FR.
+- **Con chiave** — `fetchCbsoAccounts` (`sources/bilanci/cbso-be.ts`):
+  risolve i riferimenti di deposito dal CBE e costruisce l'URL del PDF
+  ufficiale già proxato, con `accept=application/pdf` (il gateway CBSO
+  sceglie la rappresentazione solo dall'header `Accept`). L'orchestratore
+  (`attachOfficialDocument`) allega il PDF NBB ai valori Pappers.be, così
+  con la chiave si vedono entrambi.
 - `handleDocumentRequest` (`document-proxy.server.ts`): inietta
   `NBB-CBSO-Subscription-Key` + `X-Request-Id` su ogni chiamata agli host
   `ws.cbso.nbb.be` / `ws.uat2.cbso.nbb.be`. La chiave non transita mai
@@ -55,8 +68,11 @@ Caso di riferimento: **BEAULIEU International Group**, Waregem.
 
 - Campo partita IVA: `BE0442824497` (oppure seleziona Belgio e scrivi il
   CBE `0442824497`).
-- Atteso: scheda società + "Conti annuali pubblicati (CBE 0442824497) —
-  riferimento 20XX-XXXXXXXX", PDF ufficiale in anteprima e scaricabile.
+- Atteso **senza chiave**: scheda società + valori per esercizio (CA 2025
+  ~34,37 M€, utile netto, fondi propri) + elenco dei conti depositati.
+- Atteso **con chiave**: tutto quanto sopra + "Conti annuali pubblicati
+  (CBE 0442824497) — riferimento 20XX-XXXXXXXX", PDF ufficiale NBB in
+  anteprima e scaricabile.
 
 ## 5. Diagnostica rapida
 
@@ -66,6 +82,8 @@ Caso di riferimento: **BEAULIEU International Group**, Waregem.
 | `chiave non valida o non abilitata…` | chiave errata o prodotto non sottoscritto | verifica "Show" e la sottoscrizione ad Authentic Data Query |
 | `nessun conto annuale pubblicato per questo CBE` | CBE senza depositi (o test-env con CBE reale) | prova un CBE con depositi; su UAT2 usa `0403101811` |
 | 503 `…non configurati…` sul documento | chiave presente in ricerca ma assente nel runtime del proxy | stessa variabile su tutti gli ambienti + redeploy |
+| `Pappers.be: nessuna scheda trovata per questo CBE` | CBE inesistente o pagina irraggiungibile (dopo i tentativi + reader) | verifica il CBE; riprova più tardi |
+| Valori presenti ma `DOCUMENT_FOUND` senza anteprima | i pulsanti PDF di Pappers.be sono guidati da JS e il markup non espone ancore dirette | comportamento atteso: anteprima via chiave NBB, oppure download dalla pagina ufficiale |
 | Timeout CBSO | gateway lento | riprova; il proxy ha timeout 45 s e retry |
 
 ## 6. Nota di deployment (facoltativa)

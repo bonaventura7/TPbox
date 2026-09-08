@@ -74,7 +74,7 @@ export const COUNTRIES: CountryInfo[] = [
     registryAuthority: "Crossroads Bank for Enterprises",
     financials: {
       free: true,
-      note: "Le annualità (jaarrekeningen) sono gratuite presso la Banque Nationale de Belgique (NBB); con la chiave gratuita NBB-CBSO il tool scarica il documento ufficiale dei conti annuali e lo mostra in pagina; inserisci il CBE (10 cifre) nel campo partita IVA.",
+      note: "Senza chiave: valori per esercizio (ricavi, utile, patrimonio) ed elenco dei conti depositati dalla scheda pubblica gratuita (dati BCE/BNB). Con la chiave gratuita NBB-CBSO il tool aggiunge in pagina anche il PDF ufficiale NBB. Inserisci il CBE (10 cifre) nel campo partita IVA.",
     },
   },
   {

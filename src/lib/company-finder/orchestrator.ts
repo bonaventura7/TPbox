@@ -24,6 +24,7 @@ import { searchUrAccounting } from "./sources/bilanci/ur-de";
 import { fetchPappersFinancials } from "./sources/bilanci/pappers-fr";
 import { fetchDkRegnskaber, cvrFromVat } from "./sources/bilanci/regnskaber-dk";
 import { fetchCbsoAccounts, cbeFromInput } from "./sources/bilanci/cbso-be";
+import { fetchBePappers } from "./sources/bilanci/pappers-public-be.server";
 import { NO_FREE_SOURCE } from "./coverage";
 import { officialPageFor } from "./official-pages";
 import { numericRegistryId, searchGleif } from "./sources/gleif";
@@ -318,6 +319,45 @@ const REGISTRY_ROUTES: Record<string, DirectAdapter[]> = {
     },
   ],
 
+  // ---- Belgio: Pappers.be — scheda pubblica gratuita (profilo + valori) ----
+  // Un solo adapter combinato (come ariregister per l'EE): la pagina espone
+  // anagrafica BCE, valori per esercizio ed elenco dei conti depositati. Il
+  // PDF ufficiale NBB resta nel layer bilanci (fin-cbso, con chiave) e viene
+  // allegato in merge da attachOfficialDocument() quando disponibile.
+  BE: [
+    {
+      id: "pappers-be",
+      label: "Pappers.be — scheda pubblica (dati BCE/BNB)",
+      input: "vat",
+      run: (ctx, job, s) =>
+        (async () => {
+          const r = await fetchBePappers({ query: ctx.query, localVat: ctx.localVat });
+          if (r.ok && (r.profile || r.financials)) {
+            s.state = "ok";
+            const n = r.financials?.years.length ?? 0;
+            s.detail =
+              n > 0
+                ? `${n} esercizi (senza chiave)`
+                : (r.profile?.registry?.id ?? "scheda dal registro");
+            if (r.profile) {
+              const profile = r.profile;
+              job.profile = () => profile;
+            }
+            if (r.financials) {
+              const fin = r.financials;
+              job.fin = () => fin;
+            }
+          } else if (r.skipped) {
+            s.state = "skipped";
+            s.detail = r.skipped;
+          } else {
+            s.state = "failed";
+            s.detail = r.error || "fonte non raggiungibile";
+          }
+        })(),
+    },
+  ],
+
   // ---- Bulgaria: Registro Commerciale (scraping del portale pubblico) ----
   BG: [
     {
@@ -587,6 +627,28 @@ const FINANCIALS_ROUTES: Record<
  * in parallelo invece di fermarsi: è il caso piu' frequente d'uso reale.
  */
 const NAME_SEARCHABLE = ["DE", "UK", "FR", "NO", "FI", "BG", "EE"] as const;
+
+/**
+ * Selezione dei bilanci tra le fonti dello stesso paese, con arricchimento:
+ * se il vincitore (valori per esercizio) non ha il documento ma un'altra
+ * fonte sì, il documento ufficiale viene allegato al vincitore. Così il
+ * Belgio con chiave mostra valori Pappers.be + PDF ufficiale NBB in pagina.
+ */
+export function attachOfficialDocument(financials: Financials[]): Financials | undefined {
+  const winner =
+    financials.find((f) => f.available && f.years.length > 0) ||
+    financials.find((f) => f.documentUrl) ||
+    financials.find((f) => f.available) ||
+    financials[0];
+  if (!winner || winner.documentUrl) return winner;
+  const doc = financials.find((f) => f !== winner && f.documentUrl);
+  if (!doc?.documentUrl) return winner;
+  return {
+    ...winner,
+    documentUrl: doc.documentUrl,
+    ...(doc.documentTitle ? { documentTitle: doc.documentTitle } : {}),
+  };
+}
 
 /** Quanto "vale" un esito, per scegliere il migliore nel fan-out. */
 function resultScore(r: SearchResponse): number {
@@ -996,11 +1058,9 @@ export async function runSearch(req: SearchRequest, depth = 0): Promise<SearchRe
   // ---------- 5. Bilanci ----------
   // priorità: (1) valori strutturati per esercizio, (2) documento ufficiale
   // gratuito servito in pagina, (3) nota di disponibilità del paese.
-  const fin =
-    financials.find((f) => f.available && f.years.length > 0) ||
-    financials.find((f) => f.documentUrl) ||
-    financials.find((f) => f.available) ||
-    financials[0];
+  // Se il vincitore ha i valori ma non il documento, gli si allega quello
+  // ufficiale trovato da un'altra fonte (es. valori Pappers.be + PDF NBB).
+  const fin = attachOfficialDocument(financials);
   const financialsOut: Financials =
     fin && (fin.available || fin.documentUrl || fin.availability)
       ? fin

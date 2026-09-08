@@ -15,6 +15,8 @@ export const ALLOWED_DOCUMENT_HOSTS = new Set([
   "publicity.businessportal.gr",
   "www.pappers.fr",
   "pappers.fr",
+  // BE — Pappers.be: pagina pubblica gratuita (stessa strategia della FR)
+  "www.pappers.be",
   // EE — e-Äriregister (RIK): schede e bilanci pubblici
   "ariregister.rik.ee",
 ]);
