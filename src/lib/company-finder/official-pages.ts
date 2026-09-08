@@ -26,16 +26,6 @@ function digits(value: string): string {
   return value.replace(/\D/g, "");
 }
 
-function slugify(value: string): string {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/&/g, " i ")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
-
 function normalizeLuxembourgRcs(value: string): string | undefined {
   const normalized = value.replace(/[\s.-]/g, "").toUpperCase();
   return /^B\d+$/.test(normalized) ? normalized : undefined;
@@ -62,11 +52,6 @@ export function officialPageFor(
   const name = query.trim();
   const rawId = localVat.trim() || name;
 
-  // ---- Ungheria: e-Beszámoló ------------------------------------------------
-  // La ricerca è protetta da verifica anti-bot (ALTCHA) e le risposte portano
-  // X-Frame-Options: DENY. Non è incorporabile e non è automatizzabile: si apre
-  // in una nuova scheda con i passaggi da compiere. Nessun parametro di
-  // sessione del registro (b/so/o) viene costruito o riusato.
   if (iso === "HU") {
     const huIds = normalizeHuIdentifiers({ vat: rawId, query: name });
     return {
@@ -101,9 +86,6 @@ export function officialPageFor(
 
   const grGemi = iso === "GR" ? normalizeGreeceGemi(rawId) : undefined;
   if (grGemi) {
-    // L'identificativo della società G.E.MI. e quello del filing iXBRL sono
-    // distinti. Il deep-link al filing viene costruito solo quando il provider
-    // restituisce esplicitamente il document URL; non inventiamo un UUID.
     return {
       url: `https://publicity.businessportal.gr/company/${grGemi}`,
       label: "G.E.MI. — Publicity",
@@ -115,19 +97,17 @@ export function officialPageFor(
 
   const plKrs = iso === "PL" ? normalizePolandKrs(rawId) : undefined;
   if (plKrs) {
-    const registryId = String(Number(plKrs));
-    const companySlug = slugify(name || `krs-${plKrs}`);
     return {
-      url: `https://rejestr.io/krs/${registryId}/${companySlug}/sprawozdania`,
-      label: `Rejestr.io — documenti finanziari KRS (${plKrs})`,
-      actionLabel: "Apri i documenti finanziari",
+      url: `https://www.imsig.pl/krs/${plKrs}/sprawozdania`,
+      label: `IMSiG — Sprawozdania finansowe KRS (${plKrs})`,
+      actionLabel: "Apri i bilanci della società",
       mode: "external",
-      note: `Pagina specifica della società, già posizionata sulla sezione dei documenti finanziari KRS per ${plKrs}. Il riferimento ufficiale resta il Ministero della Giustizia; TPbox non presenta come “download diretto” un URL KRS generico quando il portale ufficiale non espone un deep-link stabile.`,
+      note: `Pagina specifica dei bilanci depositati per KRS ${plKrs}. Elenca gli esercizi disponibili e i documenti finanziari associati; l'eventuale accesso al file è gestito dal portale IMSiG. Il riferimento istituzionale resta il KRS del Ministero della Giustizia.`,
       instructions: [
-        `Verifica che il KRS della società sia ${plKrs}.`,
-        "Apri il bilancio dell'esercizio desiderato nella sezione “Sprawozdania”.",
-        "Usa il comando di download disponibile sul documento; eventuali richieste di accesso appartengono al portale terzo.",
-        "Per la fonte primaria ufficiale, usa il KRS/RDF del Ministero della Giustizia con lo stesso numero KRS.",
+        `Verifica il KRS ${plKrs} e la denominazione della società.`,
+        "Seleziona l'esercizio desiderato nella sezione “Sprawozdania finansowe”.",
+        "Usa il comando disponibile per aprire o scaricare il documento.",
+        "Per la fonte primaria, verifica lo stesso deposito nel Repozytorium Dokumentów Finansowych KRS.",
       ],
     };
   }
