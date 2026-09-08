@@ -3,6 +3,30 @@ import { fetchOpenRegisterFinancials } from "./openregister-de";
 import { fetchGermanyPublicBalance } from "./germany-public-balance";
 
 const FIRMENDATA_API = "https://api.firmendata.com";
+const LEGAL_FORM_TOKENS = new Set([
+  "ag",
+  "aktiengesellschaft",
+  "gmbh",
+  "mbh",
+  "kg",
+  "ohg",
+  "eg",
+  "egr",
+  "ek",
+  "ev",
+  "ug",
+  "haftungsbeschrankt",
+  "se",
+  "kgaa",
+  "gesellschaft",
+  "haftung",
+  "beschrankter",
+  "beschrankte",
+  "allgemeine",
+  "kommanditgesellschaft",
+  "offene",
+  "handelsgesellschaft",
+]);
 
 type JsonObject = Record<string, unknown>;
 
@@ -32,8 +56,16 @@ function normalizeName(value: string): string {
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/ß/g, "ss")
-    .replace(/[^a-z0-9]/gi, "")
+    .replace(/[^a-z0-9 ]/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim()
     .toLowerCase();
+}
+
+function coreTokens(value: string): string[] {
+  return normalizeName(value)
+    .split(" ")
+    .filter((token) => token && !LEGAL_FORM_TOKENS.has(token));
 }
 
 function similarity(a: string, b: string): number {
@@ -41,8 +73,19 @@ function similarity(a: string, b: string): number {
   const y = normalizeName(b);
   if (!x || !y) return 0;
   if (x === y) return 1;
-  if (x.startsWith(y) || y.startsWith(x)) return 0.9;
-  if (x.includes(y) || y.includes(x)) return 0.75;
+
+  const xCore = coreTokens(a);
+  const yCore = coreTokens(b);
+  if (!xCore.length || !yCore.length) return 0;
+  if (xCore.join(" ") === yCore.join(" ")) return 0.98;
+
+  const shorter = xCore.length <= yCore.length ? xCore : yCore;
+  const longer = xCore.length > yCore.length ? xCore : yCore;
+  const overlap = shorter.filter((token) => longer.includes(token)).length;
+  if (overlap === shorter.length && overlap > 0) return shorter.length === 1 ? 0.94 : 0.9;
+
+  const first = shorter[0];
+  if (first && longer[0] === first) return 0.82;
   return 0;
 }
 
@@ -78,7 +121,7 @@ async function resolveGermanyCompanyName(
         best = { name, euId: text(row.eu_id), score };
       }
     }
-    return best && best.score >= 0.75 ? { name: best.name, euId: best.euId } : undefined;
+    return best && best.score >= 0.8 ? { name: best.name, euId: best.euId } : undefined;
   } catch {
     return undefined;
   } finally {
