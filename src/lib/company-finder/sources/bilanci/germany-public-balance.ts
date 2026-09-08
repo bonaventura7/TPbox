@@ -63,21 +63,32 @@ function fiscalYear(pageText: string): number | undefined {
 }
 
 function searchResultUrl(html: string, companyName: string): string | undefined {
-  const hrefs = [...html.matchAll(/href=["']([^"']+)["']/gi)].map((m) => decodeHtml(m[1]!));
-  const candidates = hrefs
-    .map((href) => {
-      if (href.startsWith(COMPANY_PAGE_PREFIX)) return href;
-      const target = href.match(/[?&]uddg=([^&]+)/i)?.[1];
-      return target ? decodeURIComponent(target) : undefined;
-    })
-    .filter((url): url is string => Boolean(url) && url.startsWith(COMPANY_PAGE_PREFIX));
+  const normalizedQuery = stripHtml(companyName).toLowerCase().replace(/[^a-z0-9äöüß]/gi, "");
+  const candidates: Array<{ url: string; label: string }> = [];
 
-  const normalized = companyName.toLowerCase().replace(/[^a-z0-9äöüß]/gi, "");
-  return (
-    candidates.find((url) =>
-      url.toLowerCase().replace(/[^a-z0-9äöüß]/gi, "").includes(normalized),
-    ) ?? candidates[0]
-  );
+  // Prefer actual search-result anchors so we can rank by the displayed company name,
+  // rather than choosing an arbitrary first result with an opaque numeric URL.
+  for (const match of html.matchAll(/<a[^>]+href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi)) {
+    let href = decodeHtml(match[1]!);
+    const label = stripHtml(match[2]!);
+    if (!href.startsWith(COMPANY_PAGE_PREFIX)) {
+      const target = href.match(/[?&]uddg=([^&]+)/i)?.[1];
+      if (!target) continue;
+      try { href = decodeURIComponent(target); } catch { continue; }
+    }
+    if (!href.startsWith(COMPANY_PAGE_PREFIX)) continue;
+    candidates.push({ url: href, label });
+  }
+
+  if (!candidates.length) return undefined;
+  candidates.sort((a, b) => {
+    const aName = a.label.toLowerCase().replace(/[^a-z0-9äöüß]/gi, "");
+    const bName = b.label.toLowerCase().replace(/[^a-z0-9äöüß]/gi, "");
+    const aScore = aName === normalizedQuery ? 3 : aName.includes(normalizedQuery) || normalizedQuery.includes(aName) ? 2 : 0;
+    const bScore = bName === normalizedQuery ? 3 : bName.includes(normalizedQuery) || normalizedQuery.includes(bName) ? 2 : 0;
+    return bScore - aScore;
+  });
+  return candidates[0]?.url;
 }
 
 async function fetchText(url: string, signal: AbortSignal): Promise<string> {
