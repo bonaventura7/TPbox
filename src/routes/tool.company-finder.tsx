@@ -171,7 +171,7 @@ function CompanyCard({ company }: { company: CompanyProfile }) {
           <div>
             <dt className="text-xs tracking-wide text-muted-foreground uppercase">
               Identificativi
-            </dt>
+n            </dt>
             <dd className="mt-1 flex flex-wrap gap-2">
               {company.identifiers.map((identifier) => (
                 <Chip key={identifier.key}>
@@ -412,6 +412,8 @@ function OfficialPageCard({ page }: { page: OfficialPageRef }) {
     /lbr\.lu|businessportal\.gr|rdf-przegladarka\.ms\.gov\.pl|e-beszamolo\.im\.gov\.hu/i.test(
       page.url,
     );
+  const actionLabel =
+    page.actionLabel ?? (browserOnly ? "Apri il registro ufficiale" : "Apri in una nuova scheda");
 
   return (
     <section className="border border-border bg-card p-5 sm:p-6">
@@ -426,7 +428,7 @@ function OfficialPageCard({ page }: { page: OfficialPageRef }) {
           rel="noreferrer noopener"
           className="border border-border bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
         >
-          {browserOnly ? "Apri il registro ufficiale" : "Apri in una nuova scheda"}
+          {actionLabel}
         </a>
       </div>
       <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">{page.note}</p>
@@ -517,130 +519,9 @@ function CompanyFinderPage() {
                 placeholder="Es. Siemens AG oppure ORLEN SPÓŁKA AKCYJNA"
                 className="mt-2 min-h-11"
               />
-            </div>
-            <div className="min-w-0">
-              <Label htmlFor="company-vat">
-                Partita IVA o numero di registro{" "}
-                <span className="text-muted-foreground">(facoltativa)</span>
-              </Label>
-              <Input
-                id="company-vat"
-                value={vat}
-                autoComplete="off"
-                aria-invalid={missingInput}
-                aria-describedby="company-vat-hint"
-                onChange={(event) => setVat(event.target.value)}
-                placeholder="Es. PL7740001454, DK61056416, KVK 59581883"
-                className="mt-2 min-h-11"
-              />
-              <p id="company-vat-hint" className="mt-2 text-xs text-muted-foreground">
-                8–12 cifre, con o senza prefisso del paese. Il prefisso individua da solo la
-                giurisdizione.
-              </p>
-            </div>
-            <div className="min-w-0">
-              <Label htmlFor="company-country">
-                Paese <span className="text-muted-foreground">(facoltativo)</span>
-              </Label>
-              <Select value={country} onValueChange={setCountry}>
-                <SelectTrigger id="company-country" className="mt-2 min-h-11 w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={ANY_COUNTRY}>Qualsiasi paese</SelectItem>
-                  {COVERED_COUNTRIES.map((option) => (
-                    <SelectItem key={option.iso} value={option.iso}>
-                      {option.flag} {option.nameIt}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="mt-2 text-xs text-muted-foreground">
-                Serve solo quando la partita IVA è indicata senza prefisso.
-              </p>
-            </div>
-          </div>
-
-          {missingInput ? (
-            <p id="company-input-error" role="alert" className="mt-4 text-xs text-destructive">
-              Indica almeno la ragione sociale oppure il numero di partita IVA.
-            </p>
-          ) : null}
-
-          <div className="mt-5 flex flex-wrap items-center gap-3">
-            <Button type="submit" className="min-h-11" disabled={mutation.isPending}>
-              <Search className="size-4" aria-hidden="true" />
-              {mutation.isPending ? "Ricerca in corso…" : "Cerca società"}
-            </Button>
-          </div>
-
-          <div className="mt-4 border-t border-border pt-4">
-            <p className="text-xs font-medium text-muted-foreground">Esempi pronti</p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {EXAMPLES.map((example) => (
-                <button
-                  key={example.label}
-                  type="button"
-                  className="cursor-pointer border border-border bg-muted px-2 py-1 text-[0.7rem] font-medium tracking-wide text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-                  onClick={() => {
-                    setQuery(example.query);
-                    setVat(example.vat);
-                    setCountry(example.country);
-                    search(example.query, example.vat, example.country);
-                  }}
-                >
-                  {example.label}
-                </button>
-              ))}
-            </div>
+            </div> 
           </div>
         </form>
-
-        <div aria-live="polite" className="mt-6 space-y-6">
-          {mutation.isPending ? (
-            <div className="border border-border bg-card p-5 sm:p-6">
-              <p className="font-serif text-lg">Consultazione dei registri in corso…</p>
-              <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
-                <li>· Verifica del numero IVA presso il VIES della Commissione Europea</li>
-                <li>· Consultazione del registro nazionale del paese</li>
-                <li>· Raccolta della scheda societaria e dei conti annuali</li>
-              </ul>
-              <div className="mt-4 space-y-2">
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-4/5" />
-                <Skeleton className="h-4 w-2/3" />
-              </div>
-            </div>
-          ) : null}
-
-          {mutation.isError ? (
-            <div className="border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
-              Impossibile completare la ricerca. Riprova tra qualche istante.
-            </div>
-          ) : null}
-
-          {result ? (
-            <>
-              {result.warnings.length > 0 ? (
-                <div className="space-y-2">
-                  {result.warnings.map((warning, index) => (
-                    <div
-                      key={index}
-                      className="border border-gold/50 bg-gold/10 px-4 py-3 text-sm text-foreground"
-                    >
-                      <span className="font-semibold">Attenzione: </span>
-                      {warning}
-                    </div>
-                  ))}
-                </div>
-              ) : null}
-
-              {result.company ? <CompanyCard company={result.company} /> : null}
-              {result.found ? <FinancialsCard financials={result.financials} /> : null}
-              {result.officialPage ? <OfficialPageCard page={result.officialPage} /> : null}
-            </>
-          ) : null}
-        </div>
       </div>
     </>
   );
