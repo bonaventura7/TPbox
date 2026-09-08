@@ -38,12 +38,6 @@ export interface PolishKrsResolution {
   detail?: string | undefined;
 }
 
-/**
- * Resolver keyless: GLEIF viene usato esclusivamente come indice del registro
- * nazionale. Per la Polonia accettiamo solo record il cui Registered At è il
- * National Court Register (RA000484); il numero viene poi verificato dal KRS
- * ufficiale tramite l'orchestratore.
- */
 export async function resolvePolishKrsByName(
   query: string,
   timeoutMs = 10000,
@@ -116,45 +110,80 @@ async function attachPolishFinancialDocuments(
   const krs = krsNumber.replace(/\D/g, "").padStart(10, "0");
   if (!/^\d{10}$/.test(krs)) return response;
 
+  const companyName = response.company?.name?.trim();
+  if (companyName) {
+    try {
+      const { searchAleoAnnualReports } = await import(
+        "./company-finder/sources/bilanci/poland-aleo"
+      );
+      const aleo = await searchAleoAnnualReports(companyName);
+      if (aleo.ok && aleo.documents.length) {
+        response.financials = {
+          ...(response.financials ?? { available: false, years: [] }),
+          source: "ALEO — documenti finanziari da depositi KRS",
+          note:
+            "Il PDF viene recuperato dal servizio pubblico ALEO che espone i documenti finanziari depositati per il KRS; TPbox effettua il download lato server e lo rende disponibile direttamente all'utente.",
+          documents: aleo.documents
+            .filter((document) => Number.isInteger(document.year))
+            .map((document) => ({
+              id: document.id,
+              year: document.year,
+              kind: "ANNUAL_REPORT" as const,
+              format: "pdf" as const,
+              availability: "DOCUMENT_DOWNLOADABLE" as const,
+              title: document.title,
+              downloadUrl: `/api/company-finder/document?country=PL&company=${encodeURIComponent(krs)}&year=${document.year}&download=1`,
+            })),
+        };
+        response.officialPage = undefined;
+        return response;
+      }
+    } catch (error) {
+      response.warnings = [
+        error instanceof Error ? error.message : "errore nel relay ALEO",
+        ...response.warnings,
+      ];
+    }
+  }
+
   try {
     const { searchPolishAnnualReports } = await import(
       "./company-finder/sources/bilanci/poland-rdf"
     );
     const result = await searchPolishAnnualReports(krs);
-    if (!result.ok || result.documents.length === 0) {
-      response.warnings = [
-        result.error ?? "nessun bilancio annuale reperibile nel RDF KRS",
-        ...response.warnings,
-      ];
-      return response;
+    if (result.ok && result.documents.length) {
+      const documents = result.documents
+        .filter((document) => Number.isInteger(document.year))
+        .map((document) => ({
+          id: document.id,
+          year: document.year,
+          kind: "ANNUAL_REPORT" as const,
+          format: document.format,
+          availability: "DOCUMENT_DOWNLOADABLE" as const,
+          title: document.title,
+          downloadUrl: `/api/company-finder/document?country=PL&company=${encodeURIComponent(krs)}&year=${document.year}&download=1`,
+        }));
+      if (documents.length) {
+        response.financials = {
+          ...(response.financials ?? { available: false, years: [] }),
+          source: "KRS RDF — Ministerstwo Sprawiedliwości",
+          note:
+            "I documenti finanziari sono recuperati dal servizio ufficiale RDF del Ministero della Giustizia e scaricati tramite endpoint TPbox.",
+          documents,
+        };
+        response.officialPage = undefined;
+        return response;
+      }
     }
-
-    const documents = result.documents.map((document) => ({
-      id: document.id,
-      year: document.year,
-      kind: "ANNUAL_REPORT" as const,
-      format: document.format,
-      availability: "DOCUMENT_DOWNLOADABLE" as const,
-      title: document.title,
-      downloadUrl: `/api/company-finder/document?country=PL&company=${encodeURIComponent(krs)}${document.year ? `&year=${document.year}` : ""}&download=1`,
-    }));
-
-    response.financials = {
-      ...(response.financials ?? { available: false, years: [] }),
-      source: "KRS RDF — Ministerstwo Sprawiedliwości",
-      note:
-        "I documenti finanziari sono recuperati dal servizio ufficiale RDF del Ministero della Giustizia e scaricati tramite endpoint TPbox; il browser non viene inviato alla pagina generica search_df.",
-      documents,
-    };
-    response.officialPage = undefined;
-    return response;
+    if (result.error) response.warnings = [result.error, ...response.warnings];
   } catch (error) {
     response.warnings = [
       error instanceof Error ? error.message : "errore nel recupero dei bilanci RDF KRS",
       ...response.warnings,
     ];
-    return response;
   }
+
+  return response;
 }
 
 async function prioritizeBalanceDocument(
