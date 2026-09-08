@@ -1,25 +1,257 @@
 export const ALLOWED_DOCUMENT_HOSTS = new Set([
-  "www.unternehmensregister.de","unternehmensregister.de","publikations-plattform.de","www.publikations-plattform.de","www.bundesanzeiger.de","bundesanzeiger.de","regnskaber.virk.dk","datacvr.virk.dk","opendata.kvk.nl","ws.cbso.nbb.be","ws.uat2.cbso.nbb.be","find-and-update.company-information.service.gov.uk","filings.businessportal.gr","publicity.businessportal.gr",
+  "www.unternehmensregister.de",
+  "unternehmensregister.de",
+  "publikations-plattform.de",
+  "www.publikations-plattform.de",
+  "www.bundesanzeiger.de",
+  "bundesanzeiger.de",
+  "regnskaber.virk.dk",
+  "datacvr.virk.dk",
+  "opendata.kvk.nl",
+  "ws.cbso.nbb.be",
+  "ws.uat2.cbso.nbb.be",
+  "find-and-update.company-information.service.gov.uk",
+  "filings.businessportal.gr",
+  "publicity.businessportal.gr",
 ]);
 const HTTP_ONLY_HOSTS = new Set(["regnskaber.virk.dk"]);
 const MAX_BYTES = 30 * 1024 * 1024;
 const TIMEOUT_MS = 45_000;
 const MAX_REDIRECTS = 4;
 const UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/126.0 Safari/537.36";
-function fail(message: string, status: number): Response { return new Response(JSON.stringify({ error: message }), { status, headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" } }); }
-function redirectTo(url: URL): Response { return new Response(null, { status: 302, headers: { Location: url.toString(), "Cache-Control": "no-store", "X-Document-Source": url.hostname } }); }
-export function isAllowedDocumentHost(url: URL): boolean { return ALLOWED_DOCUMENT_HOSTS.has(url.hostname.toLowerCase()); }
-interface Fetched { bytes: ArrayBuffer; contentType: string; finalUrl: URL }
-interface CookieJar { values: Map<string,string> }
-function jar(): CookieJar { return { values: new Map() }; }
-function setCookies(j: CookieJar, h: Headers): void { const g=(h as Headers & {getSetCookie?:()=>string[]}).getSetCookie; const xs=typeof g === "function" ? g.call(h) : ((h.get("set-cookie")??"") ? (h.get("set-cookie")??"").split(/,(?=[^;=]+=)/) : []); for(const raw of xs){ const first=raw.trim().split(";",1)[0]; const i=first.indexOf("="); if(i>0) j.values.set(first.slice(0,i),first.slice(i+1)); } }
-function cookieHeader(j: CookieJar): string { return [...j.values].map(([k,v])=>`${k}=${v}`).join("; "); }
-function pdf(bytes: ArrayBuffer): boolean { return new TextDecoder("latin1").decode(new Uint8Array(bytes).slice(0,8)).startsWith("%PDF-"); }
-function html(contentType: string, bytes: ArrayBuffer): boolean { if(contentType.includes("html")||contentType.includes("xhtml")) return true; const h=new TextDecoder("utf-8").decode(new Uint8Array(bytes).slice(0,256)).trimStart(); return /^<!doctype html|^<html[\s>]/i.test(h); }
-function allowed(value: string, base: URL): URL|undefined { try{ const u=new URL(value,base); const http=HTTP_ONLY_HOSTS.has(u.hostname.toLowerCase()); if(!isAllowedDocumentHost(u)) return; if(u.protocol!=="https:" && !(u.protocol==="http:"&&http)) return; return u; }catch{return;} }
-function linksFrom(htmlText: string): string[] { const out=new Set<string>(); const re=/(?:href|src)\s*=\s*["']([^"']+)["']/gi; for(const m of htmlText.matchAll(re)){ const s=(m[1]??"").replace(/\\u0026/g,"&").replace(/\\u003d/g,"=").replace(/\\\//g,"/"); if(/\.pdf(?:[?#]|$)/i.test(s)||/(?:pdf|document|download|file)/i.test(s)) out.add(s); } for(const m of htmlText.matchAll(/https?:\\?\/\\?\/[^\s"'<>\\\\]+/gi)){const s=m[0].replace(/\\\//g,"/"); if(/\.pdf(?:[?#]|$)/i.test(s)||/(?:pdf|document|download|file)/i.test(s)) out.add(s);} return [...out]; }
-async function fetchRaw(target: URL, signal: AbortSignal, accept: string, j: CookieJar, ref?: URL): Promise<Fetched> { let current=target; for(let hop=0;hop<=MAX_REDIRECTS;hop++){ const hs:Record<string,string>={"User-Agent":UA,Accept:accept,"Accept-Language":"de-DE,de;q=0.9,en;q=0.8"}; const c=cookieHeader(j); if(c) hs.Cookie=c; if(ref) hs.Referer=ref.toString(); const r=await fetch(current.toString(),{headers:hs,signal,redirect:"manual",cache:"no-store"}); setCookies(j,r.headers); if([301,302,303,307,308].includes(r.status)){const loc=r.headers.get("location"); if(!loc) throw new Error("redirect senza destinazione"); const next=allowed(loc,current); if(!next) throw new Error("redirect verso dominio non autorizzato"); ref=current; current=next; continue;} if(!r.ok) throw new Error(`fonte HTTP ${r.status}`); const bytes=await r.arrayBuffer(); if(bytes.byteLength>MAX_BYTES) throw new Error("documento troppo grande"); return {bytes,contentType:(r.headers.get("content-type")??"").toLowerCase(),finalUrl:current}; } throw new Error("troppi redirect"); }
-async function bootstrap(j: CookieJar, signal: AbortSignal): Promise<void> { try{await fetchRaw(new URL("https://www.unternehmensregister.de/de/suche"),signal,"text/html,application/xhtml+xml",j);}catch{} }
-function serve(doc: Fetched, download: boolean): Response { const isP=pdf(doc.bytes)||doc.contentType.includes("pdf"); return new Response(doc.bytes,{headers:{"Content-Type":isP?"application/pdf":doc.contentType||"application/octet-stream","Content-Disposition":`${download?"attachment":"inline"}; filename="${isP?"bilancio.pdf":"documento-bilancio"}"`,"Cache-Control":"no-store","X-Content-Type-Options":"nosniff","X-Document-Source":doc.finalUrl.hostname}}); }
-function unwrap(requestUrl:string,target:string,accept:string){let t=target,a=accept;for(let i=0;i<3;i++){if(!t.startsWith("/api/company-finder/document?"))break;const n=new URL(t,requestUrl);const x=n.searchParams.get("url");if(!x)break;t=x;a=n.searchParams.get("accept")||a;}return {target:t,accept:a};}
-export async function handleDocumentRequest(request: Request): Promise<Response> { const p=new URL(request.url).searchParams; const raw=p.get("url"); if(!raw)return fail("url mancante",400); const u=unwrap(request.url,raw,p.get("accept")||"*/*"); let source:URL; try{source=new URL(u.target);}catch{return fail("url non valida",400);} const http=HTTP_ONLY_HOSTS.has(source.hostname.toLowerCase()); if(source.protocol!=="https:"&&!(source.protocol==="http:"&&http))return fail("sono ammesse solo url https",400); if(!isAllowedDocumentHost(source))return fail("dominio non autorizzato",403); const c=new AbortController(); const timer=setTimeout(()=>c.abort(),TIMEOUT_MS); const j=jar(); try{if(source.hostname.endsWith("unternehmensregister.de"))await bootstrap(j,c.signal); const first=await fetchRaw(source,c.signal,u.accept,j); const wantDownload=p.get("download")==="1"; if(!html(first.contentType,first.bytes)&& (pdf(first.bytes)||/pdf|octet-stream|zip|xml/i.test(first.contentType)))return serve(first,wantDownload); if(html(first.contentType,first.bytes)){const text=new TextDecoder("utf-8").decode(first.bytes); for(const link of linksFrom(text)){const next=allowed(link,first.finalUrl); if(!next)continue; try{const doc=await fetchRaw(next,c.signal,"application/pdf,application/octet-stream,*/*",j,first.finalUrl); if(pdf(doc.bytes)||doc.contentType.includes("pdf"))return serve(doc,wantDownload);}catch{}} return redirectTo(first.finalUrl);} return fail("fonte non riconosciuta come documento scaricabile",502);}catch(e){const err=e as {name?:string;message?:string};return fail(`impossibile recuperare il documento: ${err?.name==="AbortError"?"timeout":err?.message??"errore di rete"}`,502);}finally{clearTimeout(timer);} }
+
+function fail(message: string, status: number): Response {
+  return new Response(JSON.stringify({ error: message }), {
+    status,
+    headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" },
+  });
+}
+
+export function isAllowedDocumentHost(url: URL): boolean {
+  return ALLOWED_DOCUMENT_HOSTS.has(url.hostname.toLowerCase());
+}
+
+interface Fetched {
+  bytes: ArrayBuffer;
+  contentType: string;
+  finalUrl: URL;
+}
+
+interface CookieJar {
+  values: Map<string, string>;
+}
+
+function jar(): CookieJar {
+  return { values: new Map() };
+}
+
+function setCookies(j: CookieJar, headers: Headers): void {
+  const getter = (headers as Headers & { getSetCookie?: () => string[] }).getSetCookie;
+  const values = typeof getter === "function"
+    ? getter.call(headers)
+    : ((headers.get("set-cookie") ?? "")
+      ? (headers.get("set-cookie") ?? "").split(/,(?=[^;=]+=)/)
+      : []);
+  for (const raw of values) {
+    const first = raw.trim().split(";", 1)[0];
+    const eq = first.indexOf("=");
+    if (eq > 0) j.values.set(first.slice(0, eq), first.slice(eq + 1));
+  }
+}
+
+function cookieHeader(j: CookieJar): string {
+  return [...j.values].map(([key, value]) => `${key}=${value}`).join("; ");
+}
+
+function isPdf(bytes: ArrayBuffer): boolean {
+  return new TextDecoder("latin1").decode(new Uint8Array(bytes).slice(0, 8)).startsWith("%PDF-");
+}
+
+function isHtml(contentType: string, bytes: ArrayBuffer): boolean {
+  if (contentType.includes("html") || contentType.includes("xhtml")) return true;
+  const head = new TextDecoder("utf-8")
+    .decode(new Uint8Array(bytes).slice(0, 256))
+    .trimStart();
+  return /^<!doctype html|^<html[\s>]/i.test(head);
+}
+
+function allowed(value: string, base: URL): URL | undefined {
+  try {
+    const url = new URL(value, base);
+    const httpOnly = HTTP_ONLY_HOSTS.has(url.hostname.toLowerCase());
+    if (!isAllowedDocumentHost(url)) return;
+    if (url.protocol !== "https:" && !(url.protocol === "http:" && httpOnly)) return;
+    return url;
+  } catch {
+    return;
+  }
+}
+
+function linksFrom(text: string): string[] {
+  const out = new Set<string>();
+  const attr = /(?:href|src)\s*=\s*["']([^"']+)["']/gi;
+  for (const match of text.matchAll(attr)) {
+    const value = (match[1] ?? "")
+      .replace(/\\u0026/g, "&")
+      .replace(/\\u003d/g, "=")
+      .replace(/\\\//g, "/");
+    if (/\.pdf(?:[?#]|$)/i.test(value) || /(?:pdf|document|download|file)/i.test(value)) out.add(value);
+  }
+  for (const match of text.matchAll(/https?:\\?\/\\?\/[^\s"'<>\\\\]+/gi)) {
+    const value = match[0].replace(/\\\//g, "/");
+    if (/\.pdf(?:[?#]|$)/i.test(value) || /(?:pdf|document|download|file)/i.test(value)) out.add(value);
+  }
+  return [...out];
+}
+
+async function fetchRaw(
+  target: URL,
+  signal: AbortSignal,
+  accept: string,
+  cookies: CookieJar,
+  ref?: URL,
+): Promise<Fetched> {
+  let current = target;
+  for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
+    const headers: Record<string, string> = {
+      "User-Agent": UA,
+      Accept: accept,
+      "Accept-Language": "de-DE,de;q=0.9,en;q=0.8",
+    };
+    const cookie = cookieHeader(cookies);
+    if (cookie) headers.Cookie = cookie;
+    if (ref) headers.Referer = ref.toString();
+
+    const response = await fetch(current.toString(), {
+      headers,
+      signal,
+      redirect: "manual",
+      cache: "no-store",
+    });
+    setCookies(cookies, response.headers);
+
+    if ([301, 302, 303, 307, 308].includes(response.status)) {
+      const location = response.headers.get("location");
+      if (!location) throw new Error("redirect senza destinazione");
+      const next = allowed(location, current);
+      if (!next) throw new Error("redirect verso dominio non autorizzato");
+      ref = current;
+      current = next;
+      continue;
+    }
+
+    if (!response.ok) throw new Error(`fonte HTTP ${response.status}`);
+    const bytes = await response.arrayBuffer();
+    if (bytes.byteLength > MAX_BYTES) throw new Error("documento troppo grande");
+    return {
+      bytes,
+      contentType: (response.headers.get("content-type") ?? "").toLowerCase(),
+      finalUrl: current,
+    };
+  }
+  throw new Error("troppi redirect");
+}
+
+async function bootstrap(cookies: CookieJar, signal: AbortSignal): Promise<void> {
+  try {
+    await fetchRaw(
+      new URL("https://www.unternehmensregister.de/de/suche"),
+      signal,
+      "text/html,application/xhtml+xml",
+      cookies,
+    );
+  } catch {}
+}
+
+function serve(doc: Fetched, download: boolean): Response {
+  const pdf = isPdf(doc.bytes) || doc.contentType.includes("pdf");
+  return new Response(doc.bytes, {
+    headers: {
+      "Content-Type": pdf ? "application/pdf" : doc.contentType || "text/html; charset=utf-8",
+      "Content-Disposition": `${download ? "attachment" : "inline"}; filename="${pdf ? "bilancio.pdf" : "bilancio.html"}"`,
+      "Cache-Control": "no-store",
+      "X-Content-Type-Options": "nosniff",
+    },
+  });
+}
+
+function unwrap(requestUrl: string, target: string, accept: string): { target: string; accept: string } {
+  let current = target;
+  let nextAccept = accept;
+  for (let i = 0; i < 3; i++) {
+    if (!current.startsWith("/api/company-finder/document?")) break;
+    const url = new URL(current, requestUrl);
+    const nested = url.searchParams.get("url");
+    if (!nested) break;
+    current = nested;
+    nextAccept = url.searchParams.get("accept") || nextAccept;
+  }
+  return { target: current, accept: nextAccept };
+}
+
+export async function handleDocumentRequest(request: Request): Promise<Response> {
+  const params = new URL(request.url).searchParams;
+  const raw = params.get("url");
+  if (!raw) return fail("url mancante", 400);
+
+  const unwrapped = unwrap(request.url, raw, params.get("accept") || "*/*");
+  let source: URL;
+  try {
+    source = new URL(unwrapped.target);
+  } catch {
+    return fail("url non valida", 400);
+  }
+
+  const httpOnly = HTTP_ONLY_HOSTS.has(source.hostname.toLowerCase());
+  if (source.protocol !== "https:" && !(source.protocol === "http:" && httpOnly)) {
+    return fail("sono ammesse solo url https", 400);
+  }
+  if (!isAllowedDocumentHost(source)) return fail("dominio non autorizzato", 403);
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  const cookies = jar();
+
+  try {
+    if (source.hostname.endsWith("unternehmensregister.de")) await bootstrap(cookies, controller.signal);
+    const first = await fetchRaw(source, controller.signal, unwrapped.accept, cookies);
+    const download = params.get("download") === "1";
+
+    if (!isHtml(first.contentType, first.bytes)) {
+      if (isPdf(first.bytes) || /pdf|octet-stream|zip|xml/i.test(first.contentType)) {
+        return serve(first, download);
+      }
+      return fail("fonte non riconosciuta come documento scaricabile", 502);
+    }
+
+    const text = new TextDecoder("utf-8").decode(first.bytes);
+    for (const link of linksFrom(text)) {
+      const next = allowed(link, first.finalUrl);
+      if (!next) continue;
+      try {
+        const document = await fetchRaw(
+          next,
+          controller.signal,
+          "application/pdf,application/octet-stream,*/*",
+          cookies,
+          first.finalUrl,
+        );
+        if (isPdf(document.bytes) || document.contentType.includes("pdf")) {
+          return serve(document, download);
+        }
+      } catch {}
+    }
+
+    // The official registry publication itself can be the annual-report document.
+    // Serve it from TPbox instead of redirecting the browser to the registry.
+    return serve(first, download);
+  } catch (error) {
+    const err = error as { name?: string; message?: string };
+    return fail(
+      `impossibile recuperare il documento: ${err?.name === "AbortError" ? "timeout" : err?.message ?? "errore di rete"}`,
+      502,
+    );
+  } finally {
+    clearTimeout(timer);
+  }
+}
