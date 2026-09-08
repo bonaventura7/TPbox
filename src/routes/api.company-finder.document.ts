@@ -31,16 +31,12 @@ export const Route = createFileRoute("/api/company-finder/document")({
           const { fetchPolishAnnualReport } = await import("@/lib/company-finder/sources/bilanci/poland-rdf");
           const result = await fetchPolishAnnualReport(krs, year, 30000);
           if (!result.ok) {
-            return errorResponse(result.error ?? `bilancio ${year} non disponibile nel KRS RDF`, 502, {
-              fallback: "official-browser",
-            });
+            return errorResponse(result.error ?? `bilancio ${year} non disponibile nel KRS RDF`, 502, { fallback: "official-browser" });
           }
 
           const { isPdfBytes } = await import("@/lib/company-finder/pl-pdf-gate");
           if (!isPdfBytes(result.bytes)) {
-            return errorResponse("il registro polacco non ha restituito un PDF valido", 502, {
-              fallback: "official-browser",
-            });
+            return errorResponse("il registro polacco non ha restituito un PDF valido", 502, { fallback: "official-browser" });
           }
 
           return new Response(result.bytes, {
@@ -48,6 +44,27 @@ export const Route = createFileRoute("/api/company-finder/document")({
             headers: {
               "Content-Type": "application/pdf",
               "Content-Disposition": `${download ? "attachment" : "inline"}; filename="bilancio-${krs}-${year}.pdf"`,
+              "Cache-Control": "no-store",
+              "X-Content-Type-Options": "nosniff",
+            },
+          });
+        }
+
+        if (country === "EE") {
+          const code = company.replace(/\D/g, "");
+          if (!/^\d{8}$/.test(code)) return errorResponse("registrikood non valido", 400);
+          const { fetchEeFileDocument, resolveEeFiling } = await import("@/lib/company-finder/sources/bilanci/ariregister-ee");
+          const filing = await resolveEeFiling(code, year);
+          if (!filing.ok || !filing.fileId) return errorResponse(filing.error ?? `bilancio ${year} non disponibile`, 502);
+          const doc = await fetchEeFileDocument(code, filing.fileId);
+          if (!doc.ok || !doc.bytes) return errorResponse(doc.error ?? `bilancio ${year} non disponibile`, 502);
+          const isPdf = (doc.contentType ?? "").includes("pdf");
+          const ext = isPdf ? "pdf" : "html";
+          return new Response(doc.bytes, {
+            status: 200,
+            headers: {
+              "Content-Type": doc.contentType ?? (isPdf ? "application/pdf" : "text/html; charset=utf-8"),
+              "Content-Disposition": `${download ? "attachment" : "inline"}; filename="bilancio-EE-${code}-${year}.${ext}"`,
               "Cache-Control": "no-store",
               "X-Content-Type-Options": "nosniff",
             },

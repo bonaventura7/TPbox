@@ -18,6 +18,7 @@ import { searchYtj } from "./sources/ytj-fi";
 import { searchInpi, sirenFromVat } from "./sources/inpi-fr";
 import { searchBg } from "./sources/registry-bg";
 // ---- layer BILANCI (fonti gratuite, lato server) ----
+import { fetchEeFinancials } from "./sources/bilanci/ariregister-ee";
 import { fetchKvkJaarrekeningen, kvkFromInput } from "./sources/bilanci/kvk-nl";
 import { searchUrAccounting } from "./sources/bilanci/ur-de";
 import { fetchPappersFinancials } from "./sources/bilanci/pappers-fr";
@@ -266,6 +267,46 @@ const REGISTRY_ROUTES: Record<string, DirectAdapter[]> = {
             s.state = "ok";
             s.detail = r.data.registry?.id || "Base SIRENE";
             job.profile = () => r.data;
+          } else if (r.skipped) {
+            s.state = "skipped";
+            s.detail = r.skipped;
+          } else {
+            s.state = "failed";
+            s.detail = r.error || "fonte non raggiungibile";
+          }
+        })(),
+    },
+  ],
+
+  // ---- Estonia: e-Äriregister (autocomplete + scheda + bilanci, senza chiave) ----
+  // Un solo adapter combinato (come ch-public per l'UK): una sola lettura della
+  // scheda pubblica, che alimenta sia il profilo sia i bilanci.
+  EE: [
+    {
+      id: "ariregister",
+      label: "e-Äriregister — scheda e bilanci (RIK)",
+      input: "either",
+      run: (ctx, job, s) =>
+        (async () => {
+          if (!ctx.query && !ctx.localVat) {
+            s.state = "skipped";
+            s.detail = "servi la denominazione o il registrikood (8 cifre)";
+            return;
+          }
+          const r = await fetchEeFinancials({ query: ctx.query, localVat: ctx.localVat });
+          if (r.ok && (r.profile || r.financials)) {
+            s.state = "ok";
+            const n = r.financials?.documents?.length ?? 0;
+            s.detail =
+              n > 0 ? `${n} bilanci ufficiali` : (r.profile?.registry?.id ?? "scheda dal registro");
+            if (r.profile) {
+              const profile = r.profile;
+              job.profile = () => profile;
+            }
+            if (r.financials) {
+              const fin = r.financials;
+              job.fin = () => fin;
+            }
           } else if (r.skipped) {
             s.state = "skipped";
             s.detail = r.skipped;
@@ -545,7 +586,7 @@ const FINANCIALS_ROUTES: Record<
  * l'utente scrive solo il nome e non sceglie il paese, si interrogano questi
  * in parallelo invece di fermarsi: è il caso piu' frequente d'uso reale.
  */
-const NAME_SEARCHABLE = ["DE", "UK", "FR", "NO", "FI", "BG"] as const;
+const NAME_SEARCHABLE = ["DE", "UK", "FR", "NO", "FI", "BG", "EE"] as const;
 
 /** Quanto "vale" un esito, per scegliere il migliore nel fan-out. */
 function resultScore(r: SearchResponse): number {
@@ -704,8 +745,10 @@ export async function runSearch(req: SearchRequest, depth = 0): Promise<SearchRe
   // HU: un cégjegyzékszám (NN-NN-NNNNNN) non è un numero IVA → mai al VIES.
   const huRegistryNumber =
     countryIso === "HU" && /^\d{2}-?\d{2}-?\d{6}$/.test(localVat.replace(/\s/g, ""));
+  // EE: 8 cifre pure = registrikood (NON un numero IVA: l'IVA estone ne ha 9).
+  const eeRegistryCode = countryIso === "EE" && /^\d{8}$/.test(localVat);
   // ---------- 2b. VIES (tutti i paesi con prefisso IVA) ----------
-  if (hasVat && !pl8 && !pl10krs && !nlKvkDirect && !huRegistryNumber) {
+  if (hasVat && !pl8 && !pl10krs && !nlKvkDirect && !huRegistryNumber && !eeRegistryCode) {
     jobs.push(
       makeJob("vies", "VIES — Commissione Europea", async (job, s) => {
         const r = await checkVat(countryIso === "GR" ? "EL" : countryIso, localVat);

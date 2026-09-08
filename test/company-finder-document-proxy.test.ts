@@ -25,6 +25,11 @@ describe("proxy dei documenti di bilancio", () => {
       ),
     ).toBe(true);
     expect(isAllowedDocumentHost(new URL("https://ekrs.ms.gov.pl/rdf/pd/x"))).toBe(false);
+    expect(
+      isAllowedDocumentHost(
+        new URL("https://ariregister.rik.ee/eng/company/14035373/file/9014440842"),
+      ),
+    ).toBe(true);
   });
 
   it("rifiuta domini non censiti, inclusi i sottodomini somiglianti", async () => {
@@ -62,7 +67,7 @@ describe("proxy dei documenti di bilancio", () => {
 
   it("non lascia entrare nella whitelist host generici", () => {
     for (const host of ALLOWED_DOCUMENT_HOSTS) {
-      expect(host).toMatch(/\.(de|dk|nl|be|uk|gr|fr)$/);
+      expect(host).toMatch(/\.(de|dk|nl|be|uk|gr|fr|ee)$/);
     }
   });
 });
