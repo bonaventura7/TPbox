@@ -97,8 +97,29 @@ function extractGdLuLinks(html: string): LuxembourgDocument[] {
   return out.sort((a, b) => b.year - a.year || a.title.localeCompare(b.title, "fr"));
 }
 
+function extractMarkdownGdLuLinks(markdown: string): LuxembourgDocument[] {
+  const out: LuxembourgDocument[] = [];
+  const seen = new Set<string>();
+  const pattern = /\[([^\]]+)\]\((https?:\/\/gd\.lu\/rcsl\/[^\s)]+)\)/gi;
+  for (const match of markdown.matchAll(pattern)) {
+    const title = cleanText(match[1] ?? "");
+    const url = decodeHtml(match[2] ?? "");
+    if (!isOfficialGdLu(url) || seen.has(url)) continue;
+    const context = `${title} ${url}`;
+    if (!/compte|annual|social|comptes/i.test(context)) continue;
+    const year = yearFrom(context);
+    if (!year) continue;
+    seen.add(url);
+    out.push({ url, year, title: title || `Comptes annuels ${year}` });
+  }
+  return out.sort((a, b) => b.year - a.year || a.title.localeCompare(b.title, "fr"));
+}
+
 export function parseLuxembourgPappersIndex(html: string): LuxembourgDocument[] {
-  return extractGdLuLinks(html);
+  return [...extractGdLuLinks(html), ...extractMarkdownGdLuLinks(html)].reduce<LuxembourgDocument[]>(
+    (all, doc) => (all.some((item) => item.url === doc.url) ? all : [...all, doc]),
+    [],
+  ).sort((a, b) => b.year - a.year || a.title.localeCompare(b.title, "fr"));
 }
 
 async function getText(url: string, signal: AbortSignal): Promise<{ text: string; status: number; finalUrl: string }> {
@@ -133,12 +154,12 @@ function pappersCompanyUrl(companyName: string, rcs: string): string {
 }
 
 async function discoveryPages(companyName: string, rcs: string, signal: AbortSignal): Promise<LuxembourgDocument[]> {
-  const urls = [luxembourgCompanyUrl(rcs), pappersCompanyUrl(companyName, rcs)];
+  const urls = [luxembourgCompanyUrl(rcs), ...(companyName && companyName !== rcs ? [pappersCompanyUrl(companyName, rcs)] : [])];
   for (const pageUrl of urls) {
     try {
       const direct = await getText(pageUrl, signal);
       if (direct.status === 200) {
-        const docs = extractGdLuLinks(direct.text);
+        const docs = parseLuxembourgPappersIndex(direct.text);
         if (docs.length) return docs;
       }
     } catch {
@@ -148,7 +169,7 @@ async function discoveryPages(companyName: string, rcs: string, signal: AbortSig
       const readerUrl = `${READER_BASE}${pageUrl.replace(/^https?:\/\//i, "")}`;
       const reader = await getText(readerUrl, signal);
       if (reader.status === 200) {
-        const docs = extractGdLuLinks(reader.text);
+        const docs = parseLuxembourgPappersIndex(reader.text);
         if (docs.length) return docs;
       }
     } catch {
