@@ -15,6 +15,12 @@ function isOfficialGdLu(url: URL): boolean {
   return url.protocol === "https:" && url.hostname.toLowerCase() === "gd.lu" && /^\/rcsl\//i.test(url.pathname);
 }
 
+export function isValidLuxembourgPdf(bytes: ArrayBuffer): boolean {
+  if (bytes.byteLength < 8 || bytes.byteLength > 30 * 1024 * 1024) return false;
+  const head = new TextDecoder("latin1").decode(new Uint8Array(bytes).slice(0, 8));
+  return head.startsWith("%PDF-");
+}
+
 async function fetchLuxembourgPdf(url: URL, signal: AbortSignal): Promise<{ bytes: ArrayBuffer; finalUrl: URL }> {
   const response = await fetch(url.toString(), {
     method: "GET",
@@ -31,10 +37,7 @@ async function fetchLuxembourgPdf(url: URL, signal: AbortSignal): Promise<{ byte
   const finalUrl = new URL(response.url || url.toString());
   if (!isOfficialGdLu(finalUrl)) throw new Error("destinazione documentale non autorizzata");
   const bytes = await response.arrayBuffer();
-  if (bytes.byteLength < 8) throw new Error("documento vuoto o incompleto");
-  const head = new TextDecoder("latin1").decode(new Uint8Array(bytes).slice(0, 8));
-  if (!head.startsWith("%PDF-")) throw new Error("gd.lu non ha restituito un PDF valido");
-  if (bytes.byteLength > 30 * 1024 * 1024) throw new Error("documento troppo grande");
+  if (!isValidLuxembourgPdf(bytes)) throw new Error("gd.lu non ha restituito un PDF valido");
   return { bytes, finalUrl };
 }
 
