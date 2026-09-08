@@ -73,7 +73,12 @@ function provenance(metric: Metric, requestedDate: string, retrievedAt: string) 
   };
 }
 
-function missing(metric: Metric, requestedDate: string, retrievedAt: string, reason: string): MissingEntry {
+function missing(
+  metric: Metric,
+  requestedDate: string,
+  retrievedAt: string,
+  reason: string,
+): MissingEntry {
   return { status: "UNAVAILABLE", ...provenance(metric, requestedDate, retrievedAt), reason };
 }
 
@@ -86,11 +91,21 @@ function fromSnapshot(
 ): MarketEntry {
   const prefix = liveReason === null ? "" : `fonte non raggiungibile (${liveReason}); `;
   if (point === undefined) {
-    return missing(metric, requestedDate, retrievedAt, `${prefix}serie non presente nel dataset congelato del ${SNAPSHOT_DATE}`);
+    return missing(
+      metric,
+      requestedDate,
+      retrievedAt,
+      `${prefix}serie non presente nel dataset congelato del ${SNAPSHOT_DATE}`,
+    );
   }
   const gap = daysFromPeriodTo(point.asOf, requestedDate);
   if (gap < 0) {
-    return missing(metric, requestedDate, retrievedAt, `${prefix}il dataset congelato riporta l'osservazione al ${point.asOf}, successiva alla data richiesta: per una data anteriore serve la fonte`);
+    return missing(
+      metric,
+      requestedDate,
+      retrievedAt,
+      `${prefix}il dataset congelato riporta l'osservazione al ${point.asOf}, successiva alla data richiesta: per una data anteriore serve la fonte`,
+    );
   }
   return {
     status: "OK",
@@ -107,7 +122,13 @@ function snapshotPointFor(metric: Metric): SnapshotPoint | undefined {
   return SNAPSHOT_RATES[metric.id];
 }
 
-function live(metric: Metric, requestedDate: string, retrievedAt: string, period: string, value: number): ResolvedEntry {
+function live(
+  metric: Metric,
+  requestedDate: string,
+  retrievedAt: string,
+  period: string,
+  value: number,
+): ResolvedEntry {
   return {
     status: "OK",
     ...provenance(metric, requestedDate, retrievedAt),
@@ -121,7 +142,12 @@ function live(metric: Metric, requestedDate: string, retrievedAt: string, period
 function countryEntry(requestedDate: string, retrievedAt: string): CountryEntry {
   const gap = daysFromPeriodTo(SNAPSHOT_COUNTRY.asOf, requestedDate);
   if (gap < 0) {
-    return missing(COUNTRY_METRIC, requestedDate, retrievedAt, `il dataset disponibile è l'aggiornamento del ${SNAPSHOT_COUNTRY.asOf}: per una data anteriore serve il file Damodaran dell'anno corrispondente`);
+    return missing(
+      COUNTRY_METRIC,
+      requestedDate,
+      retrievedAt,
+      `il dataset disponibile è l'aggiornamento del ${SNAPSHOT_COUNTRY.asOf}: per una data anteriore serve il file Damodaran dell'anno corrispondente`,
+    );
   }
   return {
     status: "OK",
@@ -159,10 +185,17 @@ export async function buildMarketBundle(options: BundleOptions): Promise<MarketB
               signal: controller.signal,
               deadlineAt,
             });
-            if (observation === null) return [metric, { ok: false, reason: `nessuna osservazione entro il ${requestedDate}` }];
+            if (observation === null)
+              return [
+                metric,
+                { ok: false, reason: `nessuna osservazione entro il ${requestedDate}` },
+              ];
             return [metric, { ok: true, period: observation.period, value: observation.value }];
           } catch (error) {
-            const reason = error instanceof SourceError ? error.message : ((error as { message?: string })?.message ?? "errore di rete");
+            const reason =
+              error instanceof SourceError
+                ? error.message
+                : ((error as { message?: string })?.message ?? "errore di rete");
             return [metric, { ok: false, reason }];
           }
         }),
@@ -173,7 +206,13 @@ export async function buildMarketBundle(options: BundleOptions): Promise<MarketB
           metric.id,
           outcome.ok
             ? live(metric, requestedDate, retrievedAt, outcome.period, outcome.value)
-            : fromSnapshot(metric, snapshotPointFor(metric), requestedDate, retrievedAt, outcome.reason),
+            : fromSnapshot(
+                metric,
+                snapshotPointFor(metric),
+                requestedDate,
+                retrievedAt,
+                outcome.reason,
+              ),
         );
       }
     } finally {
@@ -183,7 +222,16 @@ export async function buildMarketBundle(options: BundleOptions): Promise<MarketB
 
   for (const metric of fetchable) {
     if (resolved.has(metric.id)) continue;
-    resolved.set(metric.id, fromSnapshot(metric, snapshotPointFor(metric), requestedDate, retrievedAt, options.live ? "tempo disponibile esaurito" : null));
+    resolved.set(
+      metric.id,
+      fromSnapshot(
+        metric,
+        snapshotPointFor(metric),
+        requestedDate,
+        retrievedAt,
+        options.live ? "tempo disponibile esaurito" : null,
+      ),
+    );
   }
 
   const fx: Record<string, MarketEntry> = {};
@@ -209,11 +257,33 @@ export async function buildMarketBundle(options: BundleOptions): Promise<MarketB
     unavailable: all.filter((entry) => entry.status === "UNAVAILABLE").length,
   };
 
-  if (counts.unavailable > 0) warnings.push(counts.unavailable === 1 ? `1 serie su ${all.length} non risolta: la voce riporta il motivo.` : `${counts.unavailable} serie su ${all.length} non risolte: le voci riportano il motivo.`);
-  const stale = all.filter((entry) => entry.status === "OK" && entry.cacheStatus === "CACHED_STALE").length;
-  if (stale > 0) warnings.push(stale === 1 ? `1 valore del dataset congelato del ${SNAPSHOT_DATE} dista dalla data richiesta più della lunghezza del suo periodo: da verificare alla fonte prima dell'uso.` : `${stale} valori del dataset congelato del ${SNAPSHOT_DATE} distano dalla data richiesta più della lunghezza del loro periodo: da verificare alla fonte prima dell'uso.`);
+  if (counts.unavailable > 0)
+    warnings.push(
+      counts.unavailable === 1
+        ? `1 serie su ${all.length} non risolta: la voce riporta il motivo.`
+        : `${counts.unavailable} serie su ${all.length} non risolte: le voci riportano il motivo.`,
+    );
+  const stale = all.filter(
+    (entry) => entry.status === "OK" && entry.cacheStatus === "CACHED_STALE",
+  ).length;
+  if (stale > 0)
+    warnings.push(
+      stale === 1
+        ? `1 valore del dataset congelato del ${SNAPSHOT_DATE} dista dalla data richiesta più della lunghezza del suo periodo: da verificare alla fonte prima dell'uso.`
+        : `${stale} valori del dataset congelato del ${SNAPSHOT_DATE} distano dalla data richiesta più della lunghezza del loro periodo: da verificare alla fonte prima dell'uso.`,
+    );
 
-  return { requestedDate, generatedAt: retrievedAt, mode: options.live ? "live" : "snapshot", dataset: DATASET, fx, rates, country, counts, warnings };
+  return {
+    requestedDate,
+    generatedAt: retrievedAt,
+    mode: options.live ? "live" : "snapshot",
+    dataset: DATASET,
+    fx,
+    rates,
+    country,
+    counts,
+    warnings,
+  };
 }
 
 type Observationish =

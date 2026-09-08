@@ -7,12 +7,7 @@ import type { NewsFeedResult, NewsFilters, NewsItem, NewsSource } from "../domai
 
 export type RepoKind = "MOCK" | "REAL";
 
-export type RepoStatus =
-  | "OK"
-  | "SCHEMA_UNAVAILABLE"
-  | "UNREACHABLE"
-  | "UNEXPECTED_SHAPE"
-  | "EMPTY";
+export type RepoStatus = "OK" | "SCHEMA_UNAVAILABLE" | "UNREACHABLE" | "UNEXPECTED_SHAPE" | "EMPTY";
 
 export interface NewsRepo {
   readonly kind: RepoKind;

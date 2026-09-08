@@ -36,8 +36,7 @@ export function isAllowedSourceUrl(rawUrl: string): boolean {
     const url = new URL(rawUrl);
     return (
       url.protocol === "https:" &&
-      (url.hostname === INTERPELLI_ALLOWED_HOST ||
-        url.hostname === "agenziaentrate.gov.it")
+      (url.hostname === INTERPELLI_ALLOWED_HOST || url.hostname === "agenziaentrate.gov.it")
     );
   } catch {
     return false;
@@ -80,9 +79,7 @@ function publicRecords(): InterpelloRecord[] {
 export async function listInterpelliArchive(): Promise<InterpelloArchive> {
   const correlationId = newCorrelationId();
   const records = publicRecords();
-  const availableYears = [...new Set(records.map((item) => item.year))].sort(
-    (a, b) => b - a,
-  );
+  const availableYears = [...new Set(records.map((item) => item.year))].sort((a, b) => b - a);
   const lastVerifiedAt = records
     .map((item) => item.lastVerifiedAt)
     .sort()
@@ -124,8 +121,7 @@ export async function listInterpelliArchive(): Promise<InterpelloArchive> {
   );
 
   const stale =
-    ACQUISITION_MODE === "MANUAL_IMPORT" ||
-    loaded.some((item) => item.workflowStatus === "STALE");
+    ACQUISITION_MODE === "MANUAL_IMPORT" || loaded.some((item) => item.workflowStatus === "STALE");
 
   audit({
     correlationId,

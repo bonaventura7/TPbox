@@ -1,9 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 function envKey(): string | undefined {
-  const processLike = (globalThis as {
-    process?: { env?: Record<string, string | undefined> };
-  }).process;
+  const processLike = (
+    globalThis as {
+      process?: { env?: Record<string, string | undefined> };
+    }
+  ).process;
   return processLike?.env?.["OPENREGISTER_API_KEY"]?.trim();
 }
 
@@ -22,7 +24,7 @@ export const Route = createFileRoute("/api/company-finder/document")({
     handlers: {
       GET: async ({ request }: { request: Request }) => {
         const url = new URL(request.url);
-        const country = (url.searchParams.get("country")?.trim().toUpperCase() || "DE");
+        const country = url.searchParams.get("country")?.trim().toUpperCase() || "DE";
         const company = url.searchParams.get("company")?.trim();
         const yearValue = url.searchParams.get("year")?.trim();
         if (!company) return errorResponse("società mancante", 400);
@@ -38,17 +40,15 @@ export const Route = createFileRoute("/api/company-finder/document")({
           const siren = url.searchParams.get("siren")?.replace(/\D/g, "") ?? "";
           if (!/^\d{9}$/.test(siren)) return errorResponse("SIREN non valido", 400);
 
-          const { findPappersAnnualReport } = await import(
-            "@/lib/company-finder/sources/bilanci/pappers-public-fr.server"
-          );
+          const { findPappersAnnualReport } =
+            await import("@/lib/company-finder/sources/bilanci/pappers-public-fr.server");
           const result = await findPappersAnnualReport(company, siren, year);
           if (!result.ok || !result.document?.url) {
             return errorResponse(result.error ?? `bilancio ${year} non disponibile`, 502);
           }
 
-          const { handleDocumentRequest } = await import(
-            "@/lib/company-finder/document-proxy.server"
-          );
+          const { handleDocumentRequest } =
+            await import("@/lib/company-finder/document-proxy.server");
           const internalRequest = new Request(
             new URL(
               `/api/company-finder/document?url=${encodeURIComponent(result.document.url)}&download=${download ? "1" : "0"}`,
@@ -63,9 +63,8 @@ export const Route = createFileRoute("/api/company-finder/document")({
 
         const key = envKey();
         if (key) {
-          const { fetchOpenRegisterAnnualReport } = await import(
-            "@/lib/company-finder/sources/bilanci/openregister-de"
-          );
+          const { fetchOpenRegisterAnnualReport } =
+            await import("@/lib/company-finder/sources/bilanci/openregister-de");
           const result = await fetchOpenRegisterAnnualReport(company, year, 20000);
           if (result.ok && result.html) {
             return new Response(result.html, {
@@ -80,17 +79,15 @@ export const Route = createFileRoute("/api/company-finder/document")({
           }
         }
 
-        const { findOfficialUrPublication } = await import(
-          "@/lib/company-finder/sources/bilanci/ur-de"
-        );
+        const { findOfficialUrPublication } =
+          await import("@/lib/company-finder/sources/bilanci/ur-de");
         const fallback = await findOfficialUrPublication(company, year, 30000);
         if (!fallback.ok || !fallback.document?.url) {
           return errorResponse(fallback.error ?? `bilancio ${year} non disponibile`, 502);
         }
 
-        const { handleDocumentRequest } = await import(
-          "@/lib/company-finder/document-proxy.server"
-        );
+        const { handleDocumentRequest } =
+          await import("@/lib/company-finder/document-proxy.server");
         const internalRequest = new Request(
           new URL(
             `/api/company-finder/document?url=${encodeURIComponent(fallback.document.url)}&download=${download ? "1" : "0"}`,

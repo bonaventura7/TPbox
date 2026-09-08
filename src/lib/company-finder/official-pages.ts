@@ -4,7 +4,6 @@
 import { BROWSER_ONLY_PAGES, CONSULT_PAGES, NO_FREE_SOURCE } from "./coverage";
 import { normalizeHuIdentifiers } from "./registry/hu-identifiers";
 
-
 export interface OfficialPage {
   url: string;
   label: string;
@@ -22,7 +21,6 @@ export interface OfficialPage {
   /** Passaggi operativi da compiere sul portale ufficiale. */
   instructions?: string[] | undefined;
 }
-
 
 function digits(value: string): string {
   return value.replace(/\D/g, "");
@@ -161,7 +159,6 @@ export function officialPageFor(
       note: "Apre il punto di consultazione ufficiale del registro da cui è possibile accedere al documento di bilancio.",
     };
   }
-
 
   if (NO_FREE_SOURCE[iso]) return undefined;
   return undefined;

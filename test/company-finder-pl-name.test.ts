@@ -9,39 +9,40 @@ describe("Polonia — risoluzione nome → KRS", () => {
   it("uses only GLEIF records registered at the Polish KRS authority", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () =>
-        ({
-          ok: true,
-          status: 200,
-          json: async () => ({
-            data: [
-              {
-                attributes: {
-                  lei: "529900TESTLEI00000001",
-                  entity: {
-                    legalName: { name: "MASPEX HOLDING SPÓŁKA AKCYJNA" },
-                    legalAddress: { country: "PL", city: "WADOWICE" },
-                    registeredAs: "0000725647",
-                    registeredAt: { id: "RA000484" },
-                    status: "ACTIVE",
+      vi.fn(
+        async () =>
+          ({
+            ok: true,
+            status: 200,
+            json: async () => ({
+              data: [
+                {
+                  attributes: {
+                    lei: "529900TESTLEI00000001",
+                    entity: {
+                      legalName: { name: "MASPEX HOLDING SPÓŁKA AKCYJNA" },
+                      legalAddress: { country: "PL", city: "WADOWICE" },
+                      registeredAs: "0000725647",
+                      registeredAt: { id: "RA000484" },
+                      status: "ACTIVE",
+                    },
                   },
                 },
-              },
-              {
-                attributes: {
-                  lei: "529900TESTLEI00000002",
-                  entity: {
-                    legalName: { name: "MASPEX HOLDING SPÓŁKA AKCYJNA" },
-                    legalAddress: { country: "PL", city: "WADOWICE" },
-                    registeredAs: "5512634704",
-                    registeredAt: { id: "RA000654" },
-                    status: "ACTIVE",
+                {
+                  attributes: {
+                    lei: "529900TESTLEI00000002",
+                    entity: {
+                      legalName: { name: "MASPEX HOLDING SPÓŁKA AKCYJNA" },
+                      legalAddress: { country: "PL", city: "WADOWICE" },
+                      registeredAs: "5512634704",
+                      registeredAt: { id: "RA000654" },
+                      status: "ACTIVE",
+                    },
                   },
                 },
-              },
-            ],
-          }),
-        }) as unknown as Response,
+              ],
+            }),
+          }) as unknown as Response,
       ),
     );
 
@@ -53,27 +54,28 @@ describe("Polonia — risoluzione nome → KRS", () => {
   it("refuses a Polish entity whose registered identifier belongs to another authority", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () =>
-        ({
-          ok: true,
-          status: 200,
-          json: async () => ({
-            data: [
-              {
-                attributes: {
-                  lei: "529900TESTLEI00000003",
-                  entity: {
-                    legalName: { name: "ACME POLSKA" },
-                    legalAddress: { country: "PL" },
-                    registeredAs: "123456789",
-                    registeredAt: { id: "RA000654" },
-                    status: "ACTIVE",
+      vi.fn(
+        async () =>
+          ({
+            ok: true,
+            status: 200,
+            json: async () => ({
+              data: [
+                {
+                  attributes: {
+                    lei: "529900TESTLEI00000003",
+                    entity: {
+                      legalName: { name: "ACME POLSKA" },
+                      legalAddress: { country: "PL" },
+                      registeredAs: "123456789",
+                      registeredAt: { id: "RA000654" },
+                      status: "ACTIVE",
+                    },
                   },
                 },
-              },
-            ],
-          }),
-        }) as unknown as Response,
+              ],
+            }),
+          }) as unknown as Response,
       ),
     );
 
@@ -85,27 +87,28 @@ describe("Polonia — risoluzione nome → KRS", () => {
   it("parses and exposes registeredAt while retaining existing relevance filtering", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () =>
-        ({
-          ok: true,
-          status: 200,
-          json: async () => ({
-            data: [
-              {
-                attributes: {
-                  lei: "529900TESTLEI00000004",
-                  entity: {
-                    legalName: { name: "MASPEX HOLDING SPÓŁKA AKCYJNA" },
-                    legalAddress: { country: "PL" },
-                    registeredAs: "0000725647",
-                    registeredAt: { id: "RA000484" },
-                    status: "ACTIVE",
+      vi.fn(
+        async () =>
+          ({
+            ok: true,
+            status: 200,
+            json: async () => ({
+              data: [
+                {
+                  attributes: {
+                    lei: "529900TESTLEI00000004",
+                    entity: {
+                      legalName: { name: "MASPEX HOLDING SPÓŁKA AKCYJNA" },
+                      legalAddress: { country: "PL" },
+                      registeredAs: "0000725647",
+                      registeredAt: { id: "RA000484" },
+                      status: "ACTIVE",
+                    },
                   },
                 },
-              },
-            ],
-          }),
-        }) as unknown as Response,
+              ],
+            }),
+          }) as unknown as Response,
       ),
     );
 

@@ -1,11 +1,11 @@
-export const DEFAULT_LLM_MODEL = 'nvidia/nemotron-3-ultra-550b-a55b:free';
-export const DEFAULT_LLM_FALLBACK = 'openai/gpt-4o-mini';
-export const DEFAULT_LLM_ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions';
+export const DEFAULT_LLM_MODEL = "nvidia/nemotron-3-ultra-550b-a55b:free";
+export const DEFAULT_LLM_FALLBACK = "openai/gpt-4o-mini";
+export const DEFAULT_LLM_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
 export const DEFAULT_LLM_TIMEOUT_MS = 60000;
 export const DEFAULT_LLM_MAX_RETRIES = 1;
 
 export type LlmEnv = Record<string, string | undefined>;
-export type LlmMessage = { role: 'system' | 'user'; content: string };
+export type LlmMessage = { role: "system" | "user"; content: string };
 export type FetchLike = typeof fetch;
 
 export type LlmConfig = {
@@ -19,7 +19,7 @@ export type LlmConfig = {
 
 export function getLlmConfig(env: LlmEnv): LlmConfig {
   const apiKey = env.OPENROUTER_API_KEY?.trim();
-  if (!apiKey) throw new Error('OPENROUTER_API_KEY is not configured');
+  if (!apiKey) throw new Error("OPENROUTER_API_KEY is not configured");
 
   return {
     apiKey,
@@ -46,17 +46,17 @@ async function requestModel(
 
   try {
     const response = await fetchImpl(config.endpoint, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'content-type': 'application/json',
+        "content-type": "application/json",
         authorization: `Bearer ${config.apiKey}`,
-        'http-referer': 'https://transfer-guide-italia.lovable.app',
-        'x-title': 'TransferGuideItalia-Editor',
+        "http-referer": "https://transfer-guide-italia.lovable.app",
+        "x-title": "TransferGuideItalia-Editor",
       },
       body: JSON.stringify({
         model,
         temperature: 0.3,
-        response_format: { type: 'json_object' },
+        response_format: { type: "json_object" },
         messages,
       }),
       signal: controller.signal,
@@ -71,7 +71,8 @@ async function requestModel(
 
     const data = await response.json();
     const content = data?.choices?.[0]?.message?.content;
-    if (typeof content !== 'string' || !content.trim()) throw new Error('LLM returned empty content');
+    if (typeof content !== "string" || !content.trim())
+      throw new Error("LLM returned empty content");
     return JSON.parse(content);
   } finally {
     clearTimeout(timer);
@@ -93,7 +94,7 @@ async function withRetry(
       if (attempt >= config.maxRetries) break;
     }
   }
-  throw lastError instanceof Error ? lastError : new Error('LLM request failed');
+  throw lastError instanceof Error ? lastError : new Error("LLM request failed");
 }
 
 export async function generateJson(
@@ -104,9 +105,15 @@ export async function generateJson(
   const config = getLlmConfig(env);
 
   try {
-    return { value: await withRetry(config.model, messages, config, fetchImpl), model: config.model };
+    return {
+      value: await withRetry(config.model, messages, config, fetchImpl),
+      model: config.model,
+    };
   } catch (primaryError) {
     if (config.fallbackModel === config.model) throw primaryError;
-    return { value: await requestModel(config.fallbackModel, messages, config, fetchImpl), model: config.fallbackModel };
+    return {
+      value: await requestModel(config.fallbackModel, messages, config, fetchImpl),
+      model: config.fallbackModel,
+    };
   }
 }

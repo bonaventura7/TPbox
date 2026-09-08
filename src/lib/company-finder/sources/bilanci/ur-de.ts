@@ -32,7 +32,9 @@ interface OfficialUrDocument {
 }
 
 function env(): Record<string, string | undefined> {
-  return (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env ?? {};
+  return (
+    (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env ?? {}
+  );
 }
 
 function norm(value: string): string {
@@ -55,9 +57,10 @@ function similarity(a: string, b: string): number {
 
 function appendSetCookies(cookie: string, headers: Headers): string {
   const getter = (headers as Headers & { getSetCookie?: () => string[] }).getSetCookie;
-  const values = typeof getter === "function"
-    ? getter.call(headers)
-    : (headers.get("set-cookie") ?? "").split(/,(?=[^;=]+=)/);
+  const values =
+    typeof getter === "function"
+      ? getter.call(headers)
+      : (headers.get("set-cookie") ?? "").split(/,(?=[^;=]+=)/);
   const jar = new Map<string, string>();
   for (const part of cookie.split("; ")) {
     const eq = part.indexOf("=");
@@ -205,7 +208,9 @@ async function discoverOfficialPublication(
 
     const chosen = year
       ? sameCompany.find((publication) => {
-          const candidateYear = (publication.sourceDate ?? publication.title ?? "").match(/20\d{2}/);
+          const candidateYear = (publication.sourceDate ?? publication.title ?? "").match(
+            /20\d{2}/,
+          );
           return candidateYear ? Number(candidateYear[0]) === year : false;
         })
       : undefined;
@@ -241,25 +246,34 @@ export async function findOfficialUrPublication(
 ): Promise<{ ok: boolean; document?: OfficialUrDocument; error?: string }> {
   try {
     const document = await discoverOfficialPublication(companyName, year, timeoutMs);
-    if (!document) return { ok: false, error: `Unternehmensregister: bilancio ${year} non trovato` };
+    if (!document)
+      return { ok: false, error: `Unternehmensregister: bilancio ${year} non trovato` };
     return { ok: true, document };
   } catch (e) {
     const err = e as { name?: string; message?: string; cause?: { code?: string } } | undefined;
     const code = err?.cause?.code;
     return {
       ok: false,
-      error: `Unternehmensregister: ${err?.name === "AbortError" ? "timeout" : code === "ENOTFOUND" ? "DNS non risolto" : err?.message ?? "errore"}`,
+      error: `Unternehmensregister: ${err?.name === "AbortError" ? "timeout" : code === "ENOTFOUND" ? "DNS non risolto" : (err?.message ?? "errore")}`,
     };
   }
 }
 
-export async function searchUrAccounting(companyName: string, timeoutMs = 30000): Promise<UrResult> {
+export async function searchUrAccounting(
+  companyName: string,
+  timeoutMs = 30000,
+): Promise<UrResult> {
   const key = env().OPENREGISTER_API_KEY?.trim();
   if (key) {
-    const structured = await fetchOpenRegisterFinancials(companyName, key, Math.min(timeoutMs, 15000));
+    const structured = await fetchOpenRegisterFinancials(
+      companyName,
+      key,
+      Math.min(timeoutMs, 15000),
+    );
     if (structured.ok && structured.data) return structured;
     const fallback = await discoverOfficialPublication(companyName, undefined, timeoutMs);
-    if (!fallback) return { ok: false, error: structured.error ?? "Bilancio tedesco non disponibile" };
+    if (!fallback)
+      return { ok: false, error: structured.error ?? "Bilancio tedesco non disponibile" };
     const year = fallback.year;
     const company = fallback.title.split(" · ")[1] ?? companyName;
     const documentUrl = year
@@ -275,17 +289,20 @@ export async function searchUrAccounting(companyName: string, timeoutMs = 30000)
         documentTitle: fallback.title || "Jahresabschluss",
         availability: documentUrl ? "DOCUMENT_DOWNLOADABLE" : "REGISTRY_ONLY",
         restriction: documentUrl ? undefined : "SOURCE_RESTRICTION",
-        documents: documentUrl && year
-          ? [{
-              id: `de-${norm(companyName)}-${year}`,
-              year,
-              kind: "ANNUAL_REPORT",
-              format: "html",
-              availability: "DOCUMENT_DOWNLOADABLE",
-              title: fallback.title || `Jahresabschluss ${year}`,
-              downloadUrl: `${documentUrl}&download=1`,
-            }]
-          : undefined,
+        documents:
+          documentUrl && year
+            ? [
+                {
+                  id: `de-${norm(companyName)}-${year}`,
+                  year,
+                  kind: "ANNUAL_REPORT",
+                  format: "html",
+                  availability: "DOCUMENT_DOWNLOADABLE",
+                  title: fallback.title || `Jahresabschluss ${year}`,
+                  downloadUrl: `${documentUrl}&download=1`,
+                },
+              ]
+            : undefined,
         note: structured.error
           ? `OpenRegister non riuscito (${structured.error}). Fallback attivo su Unternehmensregister.`
           : "Documento individuato nel Unternehmensregister.",
@@ -311,17 +328,20 @@ export async function searchUrAccounting(companyName: string, timeoutMs = 30000)
       documentTitle: fallback.title || "Jahresabschluss",
       availability: documentUrl ? "DOCUMENT_DOWNLOADABLE" : "REGISTRY_ONLY",
       restriction: documentUrl ? undefined : "SOURCE_RESTRICTION",
-      documents: documentUrl && year
-        ? [{
-            id: `de-${norm(companyName)}-${year}`,
-            year,
-            kind: "ANNUAL_REPORT",
-            format: "html",
-            availability: "DOCUMENT_DOWNLOADABLE",
-            title: fallback.title || `Jahresabschluss ${year}`,
-            downloadUrl: `${documentUrl}&download=1`,
-          }]
-        : undefined,
+      documents:
+        documentUrl && year
+          ? [
+              {
+                id: `de-${norm(companyName)}-${year}`,
+                year,
+                kind: "ANNUAL_REPORT",
+                format: "html",
+                availability: "DOCUMENT_DOWNLOADABLE",
+                title: fallback.title || `Jahresabschluss ${year}`,
+                downloadUrl: `${documentUrl}&download=1`,
+              },
+            ]
+          : undefined,
       note: "Documento individuato nel Unternehmensregister.",
     },
   };

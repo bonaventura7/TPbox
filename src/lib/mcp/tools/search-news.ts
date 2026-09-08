@@ -32,9 +32,7 @@ export default defineTool({
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async (input) => {
-    const { listNewsFeed } = await import(
-      "../../repositories/news.repository.server"
-    );
+    const { listNewsFeed } = await import("../../repositories/news.repository.server");
     const feed = await listNewsFeed({
       query: input.query ?? "",
       geo: input.geo ?? "TUTTE",
@@ -43,24 +41,22 @@ export default defineTool({
       category: "TUTTE",
       country: "",
     });
-    const items = [
-      ...(feed.featured ? [feed.featured] : []),
-      ...feed.latest,
-      ...feed.archive,
-    ].map((item) => ({
-      id: item.id,
-      titolo: item.title,
-      sintesi: item.summary,
-      fonte: item.sourceName,
-      tipoFonte: item.sourceKind,
-      dataOriginale: item.originalDate,
-      lingua: item.language,
-      area: item.geo,
-      tema: item.topic,
-      ultimaVerifica: item.lastVerifiedAt,
-      urlOriginale: item.originalUrl,
-      dimostrativo: true,
-    }));
+    const items = [...(feed.featured ? [feed.featured] : []), ...feed.latest, ...feed.archive].map(
+      (item) => ({
+        id: item.id,
+        titolo: item.title,
+        sintesi: item.summary,
+        fonte: item.sourceName,
+        tipoFonte: item.sourceKind,
+        dataOriginale: item.originalDate,
+        lingua: item.language,
+        area: item.geo,
+        tema: item.topic,
+        ultimaVerifica: item.lastVerifiedAt,
+        urlOriginale: item.originalUrl,
+        dimostrativo: true,
+      }),
+    );
     if (feed.health === "DEGRADED" && items.length === 0) {
       throw new ToolError("Il servizio di aggregazione non è disponibile.");
     }

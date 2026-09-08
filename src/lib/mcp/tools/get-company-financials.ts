@@ -15,9 +15,7 @@ export default defineTool({
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async ({ companyId }) => {
-    const { fetchBilancio } = await import(
-      "../../repositories/tools.repository.server"
-    );
+    const { fetchBilancio } = await import("../../repositories/tools.repository.server");
     const result = await fetchBilancio({ companyId, role: "PRO" });
     if (result.status === "NOT_FOUND") throw new ToolError(result.message);
     if (result.status !== "OK" && result.status !== "DEGRADED") {

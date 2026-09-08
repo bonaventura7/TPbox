@@ -49,11 +49,7 @@ export function classifyEbeszamoloPage(html: string): EbeszamoloPageKind {
   if (lower.includes("hibás paraméterek") || lower.includes("hib&#225;s param&#233;terek")) {
     return "SESSION_BOUND";
   }
-  if (
-    lower.includes("altcha-widget") ||
-    lower.includes("recaptcha") ||
-    lower.includes("captcha")
-  ) {
+  if (lower.includes("altcha-widget") || lower.includes("recaptcha") || lower.includes("captcha")) {
     return "CAPTCHA_REQUIRED";
   }
   if (lower.includes("kereses_megjelenites") || lower.includes("beszámoló letöltése")) {
@@ -127,7 +123,7 @@ export const huAdapter: RegistryAdapter<HuIdentifiers> = {
           registry: {
             name: huAdapter.registryLabel,
             authority: country.registryAuthority,
-            ...(ids.cegjegyzekszam ?? ids.adoszam8
+            ...((ids.cegjegyzekszam ?? ids.adoszam8)
               ? { id: ids.cegjegyzekszam ?? ids.adoszam8! }
               : {}),
           },

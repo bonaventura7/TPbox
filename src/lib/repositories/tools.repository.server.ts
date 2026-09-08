@@ -1,8 +1,4 @@
-import {
-  DEMO_COMPANIES,
-  DEMO_FINANCIALS,
-  DEMO_FINANCIALS_FALLBACK,
-} from "../domain/demo-data";
+import { DEMO_COMPANIES, DEMO_FINANCIALS, DEMO_FINANCIALS_FALLBACK } from "../domain/demo-data";
 import type {
   BilancioResult,
   CompanySearchResult,
@@ -65,9 +61,7 @@ export async function searchCompanies(input: {
         input.country === "" ? true : company.country === input.country,
       );
       if (mode === "VAT_SEARCH") return pool.slice(0, 1);
-      const byName = pool.filter((company) =>
-        company.legalName.toLowerCase().includes(term),
-      );
+      const byName = pool.filter((company) => company.legalName.toLowerCase().includes(term));
       return byName.length > 0 ? byName : pool.slice(0, 3);
     }),
   );
@@ -94,9 +88,15 @@ export async function searchCompanies(input: {
 
 function ratios(revenue: number, ebit: number, equity: number, assets: number) {
   return [
-    { label: "Margine operativo (EBIT / ricavi)", value: `${((ebit / revenue) * 100).toFixed(1)}%` },
+    {
+      label: "Margine operativo (EBIT / ricavi)",
+      value: `${((ebit / revenue) * 100).toFixed(1)}%`,
+    },
     { label: "Rotazione attivo (ricavi / attivo)", value: (revenue / assets).toFixed(2) },
-    { label: "Patrimonializzazione (equity / attivo)", value: `${((equity / assets) * 100).toFixed(1)}%` },
+    {
+      label: "Patrimonializzazione (equity / attivo)",
+      value: `${((equity / assets) * 100).toFixed(1)}%`,
+    },
   ];
 }
 
@@ -126,7 +126,8 @@ export async function fetchBilancio(input: {
     };
   }
 
-  const authorized = input.role === "PRO" || input.role === "ADMIN" || FEATURE_FLAGS.bilancioProAccess;
+  const authorized =
+    input.role === "PRO" || input.role === "ADMIN" || FEATURE_FLAGS.bilancioProAccess;
   if (!authorized) {
     audit({
       correlationId,

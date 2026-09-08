@@ -19,7 +19,11 @@ describe("proxy dei documenti di bilancio", () => {
   it("accetta solo i registri ufficiali censiti", () => {
     expect(isAllowedDocumentHost(new URL("https://www.unternehmensregister.de/x.pdf"))).toBe(true);
     expect(isAllowedDocumentHost(new URL("https://opendata.kvk.nl/api/v1/kvknummer/1"))).toBe(true);
-    expect(isAllowedDocumentHost(new URL("https://www.pappers.fr/entreprise/acme-123456789/comptes/acme.pdf"))).toBe(true);
+    expect(
+      isAllowedDocumentHost(
+        new URL("https://www.pappers.fr/entreprise/acme-123456789/comptes/acme.pdf"),
+      ),
+    ).toBe(true);
     expect(isAllowedDocumentHost(new URL("https://ekrs.ms.gov.pl/rdf/pd/x"))).toBe(false);
   });
 

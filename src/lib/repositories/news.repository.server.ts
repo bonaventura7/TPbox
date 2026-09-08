@@ -77,10 +77,7 @@ function matches(item: NewsItem, filters: NewsFilters): boolean {
 }
 
 /** Contratto storico del mock: i campi diagnostici sono aggiunti dall'adattatore. */
-export type MockNewsFeedResult = Omit<
-  NewsFeedResult,
-  "repoKind" | "repoStatus" | "rejectedRows"
->;
+export type MockNewsFeedResult = Omit<NewsFeedResult, "repoKind" | "repoStatus" | "rejectedRows">;
 
 export async function listNewsFeed(filters: NewsFilters): Promise<MockNewsFeedResult> {
   const correlationId = newCorrelationId();
@@ -88,9 +85,9 @@ export async function listNewsFeed(filters: NewsFilters): Promise<MockNewsFeedRe
 
   const items = await withTimeout(async () =>
     retryIdempotent(async () => {
-      const published = publishedOnly(DEMO_NEWS).slice().sort((a, b) =>
-        b.originalDate.localeCompare(a.originalDate),
-      );
+      const published = publishedOnly(DEMO_NEWS)
+        .slice()
+        .sort((a, b) => b.originalDate.localeCompare(a.originalDate));
       breaker.recordSuccess();
       return published;
     }),

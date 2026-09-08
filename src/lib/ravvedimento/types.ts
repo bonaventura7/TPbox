@@ -34,10 +34,7 @@ export type PenaltyBand = {
 };
 
 export type BlockedReason =
-  | "DATASET_COVERAGE"
-  | "NO_PENALTY_REGIME"
-  | "RAVVEDIMENTO_PRECLUSO"
-  | "INVALID_INPUT";
+  "DATASET_COVERAGE" | "NO_PENALTY_REGIME" | "RAVVEDIMENTO_PRECLUSO" | "INVALID_INPUT";
 
 export type RavvedimentoBlocked = {
   status: "blocked";

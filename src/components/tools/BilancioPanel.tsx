@@ -33,13 +33,7 @@ const SCENARIOS = [
 type Scenario = (typeof SCENARIOS)[number]["value"];
 
 /** Pannello bilancio: accetta solo un companyId già risolto in Company Finder. */
-export function BilancioPanel({
-  companyId,
-  legalName,
-}: {
-  companyId: string;
-  legalName: string;
-}) {
+export function BilancioPanel({ companyId, legalName }: { companyId: string; legalName: string }) {
   const run = useServerFn(getBilancio);
   const [scenario, setScenario] = useState<Scenario>("OK");
   const [requested, setRequested] = useState(false);
@@ -70,8 +64,8 @@ export function BilancioPanel({
       </div>
       <p className="mt-3 text-sm text-muted-foreground">
         {legalName} · identificativo interno{" "}
-        <span className="font-mono text-xs text-foreground">{companyId}</span>. L'accesso
-        all'area PRO è valutato lato server; in questa anteprima è simulato.
+        <span className="font-mono text-xs text-foreground">{companyId}</span>. L'accesso all'area
+        PRO è valutato lato server; in questa anteprima è simulato.
       </p>
 
       <fieldset className="mt-5">

@@ -1,35 +1,45 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { LinkCard } from '../components/ui/link-card'
-import { ExternalLink, Search, BarChart3, Globe } from 'lucide-react'
-import { loadJurisdictions, getMatchingOutcome, loadAggregateStats } from '../lib/beps-mli/api'
-import { REPO_URL, canonicalUrl } from '../lib/platform/site'
+import { createFileRoute } from "@tanstack/react-router";
+import { LinkCard } from "../components/ui/link-card";
+import { ExternalLink, Search, BarChart3, Globe } from "lucide-react";
+import { loadJurisdictions, getMatchingOutcome, loadAggregateStats } from "../lib/beps-mli/api";
+import { REPO_URL, canonicalUrl } from "../lib/platform/site";
 
-const CANONICAL = canonicalUrl('/tool/beps-mli')
+const CANONICAL = canonicalUrl("/tool/beps-mli");
 
-export const Route = createFileRoute('/tool/beps-mli/')({
+export const Route = createFileRoute("/tool/beps-mli/")({
   head: () => ({
     meta: [
-      { title: 'BEPS MLI Database: impatto sui trattati — Osservatorio Transfer Pricing' },
-      { name: 'description', content: "Database interattivo per analizzare l'impatto del BEPS Multilateral Instrument sui trattati fiscali bilaterali." },
-      { property: 'og:title', content: 'BEPS MLI Database: impatto sui trattati — Osservatorio Transfer Pricing' },
-      { property: 'og:description', content: "Database interattivo per analizzare l'impatto del BEPS Multilateral Instrument sui trattati fiscali bilaterali." },
-      { property: 'og:type', content: 'website' },
-      { property: 'og:url', content: CANONICAL },
-      { name: 'twitter:card', content: 'summary_large_image' },
+      { title: "BEPS MLI Database: impatto sui trattati — Osservatorio Transfer Pricing" },
+      {
+        name: "description",
+        content:
+          "Database interattivo per analizzare l'impatto del BEPS Multilateral Instrument sui trattati fiscali bilaterali.",
+      },
+      {
+        property: "og:title",
+        content: "BEPS MLI Database: impatto sui trattati — Osservatorio Transfer Pricing",
+      },
+      {
+        property: "og:description",
+        content:
+          "Database interattivo per analizzare l'impatto del BEPS Multilateral Instrument sui trattati fiscali bilaterali.",
+      },
+      { property: "og:type", content: "website" },
+      { property: "og:url", content: CANONICAL },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
-    links: [{ rel: 'canonical', href: CANONICAL }],
+    links: [{ rel: "canonical", href: CANONICAL }],
   }),
   component: RouteComponent,
-})
+});
 
 function RouteComponent() {
-  const jurisdictions = loadJurisdictions()
-  const stats = loadAggregateStats()
-  const demoOutcome = getMatchingOutcome('ITA', 'FRA')
+  const jurisdictions = loadJurisdictions();
+  const stats = loadAggregateStats();
+  const demoOutcome = getMatchingOutcome("ITA", "FRA");
 
   return (
     <>
-
       <div className="container mx-auto max-w-5xl px-4 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold tracking-tight">BEPS MLI Database</h1>
@@ -42,13 +52,14 @@ function RouteComponent() {
         <div className="mb-8 rounded-lg border bg-card p-6">
           <h2 className="text-xl font-semibold">Cos'è il BEPS MLI?</h2>
           <p className="mt-2 text-muted-foreground">
-            Il <strong>BEPS Multilateral Instrument (MLI)</strong> consente ai governi di modificare i trattati
-            fiscali bilaterali esistenti in modo sincronizzato ed efficiente per implementare le misure
-            sviluppate durante il BEPS Project, senza bisogno di rinegoziare ogni trattato bilateralmente.
+            Il <strong>BEPS Multilateral Instrument (MLI)</strong> consente ai governi di modificare
+            i trattati fiscali bilaterali esistenti in modo sincronizzato ed efficiente per
+            implementare le misure sviluppate durante il BEPS Project, senza bisogno di rinegoziare
+            ogni trattato bilateralmente.
           </p>
           <p className="mt-2 text-muted-foreground">
-            Entrato in vigore il 1 luglio 2018, il MLI copre oltre 100 giurisdizioni e modifica migliaia di
-            trattati fiscali in tutto il mondo.
+            Entrato in vigore il 1 luglio 2018, il MLI copre oltre 100 giurisdizioni e modifica
+            migliaia di trattati fiscali in tutto il mondo.
           </p>
         </div>
 
@@ -56,8 +67,8 @@ function RouteComponent() {
         <div className="mb-8 rounded-lg border bg-card p-6">
           <h2 className="text-xl font-semibold">Demo: Italia – Francia</h2>
           <p className="mt-2 text-muted-foreground">
-            Questa sezione mostra un esempio di come il MLI modifica la convenzione tra Italia e Francia.
-            I dati sono dimostrativi, ma seguono la logica del BEPS MLI Matching Database.
+            Questa sezione mostra un esempio di come il MLI modifica la convenzione tra Italia e
+            Francia. I dati sono dimostrativi, ma seguono la logica del BEPS MLI Matching Database.
           </p>
 
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
@@ -66,7 +77,8 @@ function RouteComponent() {
               <ul className="mt-2 text-sm text-muted-foreground">
                 {jurisdictions.map((j) => (
                   <li key={j.code}>
-                    <strong>{j.nameIt}</strong> ({j.nameEn}) — Signatario: {j.isSignatory ? 'sì' : 'no'}, Parte: {j.isParty ? 'sì' : 'no'}
+                    <strong>{j.nameIt}</strong> ({j.nameEn}) — Signatario:{" "}
+                    {j.isSignatory ? "sì" : "no"}, Parte: {j.isParty ? "sì" : "no"}
                   </li>
                 ))}
               </ul>
@@ -102,7 +114,9 @@ function RouteComponent() {
                     <tr key={p.article} className="border-t">
                       <td className="py-1 pr-4 font-medium">{p.article}</td>
                       <td className="py-1 pr-4 text-muted-foreground">{p.provisionType}</td>
-                      <td className="py-1 pr-4 text-muted-foreground">{p.minimumStandard ? 'Sì' : 'No'}</td>
+                      <td className="py-1 pr-4 text-muted-foreground">
+                        {p.minimumStandard ? "Sì" : "No"}
+                      </td>
                       <td className="py-1 pr-4 text-muted-foreground">{p.outcome}</td>
                       <td className="py-1 text-muted-foreground">{p.explanationIt}</td>
                     </tr>
@@ -194,11 +208,13 @@ function RouteComponent() {
             <ul className="space-y-2 text-sm">
               <li className="flex items-center gap-2">
                 <span className="h-2 w-2 rounded-full bg-yellow-500"></span>
-                <strong>Phase 1:</strong> Discovery e documentazione (completata per demo Italia–Francia).
+                <strong>Phase 1:</strong> Discovery e documentazione (completata per demo
+                Italia–Francia).
               </li>
               <li className="flex items-center gap-2">
                 <span className="h-2 w-2 rounded-full bg-yellow-500"></span>
-                <strong>Phase 2:</strong> Backend e dati (demo statico in uso; estensione futura a più paesi).
+                <strong>Phase 2:</strong> Backend e dati (demo statico in uso; estensione futura a
+                più paesi).
               </li>
               <li className="flex items-center gap-2">
                 <span className="h-2 w-2 rounded-full bg-gray-300"></span>
@@ -215,10 +231,11 @@ function RouteComponent() {
         {/* Fonte dati */}
         <div className="mt-8 rounded-lg border bg-muted p-4">
           <p className="text-xs text-muted-foreground">
-            <strong>Fonte dati demo:</strong> Dataset interno basato sul BEPS MLI Matching Database OECD e sulla documentazione ufficiale.
+            <strong>Fonte dati demo:</strong> Dataset interno basato sul BEPS MLI Matching Database
+            OECD e sulla documentazione ufficiale.
           </p>
         </div>
       </div>
     </>
-  )
+  );
 }

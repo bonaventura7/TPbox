@@ -57,10 +57,7 @@ function RavvedimentoPage() {
   });
   const [submitted, setSubmitted] = useState<RavvedimentoInput | null>(null);
 
-  const outcome = useMemo(
-    () => (submitted ? computeRavvedimento(submitted) : null),
-    [submitted],
-  );
+  const outcome = useMemo(() => (submitted ? computeRavvedimento(submitted) : null), [submitted]);
 
   return (
     <div className="container mx-auto max-w-4xl px-4 py-8">
@@ -248,11 +245,21 @@ function RavvedimentoPage() {
                   <caption className="sr-only">Segmenti di calcolo degli interessi legali</caption>
                   <thead className="bg-muted/50 text-left">
                     <tr>
-                      <th scope="col" className="px-3 py-2 font-medium">Periodo</th>
-                      <th scope="col" className="px-3 py-2 font-medium">Giorni</th>
-                      <th scope="col" className="px-3 py-2 font-medium">Divisore</th>
-                      <th scope="col" className="px-3 py-2 font-medium">Tasso</th>
-                      <th scope="col" className="px-3 py-2 text-right font-medium">Interessi</th>
+                      <th scope="col" className="px-3 py-2 font-medium">
+                        Periodo
+                      </th>
+                      <th scope="col" className="px-3 py-2 font-medium">
+                        Giorni
+                      </th>
+                      <th scope="col" className="px-3 py-2 font-medium">
+                        Divisore
+                      </th>
+                      <th scope="col" className="px-3 py-2 font-medium">
+                        Tasso
+                      </th>
+                      <th scope="col" className="px-3 py-2 text-right font-medium">
+                        Interessi
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -294,8 +301,8 @@ function RavvedimentoPage() {
                   ))}
                 </ul>
                 <p className="mt-2">
-                  Versioni: modello {outcome.modelVersion} · tassi {outcome.interestDatasetVersion} ·
-                  sanzioni {outcome.penaltyRulesetVersion} ({outcome.penaltyRulesetStatus}).
+                  Versioni: modello {outcome.modelVersion} · tassi {outcome.interestDatasetVersion}{" "}
+                  · sanzioni {outcome.penaltyRulesetVersion} ({outcome.penaltyRulesetStatus}).
                 </p>
                 <p className="mt-2">
                   Strumento dimostrativo: il risultato non costituisce consulenza fiscale e va

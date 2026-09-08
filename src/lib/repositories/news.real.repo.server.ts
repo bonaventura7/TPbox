@@ -135,9 +135,7 @@ async function readAttualita(filters: NewsFilters): Promise<NewsFeedResult> {
   try {
     rows = await withTimeout(async () =>
       retryIdempotent(async () => {
-        const base = client
-          .from(PUBLIC_VIEWS.attualita)
-          .select("*") as unknown as ReadQuery;
+        const base = client.from(PUBLIC_VIEWS.attualita).select("*") as unknown as ReadQuery;
         const { data, error } = await applyFilters(base, filters).limit(500);
         if (error) {
           const classified = classifyReadError(error);

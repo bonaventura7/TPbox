@@ -138,27 +138,21 @@ function InterpelloDetail() {
         <h2 id="sintesi" className="font-serif text-2xl">
           Sintesi redazionale
         </h2>
-        <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-          {data.abstract}
-        </p>
+        <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{data.abstract}</p>
       </section>
 
       <section aria-labelledby="questione" className="mt-8">
         <h2 id="questione" className="font-serif text-2xl">
           Questione interpretativa
         </h2>
-        <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-          {data.question}
-        </p>
+        <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{data.question}</p>
       </section>
 
       <section aria-labelledby="soluzione" className="mt-8">
         <h2 id="soluzione" className="font-serif text-2xl">
           Soluzione dell'Agenzia in forma sintetica
         </h2>
-        <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-          {data.answerSummary}
-        </p>
+        <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{data.answerSummary}</p>
       </section>
 
       <section aria-labelledby="norme" className="mt-8">
@@ -193,8 +187,8 @@ function InterpelloDetail() {
       <div className="mt-10 border-l-2 border-gold bg-secondary/60 p-6">
         <h2 className="font-serif text-xl">Avvertenza</h2>
         <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-          I contenuti di questa scheda sono dimostrativi e redazionali: la sintesi non
-          sostituisce il documento ufficiale, che resta l'unico testo di riferimento.
+          I contenuti di questa scheda sono dimostrativi e redazionali: la sintesi non sostituisce
+          il documento ufficiale, che resta l'unico testo di riferimento.
         </p>
         <div className="mt-5 flex flex-wrap gap-3">
           <Button asChild variant="outline" className="min-h-11">

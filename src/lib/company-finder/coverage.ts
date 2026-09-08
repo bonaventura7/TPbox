@@ -39,7 +39,6 @@ export const CONSULT_PAGES: Record<string, { url: string; label: string }> = {
   EE: { url: "https://ariregister.rik.ee/eng", label: "e-Äriregister — Centro dei registri" },
   FI: { url: "https://tietopalvelu.ytj.fi/", label: "YTJ / PRH — Servizio informazioni imprese" },
   SK: {
-
     url: "https://www.registeruz.sk/cruz-public/domain/accountingentity/simplesearch",
     label: "Register účtovných závierok",
   },
@@ -105,4 +104,3 @@ export function isCovered(iso: string): boolean {
     iso in BROWSER_ONLY_PAGES
   );
 }
-

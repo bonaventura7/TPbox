@@ -87,9 +87,7 @@ function PatentDetail() {
       </Button>
 
       <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-        <span className="rounded bg-muted px-2 py-0.5 font-medium">
-          {record.publicationNumber}
-        </span>
+        <span className="rounded bg-muted px-2 py-0.5 font-medium">{record.publicationNumber}</span>
         <span>{record.technologyArea}</span>
         <span className="rounded border border-dashed px-2 py-0.5">DEMO</span>
       </div>
@@ -139,8 +137,8 @@ function PatentDetail() {
         <p className="mt-2 text-sm text-muted-foreground">{record.tpRelevance}</p>
         <p className="mt-3 text-sm text-muted-foreground">
           Leggi il dato insieme all'analisi funzionale DEMPE: sviluppo, valorizzazione,
-          manutenzione, protezione e sfruttamento dell'intangibile devono essere remunerati
-          dove sono effettivamente svolti.
+          manutenzione, protezione e sfruttamento dell'intangibile devono essere remunerati dove
+          sono effettivamente svolti.
         </p>
       </section>
 
@@ -166,9 +164,9 @@ function PatentDetail() {
       ) : null}
 
       <p className="mt-10 rounded-lg border bg-muted p-4 text-xs text-muted-foreground">
-        Fonte del dato normalizzato: {record.sourceName}. L'acquisizione avviene solo lato
-        server, con allowlist dei domini, timeout e revisione editoriale prima della
-        pubblicazione. In questa fase i valori sono sintetici e marcati DEMO.
+        Fonte del dato normalizzato: {record.sourceName}. L'acquisizione avviene solo lato server,
+        con allowlist dei domini, timeout e revisione editoriale prima della pubblicazione. In
+        questa fase i valori sono sintetici e marcati DEMO.
       </p>
     </article>
   );

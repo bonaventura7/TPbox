@@ -67,8 +67,8 @@ export const Route = createFileRoute("/normativa/portale-interpelli/")({
     <div className="mx-auto max-w-6xl px-4 py-16" role="alert">
       <h1 className="font-serif text-2xl">Archivio non disponibile</h1>
       <p className="mt-3 text-sm text-muted-foreground">
-        La consultazione non è momentaneamente disponibile. Puoi ripetere la richiesta
-        tra qualche istante.
+        La consultazione non è momentaneamente disponibile. Puoi ripetere la richiesta tra qualche
+        istante.
       </p>
     </div>
   ),
@@ -160,13 +160,20 @@ function PortaleInterpelli() {
     ...subjects.map((id) => ({
       key: `subject-${id}`,
       label: subjectLabel(id),
-      clear: () => update(setSubjects, subjects.filter((value) => value !== id)),
+      clear: () =>
+        update(
+          setSubjects,
+          subjects.filter((value) => value !== id),
+        ),
     })),
     ...subSubjects.map((value) => ({
       key: `sub-${value}`,
       label: value,
       clear: () =>
-        update(setSubSubjects, subSubjects.filter((item) => item !== value)),
+        update(
+          setSubSubjects,
+          subSubjects.filter((item) => item !== value),
+        ),
     })),
     ...(year !== "ALL"
       ? [{ key: "year", label: `Anno ${year}`, clear: () => update(setYear, "ALL") }]
@@ -207,9 +214,7 @@ function PortaleInterpelli() {
       <div className="border-b border-border bg-surface">
         <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
           <p className="text-xs tracking-[0.18em] text-petrol uppercase">Tool</p>
-          <h1 className="mt-3 max-w-3xl font-serif text-3xl leading-tight sm:text-4xl">
-            {TITLE}
-          </h1>
+          <h1 className="mt-3 max-w-3xl font-serif text-3xl leading-tight sm:text-4xl">{TITLE}</h1>
           <p className="mt-4 max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-base">
             {SUBTITLE}
           </p>
@@ -245,9 +250,7 @@ function PortaleInterpelli() {
             <Accordion type="multiple" className="mt-3">
               {INTERPELLO_SUBJECTS.map((subject) => (
                 <AccordionItem key={subject.id} value={subject.id}>
-                  <AccordionTrigger className="text-left text-sm">
-                    {subject.label}
-                  </AccordionTrigger>
+                  <AccordionTrigger className="text-left text-sm">{subject.label}</AccordionTrigger>
                   <AccordionContent>
                     <div className="flex items-center gap-2 py-1">
                       <Checkbox
@@ -262,10 +265,7 @@ function PortaleInterpelli() {
                           )
                         }
                       />
-                      <Label
-                        htmlFor={`subject-${subject.id}`}
-                        className="text-sm font-medium"
-                      >
+                      <Label htmlFor={`subject-${subject.id}`} className="text-sm font-medium">
                         Tutta la materia
                       </Label>
                     </div>
@@ -359,9 +359,7 @@ function PortaleInterpelli() {
           </h2>
 
           <div className="border border-border bg-card p-5">
-            <Label htmlFor="interpelli-query">
-              Cerca nell'archivio delle risposte
-            </Label>
+            <Label htmlFor="interpelli-query">Cerca nell'archivio delle risposte</Label>
             <div className="mt-2 flex flex-col gap-3 sm:flex-row">
               <Input
                 id="interpelli-query"
@@ -384,9 +382,7 @@ function PortaleInterpelli() {
 
           <div className="mt-4 flex flex-wrap items-center gap-3">
             <p aria-live="polite" role="status" className="text-sm text-muted-foreground">
-              {results.length === 1
-                ? "1 risposta trovata"
-                : `${results.length} risposte trovate`}
+              {results.length === 1 ? "1 risposta trovata" : `${results.length} risposte trovate`}
               {totalPages > 1 ? ` · pagina ${currentPage} di ${totalPages}` : ""}
             </p>
             {chips.length > 0 ? (
@@ -433,12 +429,9 @@ function PortaleInterpelli() {
 
           {visible.length === 0 ? (
             <div className="mt-6 border border-dashed border-border bg-secondary/40 p-8 text-center">
-              <h3 className="font-serif text-lg">
-                Nessuna risposta corrisponde ai filtri
-              </h3>
+              <h3 className="font-serif text-lg">Nessuna risposta corrisponde ai filtri</h3>
               <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
-                Riduci il testo cercato, seleziona meno materie oppure rimuovi il filtro
-                sull'anno.
+                Riduci il testo cercato, seleziona meno materie oppure rimuovi il filtro sull'anno.
               </p>
             </div>
           ) : (
@@ -554,8 +547,8 @@ function PortaleInterpelli() {
           <div className="mt-10 border-l-2 border-gold bg-secondary/60 p-6">
             <h3 className="font-serif text-xl">Trasparenza sui dati</h3>
             <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-              I dati mostrati nel prototipo sono dimostrativi. La versione operativa
-              collegherà ogni risultato alla fonte ufficiale dell'Agenzia delle Entrate.
+              I dati mostrati nel prototipo sono dimostrativi. La versione operativa collegherà ogni
+              risultato alla fonte ufficiale dell'Agenzia delle Entrate.
             </p>
             <p className="mt-4 text-sm">
               <a

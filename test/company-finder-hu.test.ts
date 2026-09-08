@@ -29,7 +29,10 @@ const RESULT_PAGE_EXPIRED = `<!DOCTYPE html><html><body>
 </body></html>`;
 
 function htmlResponse(body: string): Response {
-  return new Response(body, { status: 200, headers: { "Content-Type": "text/html; charset=utf-8" } });
+  return new Response(body, {
+    status: 200,
+    headers: { "Content-Type": "text/html; charset=utf-8" },
+  });
 }
 
 afterEach(() => {
@@ -105,7 +108,13 @@ describe("HU — adapter e-Beszámoló", () => {
 
   it("acquireDocument senza sourceRef valido resta SESSION_BOUND", async () => {
     const result = await huAdapter.acquireDocument(
-      { id: "hu-none", year: 2024, kind: "ANNUAL_REPORT", format: "pdf", availability: "REGISTRY_ONLY" },
+      {
+        id: "hu-none",
+        year: 2024,
+        kind: "ANNUAL_REPORT",
+        format: "pdf",
+        availability: "REGISTRY_ONLY",
+      },
       {},
     );
     expect(result.ok).toBe(false);
@@ -129,7 +138,10 @@ describe("HU — integrazione con orchestrator, coverage e pagina ufficiale", ()
   });
 
   it("la risposta HU è REGISTRY_ONLY con restrizione dichiarata e pagina esterna", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () => htmlResponse(SEARCH_PAGE_WITH_ALTCHA)));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => htmlResponse(SEARCH_PAGE_WITH_ALTCHA)),
+    );
     const response = await runSearch({ query: "Tod's Hungary", vat: "HU10773381", country: "HU" });
     expect(response.financials?.availability).toBe("REGISTRY_ONLY");
     expect(response.financials?.restriction).toBe("CAPTCHA_REQUIRED");

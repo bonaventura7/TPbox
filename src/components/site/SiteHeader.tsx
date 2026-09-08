@@ -19,9 +19,7 @@ const NORMATIVA = [
   { to: "/normativa/portale-interpelli", label: "Portale interpelli" },
 ] as const;
 
-const TOOLS = [
-  { to: "/tool/company-finder", label: "Company Finder" },
-] as const;
+const TOOLS = [{ to: "/tool/company-finder", label: "Company Finder" }] as const;
 
 export function SiteHeader() {
   const [open, setOpen] = useState(false);
@@ -141,9 +139,7 @@ export function SiteHeader() {
 
       <div className="hidden border-t border-border bg-secondary/60 lg:block">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-1 px-6 py-2 text-xs">
-          <span className="tracking-wide text-muted-foreground uppercase">
-            Sezioni
-          </span>
+          <span className="tracking-wide text-muted-foreground uppercase">Sezioni</span>
           {[...NORMATIVA, ...TOOLS].map((item) => (
             <Link
               key={item.to}

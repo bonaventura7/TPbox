@@ -6,8 +6,8 @@ type PostgrestErrorLike = {
 };
 
 function field(value: unknown): string | null {
-  if (value === null || value === undefined || value === '') return null;
-  if (typeof value === 'string') return value;
+  if (value === null || value === undefined || value === "") return null;
+  if (typeof value === "string") return value;
   try {
     return JSON.stringify(value);
   } catch {
@@ -19,21 +19,21 @@ function field(value: unknown): string | null {
 export function errorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
 
-  if (error && typeof error === 'object') {
+  if (error && typeof error === "object") {
     const value = error as PostgrestErrorLike;
-    const parts = (['message', 'code', 'details', 'hint'] as const)
+    const parts = (["message", "code", "details", "hint"] as const)
       .map((key) => {
         const rendered = field(value[key]);
         return rendered ? `${key}=${rendered}` : null;
       })
       .filter((part): part is string => part !== null);
 
-    if (parts.length) return parts.join(' | ');
+    if (parts.length) return parts.join(" | ");
 
     try {
       return JSON.stringify(error);
     } catch {
-      return 'errore non serializzabile';
+      return "errore non serializzabile";
     }
   }
 

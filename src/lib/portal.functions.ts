@@ -60,9 +60,7 @@ export const getSources = createServerFn({ method: "GET" }).handler(async () => 
 
 export const searchCompanies = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) =>
-    z
-      .object({ query: z.string().max(160), country: z.string().max(2).default("") })
-      .parse(data),
+    z.object({ query: z.string().max(160), country: z.string().max(2).default("") }).parse(data),
   )
   .handler(async ({ data }) => {
     const { searchCompanies: run } = await import("./repositories/tools.repository.server");
@@ -75,13 +73,7 @@ export const getBilancio = createServerFn({ method: "POST" })
       .object({
         companyId: z.string().min(3).max(64),
         simulate: z
-          .enum([
-            "OK",
-            "NOT_AUTHORIZED",
-            "PROVIDER_UNAVAILABLE",
-            "RATE_LIMITED",
-            "DEGRADED",
-          ])
+          .enum(["OK", "NOT_AUTHORIZED", "PROVIDER_UNAVAILABLE", "RATE_LIMITED", "DEGRADED"])
           .default("OK"),
       })
       .parse(data),
@@ -98,20 +90,16 @@ export const getBilancio = createServerFn({ method: "POST" })
 
 /** Archivio interpelli: l'acquisizione è solo server-side, il browser non contatta fonti esterne. */
 export const getInterpelliArchive = createServerFn({ method: "GET" }).handler(async () => {
-  const { listInterpelliArchive } = await import(
-    "./repositories/agenzia-interpelli.repository.server"
-  );
+  const { listInterpelliArchive } =
+    await import("./repositories/agenzia-interpelli.repository.server");
   return listInterpelliArchive();
 });
 
 export const getInterpello = createServerFn({ method: "GET" })
-  .inputValidator((data: unknown) =>
-    z.object({ id: z.string().min(3).max(64) }).parse(data),
-  )
+  .inputValidator((data: unknown) => z.object({ id: z.string().min(3).max(64) }).parse(data))
   .handler(async ({ data }) => {
-    const { getInterpelloById } = await import(
-      "./repositories/agenzia-interpelli.repository.server"
-    );
+    const { getInterpelloById } =
+      await import("./repositories/agenzia-interpelli.repository.server");
     return getInterpelloById(data.id);
   });
 
@@ -127,9 +115,7 @@ const patentQuerySchema = z.object({
   technologyArea: z.string().max(80).default(""),
   yearFrom: z.number().int().min(1980).max(2100).nullable().default(null),
   yearTo: z.number().int().min(1980).max(2100).nullable().default(null),
-  sort: z
-    .enum(["RELEVANZA", "DATA_DESC", "DATA_ASC", "FAMIGLIA_DESC"])
-    .default("RELEVANZA"),
+  sort: z.enum(["RELEVANZA", "DATA_DESC", "DATA_ASC", "FAMIGLIA_DESC"]).default("RELEVANZA"),
   page: z.number().int().min(1).max(200).default(1),
   pageSize: z.number().int().min(5).max(50).default(10),
 });
@@ -137,16 +123,12 @@ const patentQuerySchema = z.object({
 export const searchPatents = createServerFn({ method: "GET" })
   .inputValidator((data: unknown) => patentQuerySchema.parse(data ?? {}))
   .handler(async ({ data }) => {
-    const { searchPatents: run } = await import(
-      "./repositories/patents.repository.server"
-    );
+    const { searchPatents: run } = await import("./repositories/patents.repository.server");
     return run(data);
   });
 
 export const getPatent = createServerFn({ method: "GET" })
-  .inputValidator((data: unknown) =>
-    z.object({ id: z.string().min(3).max(64) }).parse(data),
-  )
+  .inputValidator((data: unknown) => z.object({ id: z.string().min(3).max(64) }).parse(data))
   .handler(async ({ data }) => {
     const { getPatentById } = await import("./repositories/patents.repository.server");
     return getPatentById(data.id);

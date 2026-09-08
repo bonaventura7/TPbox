@@ -15,21 +15,13 @@ export function AreaNav() {
     <nav aria-label="Aree di attualità" className="border-b border-border bg-secondary/50">
       <ul className="mx-auto flex max-w-6xl flex-wrap gap-x-6 gap-y-1 px-4 py-2 text-sm sm:px-6">
         <li>
-          <Link
-            to="/attualita"
-            activeOptions={{ exact: true }}
-            className={LINK_CLASS}
-          >
+          <Link to="/attualita" activeOptions={{ exact: true }} className={LINK_CLASS}>
             Tutte le aree
           </Link>
         </li>
         {AREAS.map((item) => (
           <li key={item.area}>
-            <Link
-              to="/attualita/$area"
-              params={{ area: item.area }}
-              className={LINK_CLASS}
-            >
+            <Link to="/attualita/$area" params={{ area: item.area }} className={LINK_CLASS}>
               {item.label}
             </Link>
           </li>

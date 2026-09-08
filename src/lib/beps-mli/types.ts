@@ -20,11 +20,7 @@ export interface CoveredTaxAgreement {
   statusAsOf: string; // ISO date (status as of)
 }
 
-export type ProvisionOutcome =
-  | 'APPLIES'
-  | 'DOES_NOT_APPLY'
-  | 'PARTIAL'
-  | 'PENDING';
+export type ProvisionOutcome = "APPLIES" | "DOES_NOT_APPLY" | "PARTIAL" | "PENDING";
 
 export interface MliProvision {
   article: string; // es. "Article 7"

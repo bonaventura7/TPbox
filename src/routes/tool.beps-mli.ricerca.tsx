@@ -1,63 +1,73 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { loadJurisdictions } from '../lib/beps-mli/api'
-import { useState } from 'react'
-import { Search, ArrowRightLeft, CalendarDays } from 'lucide-react'
-import { canonicalUrl } from '../lib/platform/site'
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { loadJurisdictions } from "../lib/beps-mli/api";
+import { useState } from "react";
+import { Search, ArrowRightLeft, CalendarDays } from "lucide-react";
+import { canonicalUrl } from "../lib/platform/site";
 
-const CANONICAL = canonicalUrl('/tool/beps-mli/ricerca')
+const CANONICAL = canonicalUrl("/tool/beps-mli/ricerca");
 
-export const Route = createFileRoute('/tool/beps-mli/ricerca')({
+export const Route = createFileRoute("/tool/beps-mli/ricerca")({
   head: () => ({
     meta: [
-      { title: 'Ricerca BEPS MLI tra due giurisdizioni — Osservatorio Transfer Pricing' },
-      { name: 'description', content: 'Analizza come il BEPS MLI modifica un trattato fiscale tra due paesi, con focus su Italia e controparti.' },
-      { property: 'og:title', content: 'Ricerca BEPS MLI tra due giurisdizioni — Osservatorio Transfer Pricing' },
-      { property: 'og:description', content: 'Analizza come il BEPS MLI modifica un trattato fiscale tra due paesi, con focus su Italia e controparti.' },
-      { property: 'og:type', content: 'website' },
-      { property: 'og:url', content: CANONICAL },
-      { name: 'twitter:card', content: 'summary_large_image' },
+      { title: "Ricerca BEPS MLI tra due giurisdizioni — Osservatorio Transfer Pricing" },
+      {
+        name: "description",
+        content:
+          "Analizza come il BEPS MLI modifica un trattato fiscale tra due paesi, con focus su Italia e controparti.",
+      },
+      {
+        property: "og:title",
+        content: "Ricerca BEPS MLI tra due giurisdizioni — Osservatorio Transfer Pricing",
+      },
+      {
+        property: "og:description",
+        content:
+          "Analizza come il BEPS MLI modifica un trattato fiscale tra due paesi, con focus su Italia e controparti.",
+      },
+      { property: "og:type", content: "website" },
+      { property: "og:url", content: CANONICAL },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
-    links: [{ rel: 'canonical', href: CANONICAL }],
+    links: [{ rel: "canonical", href: CANONICAL }],
   }),
   component: RouteComponent,
-})
+});
 
 function RouteComponent() {
-  const navigate = useNavigate()
-  const jurisdictions = loadJurisdictions()
+  const navigate = useNavigate();
+  const jurisdictions = loadJurisdictions();
 
-  const [paeseA, setPaeseA] = useState('ITA')
-  const [paeseB, setPaeseB] = useState('FRA')
-  const [statusAsOf, setStatusAsOf] = useState('2023-06-30')
-  const [advancedMode, setAdvancedMode] = useState(false)
+  const [paeseA, setPaeseA] = useState("ITA");
+  const [paeseB, setPaeseB] = useState("FRA");
+  const [statusAsOf, setStatusAsOf] = useState("2023-06-30");
+  const [advancedMode, setAdvancedMode] = useState(false);
 
   const handleSwap = () => {
-    if (!advancedMode) return
-    setPaeseA(paeseB)
-    setPaeseB(paeseA)
-  }
+    if (!advancedMode) return;
+    setPaeseA(paeseB);
+    setPaeseB(paeseA);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
     // Per ora usiamo uno schema semplice per l'id: j1-j2-status
-    const id = `${[paeseA, paeseB].sort().join('-')}@${statusAsOf}`
-    navigate({ to: '/tool/beps-mli/risultato/$id', params: { id } })
-  }
+    const id = `${[paeseA, paeseB].sort().join("-")}@${statusAsOf}`;
+    navigate({ to: "/tool/beps-mli/risultato/$id", params: { id } });
+  };
 
   const handlePaeseAChange = (value: string) => {
-    if (!advancedMode) return
-    setPaeseA(value)
-  }
+    if (!advancedMode) return;
+    setPaeseA(value);
+  };
 
   return (
     <>
-
       <div className="container mx-auto max-w-4xl px-4 py-8">
         <div className="mb-6">
           <h1 className="text-2xl font-bold tracking-tight">Ricerca BEPS MLI</h1>
           <p className="mt-2 text-muted-foreground">
-            Scegli due paesi e una data "Status as of" per analizzare l'impatto del BEPS Multilateral Instrument
-            sul trattato fiscale bilaterale.
+            Scegli due paesi e una data "Status as of" per analizzare l'impatto del BEPS
+            Multilateral Instrument sul trattato fiscale bilaterale.
           </p>
         </div>
 
@@ -67,8 +77,8 @@ function RouteComponent() {
             <div>
               <span className="text-sm font-medium">Modalità avanzata</span>
               <p className="mt-1 text-xs text-muted-foreground">
-                In modalità standard, il Paese A è fissato su Italia. In modalità avanzata puoi scegliere
-                qualsiasi combinazione disponibile nel dataset.
+                In modalità standard, il Paese A è fissato su Italia. In modalità avanzata puoi
+                scegliere qualsiasi combinazione disponibile nel dataset.
               </p>
             </div>
             <label className="inline-flex cursor-pointer items-center gap-2 text-sm">
@@ -126,9 +136,7 @@ function RouteComponent() {
                   </option>
                 ))}
               </select>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Controparte del trattato.
-              </p>
+              <p className="mt-1 text-xs text-muted-foreground">Controparte del trattato.</p>
             </div>
           </div>
 
@@ -144,7 +152,8 @@ function RouteComponent() {
               onChange={(e) => setStatusAsOf(e.target.value)}
             />
             <p className="mt-1 text-xs text-muted-foreground">
-              Data alla quale si considera lo stato delle posizioni MLI dei due paesi (demo: 2023-06-30).
+              Data alla quale si considera lo stato delle posizioni MLI dei due paesi (demo:
+              2023-06-30).
             </p>
           </div>
 
@@ -162,11 +171,12 @@ function RouteComponent() {
 
         <div className="mt-6 rounded-lg border bg-muted p-4 text-xs text-muted-foreground">
           <p>
-            <strong>Nota demo:</strong> al momento il dataset interno contiene demo per le coppie Italia–Francia e
-            Italia–Spagna al 2023-06-30. Altre coppie potranno essere aggiunte in fasi successive.
+            <strong>Nota demo:</strong> al momento il dataset interno contiene demo per le coppie
+            Italia–Francia e Italia–Spagna al 2023-06-30. Altre coppie potranno essere aggiunte in
+            fasi successive.
           </p>
         </div>
       </div>
     </>
-  )
+  );
 }

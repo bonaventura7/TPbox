@@ -43,7 +43,10 @@ function yearFrom(value: string): number | undefined {
 }
 
 function cleanText(value: string): string {
-  return decodeHtml(value).replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  return decodeHtml(value)
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function extractPdfLinks(html: string, pageUrl: URL): PappersPublicDocument[] {
@@ -115,7 +118,10 @@ export async function findPappersAnnualReports(
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const { html, finalUrl } = await fetchPage(pappersCompanyUrl(name, cleanSiren), controller.signal);
+    const { html, finalUrl } = await fetchPage(
+      pappersCompanyUrl(name, cleanSiren),
+      controller.signal,
+    );
     if (/Ce document n'est pas disponible pour le moment/i.test(html)) {
       return {
         ok: false,

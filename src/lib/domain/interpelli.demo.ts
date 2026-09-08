@@ -7,10 +7,7 @@ import { INTERPELLI_SOURCE_URL, type InterpelloRecord } from "./interpelli";
  * Entrate: nessun URL di PDF specifico viene ipotizzato.
  */
 function record(
-  input: Omit<
-    InterpelloRecord,
-    "sourceName" | "sourceType" | "isDemo" | "officialUrl" | "year"
-  >,
+  input: Omit<InterpelloRecord, "sourceName" | "sourceType" | "isDemo" | "officialUrl" | "year">,
 ): InterpelloRecord {
   return {
     ...input,

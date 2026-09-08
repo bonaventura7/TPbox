@@ -70,8 +70,14 @@ export interface RegistryAdapter<Identifiers> {
   iso: string;
   registryLabel: string;
   registryUrl: string;
-  normalizeIdentifiers: (input: { vat?: string | undefined; query?: string | undefined }) => Identifiers;
-  searchCompanies: (ids: Identifiers, ctx: AdapterContext) => Promise<AdapterResult<CompanyMatch[]>>;
+  normalizeIdentifiers: (input: {
+    vat?: string | undefined;
+    query?: string | undefined;
+  }) => Identifiers;
+  searchCompanies: (
+    ids: Identifiers,
+    ctx: AdapterContext,
+  ) => Promise<AdapterResult<CompanyMatch[]>>;
   getCompany: (ids: Identifiers, ctx: AdapterContext) => Promise<AdapterResult<CompanyProfile>>;
   listFinancialDocuments: (
     ids: Identifiers,

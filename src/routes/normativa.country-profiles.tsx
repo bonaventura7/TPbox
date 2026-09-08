@@ -29,17 +29,46 @@ export const Route = createFileRoute("/normativa/country-profiles")({
 });
 
 const ROWS = [
-  { country: "Italia", methods: "Tutti i metodi previsti", doc: "Documentazione idonea con regime premiale", apa: "Accordi preventivi disponibili" },
-  { country: "Germania", methods: "Tutti i metodi previsti", doc: "Master file e local file", apa: "Accordi preventivi disponibili" },
-  { country: "Francia", methods: "Tutti i metodi previsti", doc: "Documentazione annuale", apa: "Accordi preventivi disponibili" },
-  { country: "Spagna", methods: "Tutti i metodi previsti", doc: "Documentazione per soglie dimensionali", apa: "Accordi preventivi disponibili" },
-  { country: "Paesi Bassi", methods: "Tutti i metodi previsti", doc: "Documentazione contestuale", apa: "Accordi preventivi disponibili" },
+  {
+    country: "Italia",
+    methods: "Tutti i metodi previsti",
+    doc: "Documentazione idonea con regime premiale",
+    apa: "Accordi preventivi disponibili",
+  },
+  {
+    country: "Germania",
+    methods: "Tutti i metodi previsti",
+    doc: "Master file e local file",
+    apa: "Accordi preventivi disponibili",
+  },
+  {
+    country: "Francia",
+    methods: "Tutti i metodi previsti",
+    doc: "Documentazione annuale",
+    apa: "Accordi preventivi disponibili",
+  },
+  {
+    country: "Spagna",
+    methods: "Tutti i metodi previsti",
+    doc: "Documentazione per soglie dimensionali",
+    apa: "Accordi preventivi disponibili",
+  },
+  {
+    country: "Paesi Bassi",
+    methods: "Tutti i metodi previsti",
+    doc: "Documentazione contestuale",
+    apa: "Accordi preventivi disponibili",
+  },
 ];
 
 function CountryProfilesPage() {
   return (
     <>
-      <PageHeader eyebrow="Normativa e prassi · Country Profiles" title={TITLE} intro={DESCRIPTION} />
+      <PageHeader
+        eyebrow="Normativa e prassi · Country Profiles"
+        title={TITLE}
+        intro={DESCRIPTION}
+      />
       <Prose>
         <div className="mb-6 flex items-center gap-3">
           <DemoBadge />

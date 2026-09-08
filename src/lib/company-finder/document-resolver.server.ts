@@ -13,7 +13,12 @@
 // Nessun controllo tecnico del registro viene aggirato: se la fonte richiede
 // verifica anti-bot o autenticazione, l'adapter non emette alcun token.
 
-import type { AcquiredDocument, AdapterResult, DocumentSourceRef, RestrictionCode } from "./registry/types";
+import type {
+  AcquiredDocument,
+  AdapterResult,
+  DocumentSourceRef,
+  RestrictionCode,
+} from "./registry/types";
 import { restrictionMessage } from "./registry/types";
 
 /** Allowlist esatta: hostname interi, nessun wildcard, nessun IP letterale. */
@@ -168,7 +173,8 @@ export function resetResolverState(): void {
 export function detectFormat(bytes: Uint8Array): DocumentFormatDetected {
   const head = new TextDecoder("latin1").decode(bytes.slice(0, 64)).trimStart();
   if (head.startsWith("%PDF-")) return "pdf";
-  if (bytes[0] === 0x50 && bytes[1] === 0x4b && bytes[2] === 0x03 && bytes[3] === 0x04) return "zip";
+  if (bytes[0] === 0x50 && bytes[1] === 0x4b && bytes[2] === 0x03 && bytes[3] === 0x04)
+    return "zip";
   if (head.startsWith("<?xml")) return "xml";
   if (/^<(!doctype html|html)/i.test(head)) return "html";
   return "unknown";
@@ -246,24 +252,41 @@ async function fetchOnce(
       });
       if ([301, 302, 303, 307, 308].includes(response.status)) {
         const location = response.headers.get("location");
-        if (!location) throw new ResolverError("SOURCE_UNAVAILABLE", 502, "redirect senza destinazione");
+        if (!location)
+          throw new ResolverError("SOURCE_UNAVAILABLE", 502, "redirect senza destinazione");
         let next: URL;
         try {
           next = new URL(location, current);
         } catch {
-          throw new ResolverError("SOURCE_RESTRICTION", 403, "destinazione del redirect non valida");
+          throw new ResolverError(
+            "SOURCE_RESTRICTION",
+            403,
+            "destinazione del redirect non valida",
+          );
         }
         if (!isAllowedSource(next)) {
-          throw new ResolverError("SOURCE_RESTRICTION", 403, "redirect verso un dominio non autorizzato");
+          throw new ResolverError(
+            "SOURCE_RESTRICTION",
+            403,
+            "redirect verso un dominio non autorizzato",
+          );
         }
         current = next;
         continue;
       }
       if (RETRYABLE_STATUS.has(response.status)) {
-        throw new ResolverError("SOURCE_UNAVAILABLE", 502, `fonte non disponibile (${response.status})`);
+        throw new ResolverError(
+          "SOURCE_UNAVAILABLE",
+          502,
+          `fonte non disponibile (${response.status})`,
+        );
       }
       if (response.status !== 200) {
-        throw new ResolverError("SOURCE_RESTRICTION", 502, `la fonte ha risposto ${response.status}`);
+        throw new ResolverError(
+          "SOURCE_RESTRICTION",
+          502,
+          `la fonte ha risposto ${response.status}`,
+        );
       }
       return {
         status: response.status,
@@ -278,7 +301,8 @@ async function fetchOnce(
 }
 
 function isRetryable(error: unknown): boolean {
-  if (error instanceof ResolverError) return error.restriction === "SOURCE_UNAVAILABLE" && error.status === 502;
+  if (error instanceof ResolverError)
+    return error.restriction === "SOURCE_UNAVAILABLE" && error.status === 502;
   return true; // errore di rete o timeout
 }
 
@@ -292,14 +316,23 @@ export async function acquireFromSource(
   try {
     source = new URL(ref.url);
   } catch {
-    return { ok: false, restriction: "SOURCE_RESTRICTION", message: "riferimento non valido", retryable: false };
+    return {
+      ok: false,
+      restriction: "SOURCE_RESTRICTION",
+      message: "riferimento non valido",
+      retryable: false,
+    };
   }
   if (!isAllowedSource(source)) {
     throw new ResolverError("SOURCE_RESTRICTION", 403, "dominio non autorizzato");
   }
   const host = source.hostname.toLowerCase();
   if (isBreakerOpen(host)) {
-    throw new ResolverError("SOURCE_UNAVAILABLE", 503, "fonte temporaneamente sospesa (circuit breaker)");
+    throw new ResolverError(
+      "SOURCE_UNAVAILABLE",
+      503,
+      "fonte temporaneamente sospesa (circuit breaker)",
+    );
   }
 
   const sleep = options.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
@@ -321,7 +354,11 @@ export async function acquireFromSource(
           contentType: validation.contentType,
           size: validation.size,
           sha256: await sha256Hex(fetched.bytes),
-          provenance: { registry: ref.registry, fetchedAt: new Date().toISOString(), correlationId },
+          provenance: {
+            registry: ref.registry,
+            fetchedAt: new Date().toISOString(),
+            correlationId,
+          },
         },
       };
     } catch (error) {

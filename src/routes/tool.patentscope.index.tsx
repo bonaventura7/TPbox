@@ -55,8 +55,7 @@ export const Route = createFileRoute("/tool/patentscope/")({
     <div className="mx-auto max-w-6xl px-4 py-16" role="alert">
       <h1 className="font-serif text-2xl">Ricerca non disponibile</h1>
       <p className="mt-3 text-sm text-muted-foreground">
-        Il motore di ricerca non è momentaneamente raggiungibile. Riprova tra qualche
-        istante.
+        Il motore di ricerca non è momentaneamente raggiungibile. Riprova tra qualche istante.
       </p>
     </div>
   ),
@@ -92,7 +91,9 @@ function PatentExplorer() {
   const [page, setPage] = useState(1);
 
   const filtered = useMemo(() => {
-    const terms = normalize(query).split(/\s+/).filter((t) => t.length > 1);
+    const terms = normalize(query)
+      .split(/\s+/)
+      .filter((t) => t.length > 1);
     const applicantTerm = normalize(applicant);
     const ipcTerm = normalize(ipc);
 
@@ -151,17 +152,12 @@ function PatentExplorer() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-10">
       <header className="max-w-3xl">
-        <p className="text-xs font-medium tracking-widest text-muted-foreground uppercase">
-          Tool
-        </p>
+        <p className="text-xs font-medium tracking-widest text-muted-foreground uppercase">Tool</p>
         <h1 className="mt-2 font-serif text-3xl md:text-4xl">{TITLE}</h1>
         <p className="mt-3 text-muted-foreground">{SUBTITLE}</p>
       </header>
 
-      <section
-        aria-labelledby="ricerca-brevetti"
-        className="mt-8 rounded-lg border bg-card p-5"
-      >
+      <section aria-labelledby="ricerca-brevetti" className="mt-8 rounded-lg border bg-card p-5">
         <h2 id="ricerca-brevetti" className="font-serif text-lg">
           Ricerca
         </h2>
@@ -325,8 +321,8 @@ function PatentExplorer() {
       <section aria-label="Risultati" className="mt-6 space-y-4">
         {visible.length === 0 ? (
           <p className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-            Nessun brevetto corrisponde ai criteri impostati. Prova a ridurre i filtri o a
-            usare termini più generali.
+            Nessun brevetto corrisponde ai criteri impostati. Prova a ridurre i filtri o a usare
+            termini più generali.
           </p>
         ) : (
           visible.map((record) => (
@@ -361,9 +357,7 @@ function PatentExplorer() {
                   <dd>{record.applicants.join(", ")}</dd>
                 </div>
                 <div>
-                  <dt className="text-xs text-muted-foreground uppercase">
-                    Giurisdizioni
-                  </dt>
+                  <dt className="text-xs text-muted-foreground uppercase">Giurisdizioni</dt>
                   <dd>{record.jurisdictions.join(" · ")}</dd>
                 </div>
               </dl>

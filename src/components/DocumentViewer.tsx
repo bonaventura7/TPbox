@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
 interface Props {
   documentId: string;
   title?: string;
 }
 
-export function DocumentViewer({ documentId, title = 'Documento aziendale' }: Props) {
+export function DocumentViewer({ documentId, title = "Documento aziendale" }: Props) {
   const documentUrl = `/api/company-finder/document/${documentId}`;
 
   return (
@@ -24,7 +24,7 @@ export function DocumentViewer({ documentId, title = 'Documento aziendale' }: Pr
         src={documentUrl}
         className="w-full h-[600px]"
         title={title}
-        style={{ border: 'none' }}
+        style={{ border: "none" }}
       />
     </div>
   );

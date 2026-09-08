@@ -14,11 +14,7 @@ import type {
   PatentRecord,
   PatentSearchResult,
 } from "../patents/types";
-import {
-  CircuitBreaker,
-  audit,
-  newCorrelationId,
-} from "../platform/resilience.server";
+import { CircuitBreaker, audit, newCorrelationId } from "../platform/resilience.server";
 
 /** Allowlist esclusiva: qualunque altro host viene rifiutato (protezione SSRF). */
 const ALLOWED_HOSTS = ["patentscope.wipo.int", "www.wipo.int"] as const;
@@ -57,7 +53,9 @@ function normalize(value: string): string {
 }
 
 function tokens(value: string): readonly string[] {
-  return normalize(value).split(/\s+/).filter((token) => token.length > 1);
+  return normalize(value)
+    .split(/\s+/)
+    .filter((token) => token.length > 1);
 }
 
 function haystack(record: PatentRecord): string {
@@ -178,10 +176,7 @@ export function searchPatents(input: PatentQuery): PatentSearchResult {
     ) {
       return false;
     }
-    if (
-      ipcTerm.length > 0 &&
-      !record.ipcCodes.some((code) => normalize(code).includes(ipcTerm))
-    ) {
+    if (ipcTerm.length > 0 && !record.ipcCodes.some((code) => normalize(code).includes(ipcTerm))) {
       return false;
     }
     if (input.jurisdiction && !record.jurisdictions.includes(input.jurisdiction)) return false;
@@ -247,9 +242,7 @@ export function getPatentById(id: string): {
   const record = index.find((item) => item.id === id) ?? null;
   const related = record
     ? index
-        .filter(
-          (item) => item.id !== record.id && item.technologyArea === record.technologyArea,
-        )
+        .filter((item) => item.id !== record.id && item.technologyArea === record.technologyArea)
         .slice(0, 3)
     : [];
   audit({

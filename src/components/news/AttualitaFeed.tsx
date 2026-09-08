@@ -89,8 +89,8 @@ function RepoStatusNotice({
     <div role="alert" className="mb-6 border-l-2 border-destructive bg-destructive/5 p-5">
       <h2 className="font-serif text-xl">Contenuti reali non disponibili</h2>
       <p className="mt-2 text-sm text-muted-foreground">
-        {detail} Nessun contenuto dimostrativo viene presentato come reale: la sostituzione
-        richiede una decisione esplicita.
+        {detail} Nessun contenuto dimostrativo viene presentato come reale: la sostituzione richiede
+        una decisione esplicita.
       </p>
       <p className="mt-2 text-xs text-muted-foreground">Riferimento tecnico: {correlationId}</p>
       <Button variant="outline" className="mt-4 min-h-11" onClick={onRetry}>
@@ -115,7 +115,10 @@ function ServiceNotice({
       className="mb-6 flex items-start gap-3 border-l-2 border-gold bg-gold/10 p-4 text-sm"
     >
       {degraded ? (
-        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-gold-foreground" aria-hidden="true" />
+        <AlertTriangle
+          className="mt-0.5 h-4 w-4 shrink-0 text-gold-foreground"
+          aria-hidden="true"
+        />
       ) : (
         <Clock className="mt-0.5 h-4 w-4 shrink-0 text-gold-foreground" aria-hidden="true" />
       )}
@@ -138,11 +141,7 @@ function ServiceNotice({
   );
 }
 
-export function AttualitaFeed({
-  fixedGeo,
-}: {
-  fixedGeo?: Exclude<NewsFilters["geo"], "TUTTE">;
-}) {
+export function AttualitaFeed({ fixedGeo }: { fixedGeo?: Exclude<NewsFilters["geo"], "TUTTE"> }) {
   const [query, setQuery] = useState("");
   const [submittedQuery, setSubmittedQuery] = useState("");
   const [geo, setGeo] = useState<NewsFilters["geo"]>(fixedGeo ?? "TUTTE");
@@ -154,7 +153,14 @@ export function AttualitaFeed({
   const fetchFeed = useServerFn(getNewsFeed);
   const effectiveGeo = fixedGeo ?? geo;
   const filters = useMemo(
-    () => ({ query: submittedQuery, geo: effectiveGeo, topic, category, country, institutionalOnly }),
+    () => ({
+      query: submittedQuery,
+      geo: effectiveGeo,
+      topic,
+      category,
+      country,
+      institutionalOnly,
+    }),
     [submittedQuery, effectiveGeo, topic, category, country, institutionalOnly],
   );
 
@@ -329,8 +335,8 @@ export function AttualitaFeed({
           <div role="alert" className="mt-6 border-l-2 border-destructive bg-destructive/5 p-5">
             <h2 className="font-serif text-xl">Contenuti non disponibili</h2>
             <p className="mt-2 text-sm text-muted-foreground">
-              Si è verificato un errore durante il recupero dei contenuti. Puoi ripetere
-              la richiesta; se il problema persiste, riprova più tardi.
+              Si è verificato un errore durante il recupero dei contenuti. Puoi ripetere la
+              richiesta; se il problema persiste, riprova più tardi.
             </p>
             <Button variant="outline" className="mt-4 min-h-11" onClick={() => void refetch()}>
               Riprova
@@ -340,7 +346,10 @@ export function AttualitaFeed({
 
         {data && data.featured ? (
           <section aria-labelledby="principale" className="mt-12">
-            <h2 id="principale" className="text-xs tracking-[0.18em] text-muted-foreground uppercase">
+            <h2
+              id="principale"
+              className="text-xs tracking-[0.18em] text-muted-foreground uppercase"
+            >
               Notizia principale
             </h2>
             <div className="mt-4">
@@ -373,8 +382,8 @@ export function AttualitaFeed({
               <div className="mt-4 border border-dashed border-border bg-secondary/40 p-8 text-center">
                 <h3 className="font-serif text-xl">Nessun risultato</h3>
                 <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
-                  Nessun elemento corrisponde ai criteri impostati. Prova a modificare il
-                  testo cercato oppure ad ampliare area geografica, categoria e paese.
+                  Nessun elemento corrisponde ai criteri impostati. Prova a modificare il testo
+                  cercato oppure ad ampliare area geografica, categoria e paese.
                 </p>
                 <Button
                   variant="outline"
@@ -421,12 +430,11 @@ export function AttualitaFeed({
             Come vengono acquisiti i contenuti
           </h2>
           <p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted-foreground">
-            L'acquisizione è esclusivamente lato server. I feed RSS/Atom sono utilizzati
-            solo quando verificati; in assenza di feed verificato si adotta il
-            monitoraggio della pagina, l'inserimento manuale oppure la disattivazione
-            della fonte. Ogni elemento acquisito entra come bozza e non può diventare
-            pubblico in modo automatico: il passaggio richiede revisione e approvazione
-            redazionale.
+            L'acquisizione è esclusivamente lato server. I feed RSS/Atom sono utilizzati solo quando
+            verificati; in assenza di feed verificato si adotta il monitoraggio della pagina,
+            l'inserimento manuale oppure la disattivazione della fonte. Ogni elemento acquisito
+            entra come bozza e non può diventare pubblico in modo automatico: il passaggio richiede
+            revisione e approvazione redazionale.
           </p>
           <p className="mt-3 text-xs tracking-wide text-muted-foreground uppercase">
             Flusso: ricevuto · classificato · rilevante o scartato · bozza · in revisione ·

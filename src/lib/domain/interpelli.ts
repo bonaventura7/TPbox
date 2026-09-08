@@ -101,12 +101,7 @@ export const TP_SUB_SUBJECTS = [
 ] as const;
 
 /** Stato editoriale del record: nessuna acquisizione può pubblicare automaticamente. */
-export type InterpelloWorkflowStatus =
-  | "DRAFT"
-  | "IN_REVIEW"
-  | "PUBLISHED"
-  | "STALE"
-  | "ARCHIVED";
+export type InterpelloWorkflowStatus = "DRAFT" | "IN_REVIEW" | "PUBLISHED" | "STALE" | "ARCHIVED";
 
 /** Modalità di acquisizione previste per l'adapter server-side. */
 export type InterpelloAcquisitionMode = "HTML_WATCH" | "MANUAL_IMPORT" | "DISABLED";
@@ -174,7 +169,6 @@ export interface OfficialSourceAdapter {
 export function isTransferPricingRecord(item: InterpelloRecord): boolean {
   if (INTERNATIONAL_SUBJECT_IDS.includes(item.subject)) return true;
   return (
-    item.subSubject !== null &&
-    (TP_SUB_SUBJECTS as readonly string[]).includes(item.subSubject)
+    item.subSubject !== null && (TP_SUB_SUBJECTS as readonly string[]).includes(item.subSubject)
   );
 }

@@ -103,11 +103,14 @@ function toProfile(company: ApiCompany): CompanyProfile | undefined {
     identifiers: [{ key: "SIREN", value: siren }],
   };
   if (company.nature_juridique) profile.legalForm = company.nature_juridique;
-  if (company.etat_administratif) profile.status = company.etat_administratif === "A" ? "attiva" : "cessata";
+  if (company.etat_administratif)
+    profile.status = company.etat_administratif === "A" ? "attiva" : "cessata";
   if (company.date_creation) profile.registeredSince = company.date_creation;
   if (company.siege?.adresse) profile.address = company.siege.adresse.toLowerCase();
-  if (company.activite_principale) profile.activityCodes = [{ code: company.activite_principale, label: "codice NAF" }];
-  if (company.siege?.siret) profile.identifiers?.push({ key: "SIRET (sede)", value: company.siege.siret });
+  if (company.activite_principale)
+    profile.activityCodes = [{ code: company.activite_principale, label: "codice NAF" }];
+  if (company.siege?.siret)
+    profile.identifiers?.push({ key: "SIRET (sede)", value: company.siege.siret });
   if (officers.length > 0) profile.officers = officers;
   return profile;
 }
@@ -163,8 +166,17 @@ export async function searchRechercheEntreprises(
     let financials = baseFinancials;
     // Pappers è usato come repertorio pubblico documentale: nessuna API key.
     // Un eventuale errore non deve invalidare i dati ufficiali già restituiti.
-    const publicDocs = await findPappersAnnualReports(profile.name ?? query, company.siren ?? "", 10000);
-    financials = mergePublicDocuments(financials, publicDocs, profile.name ?? query, company.siren ?? "");
+    const publicDocs = await findPappersAnnualReports(
+      profile.name ?? query,
+      company.siren ?? "",
+      10000,
+    );
+    financials = mergePublicDocuments(
+      financials,
+      publicDocs,
+      profile.name ?? query,
+      company.siren ?? "",
+    );
 
     return { ok: true, profile, financials };
   } catch (e) {

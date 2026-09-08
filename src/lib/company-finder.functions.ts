@@ -58,7 +58,8 @@ export async function resolvePolishKrsByName(
   }
 
   for (const match of result.matches) {
-    if (match.country !== "PL" || match.registeredAt !== POLISH_KRS_REGISTRATION_AUTHORITY) continue;
+    if (match.country !== "PL" || match.registeredAt !== POLISH_KRS_REGISTRATION_AUTHORITY)
+      continue;
     const registeredAs = numericRegistryId(match.registeredAs);
     if (!registeredAs) continue;
     const krs = registeredAs.padStart(10, "0");
@@ -75,7 +76,10 @@ export async function resolvePolishKrsByName(
   };
 }
 
-async function resolveGreekBalance(response: SearchResponse, fallbackId: string): Promise<SearchResponse> {
+async function resolveGreekBalance(
+  response: SearchResponse,
+  fallbackId: string,
+): Promise<SearchResponse> {
   if (response.company?.country.iso !== "GR" || response.financials?.documentUrl) {
     return response;
   }
@@ -105,7 +109,10 @@ async function resolveGreekBalance(response: SearchResponse, fallbackId: string)
   }
 }
 
-async function prioritizeBalanceDocument(response: SearchResponse, fallbackId: string): Promise<SearchResponse> {
+async function prioritizeBalanceDocument(
+  response: SearchResponse,
+  fallbackId: string,
+): Promise<SearchResponse> {
   const resolved = await resolveGreekBalance(response, fallbackId);
   const documentUrl = resolved.financials?.documentUrl;
   if (!documentUrl) return resolved;
@@ -140,7 +147,6 @@ async function browserRegistryResponse(
         authority: country.registryAuthority,
         id: cleaned,
       },
-
     },
     financials: {
       available: false,

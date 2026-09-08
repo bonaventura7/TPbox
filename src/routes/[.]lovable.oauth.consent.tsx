@@ -16,13 +16,15 @@ type OAuthResult = { data: AuthorizationDetails | null; error: Error | null };
 
 // `supabase.auth.oauth` is a beta namespace not yet in the published types.
 function oauthApi() {
-  return (supabase.auth as unknown as {
-    oauth: {
-      getAuthorizationDetails: (id: string) => Promise<OAuthResult>;
-      approveAuthorization: (id: string) => Promise<OAuthResult>;
-      denyAuthorization: (id: string) => Promise<OAuthResult>;
-    };
-  }).oauth;
+  return (
+    supabase.auth as unknown as {
+      oauth: {
+        getAuthorizationDetails: (id: string) => Promise<OAuthResult>;
+        approveAuthorization: (id: string) => Promise<OAuthResult>;
+        denyAuthorization: (id: string) => Promise<OAuthResult>;
+      };
+    }
+  ).oauth;
 }
 
 const SCOPE_LABELS: Record<string, string> = {
@@ -36,7 +38,7 @@ export const Route = createFileRoute("/.lovable/oauth/consent")({
   ssr: false,
   validateSearch: (search: Record<string, unknown>) => ({
     authorization_id:
-      typeof search['authorization_id'] === "string" ? (search['authorization_id'] as string) : "",
+      typeof search["authorization_id"] === "string" ? (search["authorization_id"] as string) : "",
   }),
   beforeLoad: async ({ search, location }) => {
     if (!search.authorization_id) throw new Error("authorization_id mancante");
@@ -49,9 +51,7 @@ export const Route = createFileRoute("/.lovable/oauth/consent")({
     }
   },
   loader: async ({ location }) => {
-    const authorizationId = new URLSearchParams(location.searchStr).get(
-      "authorization_id",
-    )!;
+    const authorizationId = new URLSearchParams(location.searchStr).get("authorization_id")!;
     const { data, error } = await oauthApi().getAuthorizationDetails(authorizationId);
     if (error) throw error;
     const immediate = data?.redirect_url ?? data?.redirect_to;
@@ -114,15 +114,12 @@ function Consent() {
   return (
     <main className="mx-auto max-w-md px-4 py-14 sm:py-20">
       <div className="border border-border bg-card p-6">
-        <p className="text-xs tracking-wide text-muted-foreground uppercase">
-          Autorizzazione
-        </p>
+        <p className="text-xs tracking-wide text-muted-foreground uppercase">Autorizzazione</p>
         <h1 className="mt-2 font-serif text-2xl leading-snug">
           Collega {clientName} al tuo account
         </h1>
         <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-          {clientName} potrà usare gli strumenti del portale a tuo nome, con i tuoi
-          permessi.
+          {clientName} potrà usare gli strumenti del portale a tuo nome, con i tuoi permessi.
         </p>
 
         {scopes.length > 0 ? (
@@ -140,8 +137,7 @@ function Consent() {
         ) : null}
 
         <p className="mt-4 text-xs text-muted-foreground">
-          L'autorizzazione non aggira i permessi del portale né le regole di accesso ai
-          dati.
+          L'autorizzazione non aggira i permessi del portale né le regole di accesso ai dati.
         </p>
 
         {error ? (

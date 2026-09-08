@@ -21,12 +21,9 @@ export default defineTool({
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async (input) => {
-    const { listInterpelliArchive } = await import(
-      "../../repositories/agenzia-interpelli.repository.server"
-    );
-    const { isTransferPricingRecord, subjectLabel } = await import(
-      "../../domain/interpelli"
-    );
+    const { listInterpelliArchive } =
+      await import("../../repositories/agenzia-interpelli.repository.server");
+    const { isTransferPricingRecord, subjectLabel } = await import("../../domain/interpelli");
     const archive = await listInterpelliArchive();
     const term = (input.query ?? "").trim().toLowerCase();
     const limit = Math.min(Math.max(input.limit ?? 20, 1), 50);
@@ -61,11 +58,7 @@ export default defineTool({
       content: [
         {
           type: "text",
-          text: JSON.stringify(
-            { statoServizio: archive.serviceStatus, records },
-            null,
-            2,
-          ),
+          text: JSON.stringify({ statoServizio: archive.serviceStatus, records }, null, 2),
         },
       ],
       structuredContent: {

@@ -7,9 +7,8 @@ export const Route = createFileRoute("/api/company-finder/financial-document")({
   server: {
     handlers: {
       GET: async ({ request }) => {
-        const { handleFinancialDocumentRequest } = await import(
-          "@/lib/company-finder/document-resolver.server"
-        );
+        const { handleFinancialDocumentRequest } =
+          await import("@/lib/company-finder/document-resolver.server");
         return handleFinancialDocumentRequest(request);
       },
     },

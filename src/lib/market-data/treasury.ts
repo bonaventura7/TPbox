@@ -24,7 +24,8 @@ function xmlTag(properties: string, name: string): string | null {
 /** Parses one Treasury CMT tenor from the official OData XML feed. */
 export function parseTreasuryXml(xml: string, series: TreasurySeries): Observation[] {
   const observations: Observation[] = [];
-  const propertiesBlocks = xml.match(/<[^>]*:?properties\b[^>]*>[\s\S]*?<\/[^>]*:?properties>/gi) ?? [];
+  const propertiesBlocks =
+    xml.match(/<[^>]*:?properties\b[^>]*>[\s\S]*?<\/[^>]*:?properties>/gi) ?? [];
   for (const properties of propertiesBlocks) {
     const rawDate = xmlTag(properties, "NEW_DATE");
     const rawValue = xmlTag(properties, series);

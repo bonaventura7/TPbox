@@ -89,7 +89,10 @@ async function treasuryText(url: string, options: FetchOptions): Promise<string>
     if (entry.expiresAt > now) return entry.text;
     treasuryCache.delete(url);
   }
-  const pending = getText(url, options).then((text) => ({ expiresAt: Date.now() + TREASURY_CACHE_TTL_MS, text }));
+  const pending = getText(url, options).then((text) => ({
+    expiresAt: Date.now() + TREASURY_CACHE_TTL_MS,
+    text,
+  }));
   treasuryCache.set(url, pending);
   try {
     return (await pending).text;
@@ -105,14 +108,20 @@ async function fetchTreasuryObservation(
   options: FetchOptions,
 ): Promise<Observation | null> {
   const currentUrl = treasuryUrl(date);
-  const current = parseTreasuryXml(await treasuryText(currentUrl, options), metric.series as Parameters<typeof parseTreasuryXml>[1]);
+  const current = parseTreasuryXml(
+    await treasuryText(currentUrl, options),
+    metric.series as Parameters<typeof parseTreasuryXml>[1],
+  );
   const observation = lastObservationAtOrBefore(current, date);
   if (observation) return observation;
 
   // Se la data richiesta e' nei primissimi giorni del mese, la precedente
   // osservazione valida puo' appartenere al mese precedente (weekend/festivita').
   const previousUrl = treasuryUrl(shiftMonths(date, -1));
-  const previous = parseTreasuryXml(await treasuryText(previousUrl, options), metric.series as Parameters<typeof parseTreasuryXml>[1]);
+  const previous = parseTreasuryXml(
+    await treasuryText(previousUrl, options),
+    metric.series as Parameters<typeof parseTreasuryXml>[1],
+  );
   return lastObservationAtOrBefore(previous, date);
 }
 

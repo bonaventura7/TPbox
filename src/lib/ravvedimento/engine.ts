@@ -9,11 +9,7 @@ import {
   selectBand,
   selectRegime,
 } from "./datasets/penalty-regimes/registry";
-import type {
-  InterestSegment,
-  RavvedimentoInput,
-  RavvedimentoOutcome,
-} from "./types";
+import type { InterestSegment, RavvedimentoInput, RavvedimentoOutcome } from "./types";
 
 export const RAVVEDIMENTO_MODEL_VERSION = "ravvedimento-model.v1";
 
@@ -96,7 +92,8 @@ export function computeRavvedimento(input: RavvedimentoInput): RavvedimentoOutco
   }
 
   const dueCents = toCents(input.amountDue);
-  const paidCents = input.violationType === "INSUFFICIENT_PAYMENT" ? toCents(input.amountPaid ?? 0) : 0;
+  const paidCents =
+    input.violationType === "INSUFFICIENT_PAYMENT" ? toCents(input.amountPaid ?? 0) : 0;
   const baseCents = dueCents - paidCents;
 
   if (!Number.isFinite(baseCents) || baseCents <= 0) {
@@ -125,7 +122,10 @@ export function computeRavvedimento(input: RavvedimentoInput): RavvedimentoOutco
     };
   }
 
-  if (originalDueDate < LEGAL_INTEREST_COVERED_FROM || paymentDate > LEGAL_INTEREST_COVERED_THROUGH) {
+  if (
+    originalDueDate < LEGAL_INTEREST_COVERED_FROM ||
+    paymentDate > LEGAL_INTEREST_COVERED_THROUGH
+  ) {
     return {
       status: "blocked",
       reason: "DATASET_COVERAGE",

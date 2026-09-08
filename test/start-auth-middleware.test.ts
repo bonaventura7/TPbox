@@ -34,8 +34,7 @@ async function clientMiddleware() {
   vi.resetModules();
   const mod = await import("../src/start");
   return mod.attachSupabaseAuthWhenConfigured.options.client as
-    | ((ctx: { next: (arg: unknown) => Promise<unknown> }) => Promise<unknown>)
-    | undefined;
+    ((ctx: { next: (arg: unknown) => Promise<unknown> }) => Promise<unknown>) | undefined;
 }
 
 describe("middleware auth globale: comportamento", () => {
@@ -52,7 +51,10 @@ describe("middleware auth globale: comportamento", () => {
     const next = vi.fn(async (arg: unknown) => arg);
     await client!({ next });
 
-    expect(getSession, "il client Supabase è stato toccato senza configurazione").not.toHaveBeenCalled();
+    expect(
+      getSession,
+      "il client Supabase è stato toccato senza configurazione",
+    ).not.toHaveBeenCalled();
     expect(next).toHaveBeenCalledWith({ headers: {} });
   });
 

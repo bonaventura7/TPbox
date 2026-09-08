@@ -11,9 +11,8 @@ export default defineTool({
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async ({ id }) => {
-    const { getInterpelloById } = await import(
-      "../../repositories/agenzia-interpelli.repository.server"
-    );
+    const { getInterpelloById } =
+      await import("../../repositories/agenzia-interpelli.repository.server");
     const { subjectLabel } = await import("../../domain/interpelli");
     const record = await getInterpelloById(id);
     if (!record) throw new ToolError(`Nessuna risposta trovata per l'identificativo "${id}".`);

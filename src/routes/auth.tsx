@@ -26,7 +26,7 @@ function safeNext(raw: string): string {
 export const Route = createFileRoute("/auth")({
   ssr: false,
   validateSearch: (search: Record<string, unknown>) => ({
-    next: typeof search['next'] === "string" ? (search['next'] as string) : "",
+    next: typeof search["next"] === "string" ? (search["next"] as string) : "",
   }),
   head: () => ({
     meta: [
@@ -136,77 +136,77 @@ function AuthPage() {
             </p>
           </div>
         ) : (
-        <div className="border border-border bg-card p-6">
-          <form onSubmit={onSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Indirizzo e-mail</Label>
-              <Input
-                id="email"
-                type="email"
-                autoComplete="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
+          <div className="border border-border bg-card p-6">
+            <form onSubmit={onSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Indirizzo e-mail</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  autoComplete={mode === "signin" ? "current-password" : "new-password"}
+                  required
+                  minLength={8}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+              </div>
+              {error ? (
+                <p role="alert" className="text-sm text-destructive">
+                  {error}
+                </p>
+              ) : null}
+              {notice ? (
+                <p role="status" className="text-sm text-muted-foreground">
+                  {notice}
+                </p>
+              ) : null}
+              <Button type="submit" disabled={busy} className="min-h-11 w-full">
+                {mode === "signin" ? "Accedi" : "Crea l'account"}
+              </Button>
+            </form>
+
+            <div className="my-5 flex items-center gap-3 text-xs tracking-wide text-muted-foreground uppercase">
+              <span className="h-px flex-1 bg-border" />
+              oppure
+              <span className="h-px flex-1 bg-border" />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                autoComplete={mode === "signin" ? "current-password" : "new-password"}
-                required
-                minLength={8}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </div>
-            {error ? (
-              <p role="alert" className="text-sm text-destructive">
-                {error}
-              </p>
-            ) : null}
-            {notice ? (
-              <p role="status" className="text-sm text-muted-foreground">
-                {notice}
-              </p>
-            ) : null}
-            <Button type="submit" disabled={busy} className="min-h-11 w-full">
-              {mode === "signin" ? "Accedi" : "Crea l'account"}
-            </Button>
-          </form>
 
-          <div className="my-5 flex items-center gap-3 text-xs tracking-wide text-muted-foreground uppercase">
-            <span className="h-px flex-1 bg-border" />
-            oppure
-            <span className="h-px flex-1 bg-border" />
-          </div>
-
-          <Button
-            type="button"
-            variant="outline"
-            disabled={busy}
-            onClick={() => void onGoogle()}
-            className="min-h-11 w-full"
-          >
-            Continua con Google
-          </Button>
-
-          <p className="mt-5 text-sm text-muted-foreground">
-            {mode === "signin" ? "Non hai un account?" : "Hai già un account?"}{" "}
-            <button
+            <Button
               type="button"
-              className="text-petrol underline underline-offset-4"
-              onClick={() => {
-                setMode(mode === "signin" ? "signup" : "signin");
-                setError(null);
-                setNotice(null);
-              }}
+              variant="outline"
+              disabled={busy}
+              onClick={() => void onGoogle()}
+              className="min-h-11 w-full"
             >
-              {mode === "signin" ? "Registrati" : "Accedi"}
-            </button>
-          </p>
-        </div>
+              Continua con Google
+            </Button>
+
+            <p className="mt-5 text-sm text-muted-foreground">
+              {mode === "signin" ? "Non hai un account?" : "Hai già un account?"}{" "}
+              <button
+                type="button"
+                className="text-petrol underline underline-offset-4"
+                onClick={() => {
+                  setMode(mode === "signin" ? "signup" : "signin");
+                  setError(null);
+                  setNotice(null);
+                }}
+              >
+                {mode === "signin" ? "Registrati" : "Accedi"}
+              </button>
+            </p>
+          </div>
         )}
       </div>
     </>
