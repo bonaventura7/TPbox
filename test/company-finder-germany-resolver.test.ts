@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { searchGermanyAdapter } from "../src/lib/company-finder/sources/germany-adapter";
 import { searchUrAccounting } from "../src/lib/company-finder/sources/bilanci/ur-de";
 
 afterEach(() => vi.unstubAllGlobals());
@@ -95,5 +96,59 @@ describe("German company resolver", () => {
     expect(result.ok).toBe(true);
     expect(result.data?.years[0]?.year).toBe(2024);
     expect(result.data?.years[0]?.totalAssets).toBe(10000000);
+  });
+
+  it("returns the resolved company profile and financials from one German adapter", async () => {
+    const seen: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: string | URL) => {
+        const url = String(input);
+        seen.push(url);
+        if (url.startsWith("https://api.firmendata.com/v1/companies/autocomplete?")) {
+          return new Response(
+            JSON.stringify({
+              data: [
+                {
+                  eu_id: "DEMO.TOZ",
+                  display_name: "TOZ Physiotherapie GmbH",
+                  legal_name: "TOZ Physiotherapie GmbH",
+                },
+              ],
+            }),
+            { status: 200, headers: { "content-type": "application/json" } },
+          );
+        }
+        if (url.startsWith("https://html.duckduckgo.com/html/?q=")) {
+          return new Response(
+            '<a href="https://www.unternehmen24.info/Firmeninformationen/Deutschland/Firma/1234567">TOZ Physiotherapie GmbH</a>',
+            { status: 200 },
+          );
+        }
+        if (url.endsWith("/Firma/1234567")) {
+          return new Response(
+            '<html><body><h1>TOZ Physiotherapie GmbH</h1><div>Jahresabschluss 2024</div><div>Summe Aktiva 125.000 €</div><div>Eigenkapital 75.000 €</div><div>Jahresüberschuss 12.000 €</div><div>Summe Passiva 125.000 €</div></body></html>',
+            { status: 200 },
+          );
+        }
+        throw new Error(`unexpected URL ${url}`);
+      }),
+    );
+
+    const result = await searchGermanyAdapter({ query: "TOZ" }, 10000);
+
+    expect(result.ok).toBe(true);
+    expect(result.profile?.name).toBe("TOZ Physiotherapie GmbH");
+    expect(result.profile?.registry?.id).toBe("DEMO.TOZ");
+    expect(result.profile?.country.iso).toBe("DE");
+    expect(result.financials?.years[0]).toMatchObject({
+      year: 2024,
+      totalAssets: 125000,
+      equity: 75000,
+      liabilitiesAndEquity: 125000,
+      netIncome: 12000,
+    });
+    expect(result.financials?.documents?.[0]?.downloadUrl).toMatch(/^\/api\/company-finder\/germany-public-balance\?/);
+    expect(seen.filter((url) => url.startsWith("https://api.firmendata.com")).length).toBe(1);
   });
 });
