@@ -121,6 +121,65 @@ function reportEndYear(report: JsonObject): number | undefined {
   return indicatorYear(report.report_end_date ?? report.report_date ?? report.date);
 }
 
+function csvCell(value: unknown): string {
+  const raw = value === null || value === undefined ? "" : String(value);
+  return /[;\r\n\"]/g.test(raw) ? `"${raw.replace(/"/g, '""')}"` : raw;
+}
+
+type ReportRow = JsonObject & {
+  name?: string;
+  formatted_name?: string;
+  current_value?: number | string | null;
+  previous_value?: number | string | null;
+  children?: unknown;
+};
+
+function flattenRows(rows: unknown, path: string[], output: string[], section: string): void {
+  if (!Array.isArray(rows)) return;
+  for (const raw of rows) {
+    const row = asObject(raw) as ReportRow | undefined;
+    if (!row) continue;
+    const label = text(row.formatted_name) ?? text(row.name) ?? "Voce senza descrizione";
+    const nextPath = [...path, label];
+    output.push(
+      [
+        csvCell(section),
+        csvCell(nextPath.join(" > ")),
+        csvCell(row.current_value),
+        csvCell(row.previous_value),
+      ].join(";"),
+    );
+    flattenRows(row.children, nextPath, output, section);
+  }
+}
+
+/** Serializza un report OpenRegister in un CSV leggibile e scaricabile. */
+export function buildOpenRegisterFinancialCsv(report: JsonObject, companyName: string): string {
+  const lines = [
+    ["Società", csvCell(companyName)].join(";"),
+    ["Data inizio", csvCell(report.report_start_date)].join(";"),
+    ["Data fine", csvCell(report.report_end_date)].join(";"),
+    "",
+    ["Sektion", "Position", "Aktueller Wert", "Vorjahreswert"].join(";"),
+  ];
+
+  const sections: Array<[string, string]> = [
+    ["Aktiva", "aktiva"],
+    ["Passiva", "passiva"],
+    ["GuV", "guv"],
+  ];
+
+  for (const [label, key] of sections) {
+    const table = asObject(report[key]);
+    if (!table) continue;
+    const before = lines.length;
+    flattenRows(table.rows, [], lines, label);
+    if (lines.length > before) lines.splice(before, 0, [csvCell(label), "", "", ""].join(";"));
+  }
+
+  return `\uFEFF${lines.join("\r\n")}\r\n`;
+}
+
 function buildDownloadDocument(
   company: OpenRegisterCompany,
   companyId: string,
@@ -149,6 +208,17 @@ export async function fetchOpenRegisterFinancialsByCompanyId(
   return getJson(`${API_BASE}/v1/company/${encodeURIComponent(companyId)}/financials`, apiKey, signal);
 }
 
+export function getOpenRegisterCompanyName(companyId: string): string {
+  return companyId;
+}
+
+export function reportList(payload: unknown): JsonObject[] {
+  const root = asObject(payload);
+  return (Array.isArray(root?.reports) ? root.reports : [])
+    .map(asObject)
+    .filter(Boolean) as JsonObject[];
+}
+
 function mapFinancials(
   company: OpenRegisterCompany,
   companyId: string,
@@ -158,17 +228,9 @@ function mapFinancials(
   const indicators = Array.isArray(root?.indicators)
     ? (root.indicators.map(asObject).filter(Boolean) as Indicator[])
     : [];
-  const reports = Array.isArray(root?.reports)
-    ? (root.reports.map(asObject).filter(Boolean) as JsonObject[])
-    : [];
+  const reports = reportList(payload);
 
   if (indicators.length === 0 && reports.length === 0) return undefined;
-
-  const reportsById = new Map<string, JsonObject>();
-  for (const report of reports) {
-    const id = text(report.report_id);
-    if (id) reportsById.set(id, report);
-  }
 
   const years = indicators
     .map((indicator) => {
