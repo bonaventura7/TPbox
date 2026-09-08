@@ -70,7 +70,10 @@ export function gleifNameRelevance(query: string, candidate: string): number {
   const common = qTokens.filter((token) => cTokens.includes(token)).length;
   const precision = common / Math.max(cTokens.length, 1);
   const recall = common / Math.max(qTokens.length, 1);
-  const tokenScore = Math.round(100 * (2 * precision * recall) / Math.max(precision + recall, 0.0001));
+  // Precisione e richiamo moltiplicati: i token estranei nel candidato
+  // (es. "HEALTHINEERS") abbassano il punteggio sotto la soglia di rilevanza,
+  // così le omonimie parziali non vengono scambiate per la società cercata.
+  const tokenScore = Math.round(100 * precision * recall);
 
   return tokenScore;
 }

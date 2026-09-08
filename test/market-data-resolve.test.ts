@@ -108,11 +108,11 @@ describe("indirizzi delle fonti", () => {
   });
 
   it("restringe la finestra richiesta a FRED", () => {
-    const metric = metricById("US_TREASURY_10Y");
+    const metric = metricById("MOODYS_BAA_D");
     expect(metric).not.toBeNull();
     if (metric === null) return;
     const url = fredUrl(metric, "2026-09-03");
-    expect(url).toContain("id=DGS10");
+    expect(url).toContain("id=DBAA");
     expect(url).toContain("cosd=2025-07");
   });
 });
