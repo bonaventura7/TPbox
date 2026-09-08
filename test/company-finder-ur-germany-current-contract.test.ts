@@ -5,27 +5,66 @@ import { searchUrAccounting } from "../src/lib/company-finder/sources/bilanci/ur
 afterEach(() => vi.unstubAllGlobals());
 
 describe("Unternehmensregister current search contract", () => {
-  it("accepts the current areas/companySearchTerm search and payload publication URL", async () => {
-    const urls: string[] = [];
+  it("uses the current search contract, carries the registry cookie, and resolves the publication to a PDF", async () => {
+    const requests: Array<{ url: string; cookie?: string }> = [];
     vi.stubGlobal(
       "fetch",
-      vi.fn(async (url: string) => {
-        urls.push(url);
+      vi.fn(async (input: string | URL, init?: RequestInit) => {
+        const url = String(input);
+        const headers = new Headers(init?.headers);
+        requests.push({ url, cookie: headers.get("cookie") ?? undefined });
+
         if (url.endsWith("/api/search-token")) {
-          return { ok: true, status: 200, json: async () => ({ token: "token" }) } as unknown as Response;
+          return {
+            ok: true,
+            status: 200,
+            headers: new Headers({ "set-cookie": "URSESSION=session-123; Path=/; HttpOnly" }),
+            json: async () => ({ token: "token" }),
+          } as unknown as Response;
         }
+
         if (url.includes("/de/suche?areas=all")) {
+          expect(headers.get("cookie")).toContain("URSESSION=session-123");
           const html = `self.__next_f.push([1,"{\\"companyDto\\":{\\"name\\":\\"ORI MARTIN GMBH\\"},\\"publicationDto\\":{\\"companyNameAtTimeOfPublication\\":\\"ORI MARTIN GMBH\\",\\"title\\":\\"Jahresabschluss zum Geschäftsjahr 2024\\",\\"sourceDate\\":\\"2026-06-16\\",\\"hasPdf\\":true,\\"payload\\":\\"abc123\\"}}"])`;
-          return { ok: true, status: 200, text: async () => html } as unknown as Response;
+          return {
+            ok: true,
+            status: 200,
+            headers: new Headers({ "set-cookie": "URSEARCH=search-456; Path=/; HttpOnly" }),
+            text: async () => html,
+          } as unknown as Response;
         }
+
+        if (url.includes("/de/veroeffentlichung?payload=abc123")) {
+          expect(headers.get("cookie")).toContain("URSESSION=session-123");
+          expect(headers.get("cookie")).toContain("URSEARCH=search-456");
+          return {
+            ok: true,
+            status: 200,
+            headers: new Headers({ "content-type": "text/html" }),
+            text: async () => '<html><body><a href="/download/document.pdf">PDF</a></body></html>',
+            arrayBuffer: async () => new TextEncoder().encode('<html><body><a href="/download/document.pdf">PDF</a></body></html>').buffer,
+          } as unknown as Response;
+        }
+
+        if (url.includes("/download/document.pdf")) {
+          expect(headers.get("cookie")).toContain("URSESSION=session-123");
+          expect(headers.get("cookie")).toContain("URSEARCH=search-456");
+          return {
+            ok: true,
+            status: 200,
+            url: "https://www.unternehmensregister.de/download/document.pdf?sig=signed",
+            headers: new Headers({ "content-type": "application/pdf" }),
+          } as unknown as Response;
+        }
+
         throw new Error(`unexpected URL ${url}`);
       }),
     );
 
     const result = await searchUrAccounting("ORI MARTIN GMBH");
 
-    expect(urls.some((url) => url.includes("areas=all") && url.includes("companySearchTerm=ORI%20MARTIN%20GMBH"))).toBe(true);
+    expect(requests.some((r) => r.url.includes("areas=all") && r.url.includes("companySearchTerm=ORI%20MARTIN%20GMBH"))).toBe(true);
     expect(result.data?.available).toBe(true);
-    expect(result.data?.documentUrl).toContain("payload=abc123");
+    expect(result.data?.documentUrl).toContain("download/document.pdf");
   });
 });
