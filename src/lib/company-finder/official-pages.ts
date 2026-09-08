@@ -101,7 +101,7 @@ export function officialPageFor(
       label: "G.E.MI. — Publicity",
       actionLabel: "Apri il registro ufficiale",
       mode: "external",
-      note: "Apre direttamente la società nel portale ufficiale. Quando il record contiene il link al singolo documento iXBRL, quello viene usato come destinazione primaria.",
+      note: "Apre direttamente la società nel portale ufficiale. Il portale può richiedere un CAPTCHA: la verifica va completata nel browser. Quando il record contiene il link al singolo documento iXBRL, quello viene usato come destinazione primaria.",
     };
   }
 
@@ -112,7 +112,7 @@ export function officialPageFor(
       label: "RDF — Repozytorium Dokumentów Finansowych",
       actionLabel: "Apri il registro ufficiale",
       mode: "external",
-      note: `Cerca KRS ${plKrs}, seleziona il periodo effettivo e quindi “Roczne sprawozdanie finansowe”. Il tool non inventa l'anno del deposito.`,
+      note: `Inserisci KRS ${plKrs} e premi “Szukaj”, seleziona il periodo effettivo, apri “Roczne sprawozdanie finansowe” e usa “Pobierz dokument”. Il tool non inventa l'anno del deposito.`,
     };
   }
 
