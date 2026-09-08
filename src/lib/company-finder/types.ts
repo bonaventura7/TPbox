@@ -28,7 +28,7 @@ export interface SourceStatus {
 
 export interface VatInfo {
   number: string;
-  country: Iso2;
+  country: string;
   valid: boolean | null;
   checkedAt?: string | undefined;
 }
@@ -72,6 +72,7 @@ export interface CompanyProfile {
 
 export interface FinancialYear {
   periodLabel: string;
+  year?: number | undefined;
   revenue?: number | undefined;
   operatingProfit?: number | undefined;
   ebitda?: number | undefined;
@@ -126,7 +127,7 @@ export interface FinancialDocumentSummary {
   id: string;
   year?: number | undefined;
   kind: "ANNUAL_REPORT" | "BALANCE_SHEET" | "AUDIT_REPORT" | "OTHER";
-  format: "pdf" | "xbrl" | "xml" | "zip" | "html" | "unknown";
+  format: "pdf" | "xbrl" | "xml" | "zip" | "html" | "csv" | "unknown";
   availability: DocumentAvailability;
   restriction?: RestrictionCode | undefined;
   title?: string | undefined;
