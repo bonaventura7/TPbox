@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { fetchGermanyPublicBalance } from "../src/lib/company-finder/sources/bilanci/germany-public-balance";
+import {
+  buildGermanyPublicBalanceCsv,
+  fetchGermanyPublicBalance,
+} from "../src/lib/company-finder/sources/bilanci/germany-public-balance";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -49,5 +52,31 @@ describe("German public balance fallback", () => {
     expect(seen).toContain(right);
     expect(seen).not.toContain(wrong);
     expect(result.data?.years[0]?.year).toBe(2024);
+  });
+
+  it("keeps the source URL out of both the user download link and the downloaded CSV", async () => {
+    const sourceUrl = "https://www.unternehmen24.info/Firmeninformationen/Deutschland/Firma/5064652";
+    const page = pageHtml("ORI MARTIN Deutschland GmbH", 2024, "668.995");
+    vi.stubGlobal("fetch", vi.fn(async (input: string | URL) => {
+      expect(String(input)).toBe(sourceUrl);
+      return { ok: true, status: 200, text: async () => page } as unknown as Response;
+    }));
+
+    const download = await buildGermanyPublicBalanceCsv(sourceUrl, "ORI MARTIN Deutschland GmbH");
+    expect(download).toBeDefined();
+    expect(download?.csv).not.toContain("Fonte;");
+    expect(download?.csv).not.toContain(sourceUrl);
+
+    vi.stubGlobal("fetch", vi.fn(async (input: string | URL) => {
+      const url = String(input);
+      if (url.includes("html.duckduckgo.com/html")) {
+        return { ok: true, status: 200, text: async () => `<a href="${sourceUrl}">ORI MARTIN Deutschland GmbH</a>` } as unknown as Response;
+      }
+      return { ok: true, status: 200, text: async () => page } as unknown as Response;
+    }));
+    const result = await fetchGermanyPublicBalance("ORI MARTIN Deutschland GmbH");
+    const downloadUrl = result.data?.documents?.[0]?.downloadUrl ?? "";
+    expect(downloadUrl).not.toContain("sourceUrl=");
+    expect(downloadUrl).not.toContain("unternehmen24.info");
   });
 });
