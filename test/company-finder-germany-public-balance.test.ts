@@ -12,9 +12,8 @@ describe("German public balance fallback", () => {
     const pageHtml = `
       <html><body>
         <h1>ORI MARTIN Deutschland GmbH</h1>
-        <div>Bilanzsumme 2024 668.995 €</div>
-        <div>Bilanzsumme 668.995 €</div>
-        <div>Gewinn 332.338 €</div>
+        <div>Jahresabschluss zum Geschäftsjahr vom 01.01.2024 bis zum 31.12.2024</div>
+        <div>Bilanzsumme 2016 1.333.189 € 2017 1.523.588 € 2024 668.995 €</div>
         <div>Aktiva</div><div>Anlagevermögen 54.534 €</div><div>Sachanlagen 53.648 €</div><div>Umlaufvermögen 609.807 €</div>
         <div>Forderungen und sonstige Vermögensgegenstände 212.253 €</div>
         <div>Kassenbestand, Guthaben bei Kreditinstituten und Schecks 397.554 €</div>
