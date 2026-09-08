@@ -20,7 +20,7 @@ import { searchBg } from "./sources/registry-bg";
 // ---- layer BILANCI (fonti gratuite, lato server) ----
 import { fetchEeFinancials } from "./sources/bilanci/ariregister-ee";
 import { fetchKvkJaarrekeningen, kvkFromInput } from "./sources/bilanci/kvk-nl";
-import { searchUrAccounting } from "./sources/bilanci/ur-de";
+import { searchGermanyAdapter } from "./sources/germany-adapter";
 import { fetchPappersFinancials } from "./sources/bilanci/pappers-fr";
 import { fetchDkRegnskaber, cvrFromVat } from "./sources/bilanci/regnskaber-dk";
 import { fetchCbsoAccounts, cbeFromInput } from "./sources/bilanci/cbso-be";
@@ -278,6 +278,44 @@ const REGISTRY_ROUTES: Record<string, DirectAdapter[]> = {
     },
   ],
 
+  // ---- Germania: adapter combinato (scheda + bilanci) ----
+  DE: [
+    {
+      id: "germany",
+      label: "Registro imprese tedesco — scheda e bilanci",
+      input: "either",
+      run: (ctx, job, s) =>
+        (async () => {
+          if (!ctx.query && !ctx.localVat) {
+            s.state = "skipped";
+            s.detail = "servi la ragione sociale o il numero di registro/IVA";
+            return;
+          }
+          const r = await searchGermanyAdapter({ query: ctx.query, localVat: ctx.localVat });
+          if (r.ok && (r.profile || r.financials)) {
+            s.state = "ok";
+            s.detail = r.financials?.documents?.length
+              ? `${r.financials.documents.length} bilanci individuati`
+              : "scheda societaria e dati di bilancio";
+            if (r.profile) {
+              const profile = r.profile;
+              job.profile = () => profile;
+            }
+            if (r.financials) {
+              const fin = r.financials;
+              job.fin = () => fin;
+            }
+          } else if (r.skipped) {
+            s.state = "skipped";
+            s.detail = r.skipped;
+          } else {
+            s.state = "failed";
+            s.detail = r.error || "fonte non raggiungibile";
+          }
+        })(),
+    },
+  ],
+
   // ---- Estonia: e-Äriregister (autocomplete + scheda + bilanci, senza chiave) ----
   // Un solo adapter combinato (come ch-public per l'UK): una sola lettura della
   // scheda pubblica, che alimenta sia il profilo sia i bilanci.
@@ -437,35 +475,6 @@ const FINANCIALS_ROUTES: Record<
           s.detail = r.data.years.length
             ? `${r.data.years.length} annualità (XBRL)`
             : "nessuna annualità XBRL depositata";
-          job.fin = () => r.data!;
-        } else if (r.skipped) {
-          s.state = "skipped";
-          s.detail = r.skipped;
-        } else {
-          s.state = "failed";
-          s.detail = r.error || "fonte non raggiungibile";
-        }
-      })(),
-  },
-
-  // ---- Germania: Unternehmensregister (Jahresabschlüsse ufficiali gratuiti) ----
-  DE: {
-    id: "fin-ur",
-    label: "Unternehmensregister — Rendiconti (Jahresabschlüsse)",
-    run: (ctx, job, s) =>
-      (async () => {
-        const q = ctx.query || "Siemens"; // fallback: serve SEMPRE un nome
-        if (!ctx.query) {
-          s.state = "skipped";
-          s.detail = "servi la ragione sociale per la ricerca dei rendiconti";
-          return;
-        }
-        const r = await searchUrAccounting(q);
-        if (r.ok && r.data) {
-          s.state = "ok";
-          s.detail = r.data.documentUrl
-            ? r.data.documentTitle || "documento ufficiale gratuito"
-            : r.data.note || "nessun documento";
           job.fin = () => r.data!;
         } else if (r.skipped) {
           s.state = "skipped";

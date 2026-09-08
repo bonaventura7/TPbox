@@ -227,7 +227,7 @@ export async function handleDocumentRequest(request: Request): Promise<Response>
           return serve(document, download);
       } catch {}
     }
-    return serve(first, download);
+    return fail("la fonte ha restituito HTML invece di un documento scaricabile", 502);
   } catch (error) {
     const err = error as { name?: string; message?: string };
     return fail(

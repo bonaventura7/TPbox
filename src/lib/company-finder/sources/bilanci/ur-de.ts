@@ -30,9 +30,15 @@ const LEGAL_FORM_TOKENS = new Set([
 
 type JsonObject = Record<string, unknown>;
 
+export interface GermanyCompanyMatch {
+  name: string;
+  euId?: string;
+}
+
 export interface UrResult {
   ok: boolean;
   data?: Financials;
+  company?: GermanyCompanyMatch;
   error?: string;
   skipped?: string;
 }
@@ -89,7 +95,7 @@ function similarity(a: string, b: string): number {
   return 0;
 }
 
-async function resolveGermanyCompanyName(
+export async function resolveGermanyCompanyName(
   query: string,
   timeoutMs: number,
 ): Promise<{ name: string; euId?: string } | undefined> {
@@ -144,7 +150,9 @@ export async function searchUrAccounting(companyName: string, timeoutMs = 30000)
   const key = env().OPENREGISTER_API_KEY?.trim();
   if (key) {
     const structured = await fetchOpenRegisterFinancials(query, key, Math.min(timeoutMs, 15000));
-    if (structured.ok && structured.data) return structured;
+    if (structured.ok && structured.data) {
+      return { ...structured, company: { name: query } };
+    }
   }
 
   const resolved = await resolveGermanyCompanyName(query, timeoutMs);
@@ -152,7 +160,9 @@ export async function searchUrAccounting(companyName: string, timeoutMs = 30000)
 
   for (const candidate of candidates) {
     const publicBalance = await fetchGermanyPublicBalance(candidate);
-    if (publicBalance.ok && publicBalance.data) return publicBalance;
+    if (publicBalance.ok && publicBalance.data) {
+      return { ...publicBalance, company: resolved ?? { name: candidate } };
+    }
   }
 
   return {
