@@ -22,15 +22,15 @@ jobs:
           cache: npm
 
       - run: npm ci
-      - run: npx prettier --write .
+      - run: npx prettier --write "src/**/*.ts" "src/**/*.tsx" "lib/**/*.ts" "test/**/*.ts" "tests/**/*.ts" "supabase/functions/**/*.ts" "eslint.config.js"
       - name: Commit formatting changes
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           if git diff --quiet; then
-            echo "Repository already formatted."
+            echo "Linted source files already formatted."
             exit 0
           fi
-          git add -A
-          git commit -m "chore: format repository"
+          git add src lib test tests supabase/functions eslint.config.js
+          git commit -m "chore: format linted source files"
           git push
