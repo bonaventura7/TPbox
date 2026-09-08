@@ -27,9 +27,13 @@ export const CONSULT_PAGES: Record<string, { url: string; label: string }> = {
     url: "https://ekrs.ms.gov.pl/rdf/pd/search_df",
     label: "KRS — Repozytorium Dokumentów Finansowych",
   },
+  // Lussemburgo: i comptes annuels sono GRATUITI dal 01/06/2016 (FAQ governo LU,
+  // 09/02/2021) — la pagina arricchisce il fascicolo con tab "deposit" dal
+  // resolver (official-pages.ts); il portale usa Friendly Captcha (verificato
+  // 08/09/2026), quindi il tool tenta prima il recupero server (rcsl-lu.ts).
   LU: {
     url: "https://www.lbr.lu/mjrcs-web-front/",
-    label: "LBR — Registre de commerce et des sociétés",
+    label: "LBR — Registre de commerce et des sociétés (bilanci gratuiti dal 2016)",
   },
   GR: {
     url: "https://publicity.businessportal.gr/",

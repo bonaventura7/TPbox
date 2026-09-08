@@ -15,6 +15,9 @@ export const ALLOWED_DOCUMENT_HOSTS = new Set([
   "publicity.businessportal.gr",
   "www.pappers.fr",
   "pappers.fr",
+  "www.lbr.lu",
+  "lbr.lu",
+  "gd.lu",
 ]);
 const HTTP_ONLY_HOSTS = new Set(["regnskaber.virk.dk"]);
 const MAX_BYTES = 30 * 1024 * 1024;

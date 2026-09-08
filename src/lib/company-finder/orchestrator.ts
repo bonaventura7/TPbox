@@ -23,6 +23,12 @@ import { searchUrAccounting } from "./sources/bilanci/ur-de";
 import { fetchPappersFinancials } from "./sources/bilanci/pappers-fr";
 import { fetchDkRegnskaber, cvrFromVat } from "./sources/bilanci/regnskaber-dk";
 import { fetchCbsoAccounts, cbeFromInput } from "./sources/bilanci/cbso-be";
+import {
+  fetchLuxAccounts,
+  gdLuLinkFromInput,
+  luxRcsFromAnyText,
+  luxRcsFromInput,
+} from "./sources/bilanci/rcsl-lu";
 import { NO_FREE_SOURCE } from "./coverage";
 import { officialPageFor } from "./official-pages";
 import { numericRegistryId, searchGleif } from "./sources/gleif";
@@ -524,6 +530,44 @@ const FINANCIALS_ROUTES: Record<
         if (r.ok && r.data) {
           s.state = "ok";
           s.detail = r.data.documentTitle || "conti annuali";
+          job.fin = () => r.data!;
+        } else if (r.skipped) {
+          s.state = "skipped";
+          s.detail = r.skipped;
+        } else {
+          s.state = "failed";
+          s.detail = r.error || "fonte non raggiungibile";
+        }
+      })(),
+  },
+
+  // ---- Lussemburgo: LBR/RCSL (comptes annuels GRATUITI dal 01/06/2016) ----
+  LU: {
+    id: "fin-rcsl",
+    label: "LBR — RCSL comptes annuels (gratuiti dal 2016)",
+    run: (ctx, job, s) =>
+      (async () => {
+        // 1) RCS (B…) dal campo IVA, o permalink ufficiale incollato dall'utente
+        let rcs = luxRcsFromInput(ctx.localVat);
+        const gdLuUrl = gdLuLinkFromInput(ctx.localVat) || gdLuLinkFromInput(ctx.query);
+        // 2) risoluzione nome → RCS: GLEIF (LEI, gratuito, senza chiave) e,
+        //    in cascata, OpenCorporates (chiave opzionale)
+        if (!rcs && !gdLuUrl && ctx.query) {
+          const gleif = await searchGleif(ctx.query, "LU");
+          rcs = luxRcsFromAnyText(
+            gleif.matches.map((m) => m.registeredAs ?? "").join(" "),
+          );
+          if (!rcs && OC_KEY) {
+            const oc = await ocSearch(ctx.query, "LU", OC_KEY);
+            rcs = luxRcsFromAnyText(oc.data?.registry?.id ?? "");
+          }
+        }
+        const r = await fetchLuxAccounts({ rcs, query: ctx.query, gdLuUrl });
+        if (r.ok && r.data) {
+          s.state = r.data.availability === "DOCUMENT_DOWNLOADABLE" ? "ok" : "skipped";
+          s.detail =
+            r.data.documentTitle ||
+            (rcs ? `RCS ${rcs} — consultazione gratuita sul portale LBR` : "consultazione LBR");
           job.fin = () => r.data!;
         } else if (r.skipped) {
           s.state = "skipped";
