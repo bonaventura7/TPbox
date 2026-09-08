@@ -23,42 +23,17 @@ import type { CompanyProfile, Financials, OfficialPageRef } from "@/lib/company-
 
 const TITLE = "Company Finder";
 const DESCRIPTION =
-  "Identifica una società a partire dalla ragione sociale o dal numero di partita IVA e ne mostra la scheda e i conti annuali. I registri ufficiali sono interrogati dal server quando possibile; per alcuni registri la consultazione avviene direttamente nel browser.";
-
-export const Route = createFileRoute("/tool/company-finder")({
-  head: () => ({
-    meta: [
-      { title: `${TITLE} — Osservatorio Transfer Pricing` },
-      { name: "description", content: DESCRIPTION },
-      { property: "og:title", content: TITLE },
-      { property: "og:description", content: DESCRIPTION },
-    ],
-  }),
-  component: CompanyFinderPage,
-});
-
+  "Identifica una società a partire dalla ragione sociale o dal numero di partita IVA e ne mostra la scheda e i conti annuali.";
 const ANY_COUNTRY = "ANY";
-
-/**
- * Esempi verificati su fonti reali. Dove la ricerca per nome funziona il campo
- * IVA resta vuoto: è il modo in cui il tool va usato davvero.
- */
 const EXAMPLES = [
-  { label: "TOD'S Deutschland GmbH · DE", query: "TOD'S Deutschland GmbH", vat: "", country: "DE" },
   { label: "SIEMENS AG · DE", query: "Siemens AG", vat: "", country: "DE" },
-  { label: "ROLLS-ROYCE plc · UK", query: "Rolls-Royce Holdings plc", vat: "", country: "UK" },
   { label: "TOD'S FRANCE · FR", query: "TOD'S France", vat: "", country: "FR" },
-  { label: "KVK 59581883 · NL (XBRL)", query: "", vat: "59581883", country: "NL" },
-  {
-    label: "PETTINAROLI A/S · DK, CVR 58495913",
-    query: "Pettinaroli A/S Northern Europe",
-    vat: "58495913",
-    country: "DK",
-  },
   { label: "ORLEN · PL, KRS 0000028860", query: "ORLEN", vat: "0000028860", country: "PL" },
+  { label: "AVIO POLSKA · PL", query: "AVIO POLSKA", vat: "", country: "PL" },
   { label: "PROXIMUS · BE0202239951", query: "Proximus", vat: "BE0202239951", country: "BE" },
 ] as const;
 
+const COVERED_COUNTRIES = ALL_COUNTRIES.filter((country) => isCovered(country.iso));
 const NUMBER_FORMAT = new Intl.NumberFormat("it-IT", { maximumFractionDigits: 0 });
 const DATE_FORMAT = new Intl.DateTimeFormat("it-IT", {
   day: "2-digit",
@@ -66,7 +41,14 @@ const DATE_FORMAT = new Intl.DateTimeFormat("it-IT", {
   year: "numeric",
 });
 
-function fmtNum(value: number | undefined, currency: string | undefined): string {
+export const Route = createFileRoute("/tool/company-finder")({
+  head: () => ({
+    meta: [{ title: `${TITLE} — Osservatorio Transfer Pricing` }, { name: "description", content: DESCRIPTION }],
+  }),
+  component: CompanyFinderPage,
+});
+
+function fmtNum(value: number | undefined, currency?: string): string {
   if (value === undefined) return "—";
   const formatted = NUMBER_FORMAT.format(value);
   return currency ? `${formatted} ${currency}` : formatted;
@@ -78,29 +60,15 @@ function fmtDate(value: string | undefined): string | undefined {
   return Number.isNaN(parsed.getTime()) ? value : DATE_FORMAT.format(parsed);
 }
 
-function Chip({
-  tone = "neutral",
-  children,
-}: {
-  tone?: "neutral" | "ok" | "bad";
-  children: React.ReactNode;
-}) {
-  const toneClass =
-    tone === "ok"
-      ? "border-petrol/40 bg-petrol/10 text-petrol"
-      : tone === "bad"
-        ? "border-destructive/40 bg-destructive/10 text-destructive"
-        : "border-border bg-muted text-muted-foreground";
+function Chip({ children }: { children: React.ReactNode }) {
   return (
-    <span
-      className={`inline-flex items-center border px-2 py-0.5 text-[0.7rem] font-medium tracking-wide ${toneClass}`}
-    >
+    <span className="inline-flex items-center border border-border bg-muted px-2 py-0.5 text-[0.7rem] font-medium tracking-wide text-muted-foreground">
       {children}
     </span>
   );
 }
 
-function Field({ label, value }: { label: string; value?: string | null | undefined }) {
+function Field({ label, value }: { label: string; value?: string | null }) {
   if (!value) return null;
   return (
     <div>
@@ -110,278 +78,51 @@ function Field({ label, value }: { label: string; value?: string | null | undefi
   );
 }
 
-/**
- * Unica fonte di verità per il dropdown: un paese compare solo se il tool ne
- * ottiene il bilancio gratuitamente (isCovered in lib/company-finder/coverage).
- */
-const COVERED_COUNTRIES = ALL_COUNTRIES.filter((country) => isCovered(country.iso));
-
 function CompanyCard({ company }: { company: CompanyProfile }) {
   return (
     <section className="border border-border bg-card p-5 sm:p-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-xs tracking-[0.18em] text-petrol uppercase">Scheda società</p>
-          <h3 className="mt-2 font-serif text-2xl leading-tight break-words">
-            {company.country.flag} {company.name ?? "Denominazione non disponibile"}
-          </h3>
-          {company.nameSource ? (
-            <p className="mt-1 text-xs text-muted-foreground">
-              Denominazione registrata: {company.nameSource}
-            </p>
-          ) : null}
-        </div>
-        {company.vat ? (
-          <Chip tone={company.vat.valid ? "ok" : company.vat.valid === false ? "bad" : "neutral"}>
-            {company.vat.valid
-              ? "IVA valida (VIES)"
-              : company.vat.valid === false
-                ? "IVA non valida (VIES)"
-                : "IVA non verificata"}
-          </Chip>
-        ) : null}
-      </div>
-
+      <p className="text-xs tracking-[0.18em] text-petrol uppercase">Scheda società</p>
+      <h3 className="mt-2 font-serif text-2xl leading-tight break-words">
+        {company.country.flag} {company.name ?? "Denominazione non disponibile"}
+      </h3>
+      {company.nameSource ? (
+        <p className="mt-1 text-xs text-muted-foreground">Fonte denominazione: {company.nameSource}</p>
+      ) : null}
       <dl className="mt-6 grid gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
         <Field label="Paese" value={`${company.country.nameIt} (${company.country.iso})`} />
         <Field label="Numero IVA" value={company.vat?.number} />
         <Field
           label="Registro"
-          value={
-            company.registry?.id
-              ? `${company.registry.name} · ${company.registry.id}`
-              : company.registry?.name
-          }
+          value={company.registry?.id ? `${company.registry.name} · ${company.registry.id}` : company.registry?.name}
         />
         <Field label="Forma giuridica" value={company.legalForm} />
         <Field label="Stato" value={company.status} />
         <Field label="Iscritta dal" value={fmtDate(company.registeredSince)} />
-        <Field label="Ultimo aggiornamento registro" value={fmtDate(company.lastRegistryUpdate)} />
+        <Field label="Ultimo aggiornamento" value={fmtDate(company.lastRegistryUpdate)} />
         <Field label="Sede" value={company.address} />
         <Field label="Sito web" value={company.website} />
         <Field label="E-mail" value={company.email} />
         <Field label="Capitale" value={company.capital} />
-        <Field
-          label="Dipendenti"
-          value={
-            company.employees !== undefined ? NUMBER_FORMAT.format(company.employees) : undefined
-          }
-        />
-        {company.identifiers && company.identifiers.length > 0 ? (
+        {company.identifiers?.length ? (
           <div>
-            <dt className="text-xs tracking-wide text-muted-foreground uppercase">
-              Identificativi
-n            </dt>
+            <dt className="text-xs tracking-wide text-muted-foreground uppercase">Identificativi</dt>
             <dd className="mt-1 flex flex-wrap gap-2">
               {company.identifiers.map((identifier) => (
-                <Chip key={identifier.key}>
-                  {identifier.key}: {identifier.value}
-                </Chip>
+                <Chip key={`${identifier.key}-${identifier.value}`}>{identifier.key}: {identifier.value}</Chip>
               ))}
             </dd>
           </div>
         ) : null}
       </dl>
-
-      {company.officers && company.officers.length > 0 ? (
+      {company.activityCodes?.length ? (
         <div className="mt-6 border-t border-border pt-4">
-          <h4 className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-            Organo rappresentativo
-          </h4>
+          <h4 className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Codici attività</h4>
           <div className="mt-2 flex flex-wrap gap-2">
-            {company.officers.map((officer, index) => (
-              <Chip key={`${officer.role}-${index}`}>
-                {officer.name ? `${officer.name} — ` : ""}
-                {officer.role}
+            {company.activityCodes.map((activity) => (
+              <Chip key={activity.code}>
+                {activity.code}{activity.label ? ` · ${activity.label}` : ""}
               </Chip>
             ))}
-          </div>
-          <p className="mt-2 text-xs text-muted-foreground">
-            Nelle API aperte i nomi delle persone fisiche sono oscurati ai sensi del GDPR: vengono
-            mostrati i soli ruoli.
-          </p>
-        </div>
-      ) : null}
-
-      {company.activityCodes && company.activityCodes.length > 0 ? (
-        <div className="mt-6 border-t border-border pt-4">
-          <h4 className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-            Codici attività
-          </h4>
-          <ul className="mt-2 grid gap-1 text-sm sm:grid-cols-2">
-            {company.activityCodes.map((activity, index) => (
-              <li key={`${activity.code}-${index}`} className="flex gap-2">
-                <span className="shrink-0 font-medium text-petrol tabular-nums">
-                  {activity.code}
-                </span>
-                {activity.label ? (
-                  <span className="text-muted-foreground">{activity.label}</span>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-    </section>
-  );
-}
-
-function FinancialsCard({ financials }: { financials: Financials | undefined }) {
-  const hasValues = Boolean(financials?.available && financials.years.length > 0);
-  const showLiabilities = Boolean(
-    financials?.years.some((year) => year.liabilitiesAndEquity !== undefined),
-  );
-
-  return (
-    <section className="border border-border bg-card p-5 sm:p-6">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <p className="text-xs tracking-[0.18em] text-petrol uppercase">Dati di bilancio</p>
-          <h3 className="mt-1 font-serif text-xl">
-            {hasValues ? "Conti annuali depositati" : "Bilancio — disponibilità della fonte"}
-          </h3>
-        </div>
-        {financials?.source ? <Chip>{financials.source}</Chip> : null}
-      </div>
-
-      {hasValues && financials ? (
-        <div className="mt-4 overflow-x-auto">
-          <table className="w-full min-w-[560px] border-collapse text-sm">
-            <thead>
-              <tr className="border-b border-border text-left text-xs tracking-wide text-muted-foreground uppercase">
-                <th scope="col" className="py-2 pr-4">
-                  Periodo
-                </th>
-                <th scope="col" className="py-2 pr-4 text-right">
-                  Ricavi
-                </th>
-                <th scope="col" className="py-2 pr-4 text-right">
-                  Utile operativo
-                </th>
-                <th scope="col" className="py-2 pr-4 text-right">
-                  Utile netto
-                </th>
-                <th scope="col" className="py-2 pr-4 text-right">
-                  Attivo totale
-                </th>
-                <th scope="col" className="py-2 pr-4 text-right">
-                  Patrimonio
-                </th>
-                {showLiabilities ? (
-                  <th scope="col" className="py-2 text-right">
-                    Totale passiva
-                  </th>
-                ) : null}
-              </tr>
-            </thead>
-            <tbody>
-              {financials.years.map((year, index) => (
-                <tr key={`${year.periodLabel}-${index}`} className="border-b border-border/60">
-                  <td className="py-3 pr-4 font-medium">{year.periodLabel}</td>
-                  <td className="py-3 pr-4 text-right tabular-nums">
-                    {fmtNum(year.revenue, year.currency)}
-                  </td>
-                  <td className="py-3 pr-4 text-right tabular-nums">
-                    {fmtNum(year.operatingProfit, year.currency)}
-                  </td>
-                  <td className="py-3 pr-4 text-right tabular-nums">
-                    {fmtNum(year.netIncome, year.currency)}
-                  </td>
-                  <td className="py-3 pr-4 text-right tabular-nums">
-                    {fmtNum(year.totalAssets, year.currency)}
-                  </td>
-                  <td className="py-3 pr-4 text-right tabular-nums">
-                    {fmtNum(year.equity, year.currency)}
-                  </td>
-                  {showLiabilities ? (
-                    <td className="py-3 text-right tabular-nums">
-                      {fmtNum(year.liabilitiesAndEquity, year.currency)}
-                    </td>
-                  ) : null}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {financials.note ? (
-            <p className="mt-3 text-xs text-muted-foreground">{financials.note}</p>
-          ) : null}
-        </div>
-      ) : !financials?.documentUrl ? (
-        <p className="mt-4 max-w-3xl text-sm leading-relaxed text-muted-foreground">
-          {financials?.note ??
-            "Per questo paese i conti annuali non sono esposti da una fonte gratuita: restano consultabili presso il registro nazionale, in alcuni casi a pagamento."}
-        </p>
-      ) : null}
-
-      {financials?.documents && financials.documents.length > 0 ? (
-        <div className="mt-5">
-          <h4 className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-            Bilanci individuati
-          </h4>
-          <ul className="mt-2 divide-y divide-border border border-border">
-            {financials.documents.map((doc) => (
-              <li
-                key={doc.id}
-                className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm"
-              >
-                <span>
-                  <span className="font-medium">{doc.year ?? "Esercizio non indicato"}</span>
-                  <span className="text-muted-foreground">
-                    {" "}
-                    · {DOC_KIND_LABEL[doc.kind]} · {doc.format.toUpperCase()}
-                  </span>
-                </span>
-                {doc.availability === "DOCUMENT_DOWNLOADABLE" && doc.downloadUrl ? (
-                  <a
-                    href={doc.downloadUrl}
-                    download
-                    className="border border-border bg-muted px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-                  >
-                    Scarica bilancio
-                  </a>
-                ) : (
-                  <Chip>
-                    {doc.restriction ? RESTRICTION_LABEL[doc.restriction] : "Solo consultazione"}
-                  </Chip>
-                )}
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-
-      {financials?.availability === "REGISTRY_ONLY" && financials.restriction ? (
-        <p className="mt-4 max-w-3xl border border-border bg-muted/40 p-4 text-sm leading-relaxed text-muted-foreground">
-          <span className="font-medium text-foreground">
-            {RESTRICTION_LABEL[financials.restriction]}.
-          </span>{" "}
-          Il download non è eseguibile dal server: si completa nella pagina del registro ufficiale,
-          senza aggirare i controlli della fonte.
-        </p>
-      ) : null}
-
-      {financials?.documentUrl ? (
-        <div className="mt-5 border-t border-border pt-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h4 className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                Documento ufficiale del bilancio
-              </h4>
-              {financials.documentTitle ? (
-                <p className="mt-1 text-sm font-medium">{financials.documentTitle}</p>
-              ) : null}
-              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                Il documento viene recuperato dal backend TPbox e restituito tramite un endpoint
-                interno. Nessun iframe e nessun URL del registro viene esposto nel browser.
-              </p>
-            </div>
-            <a
-              href={financials.documentUrl}
-              download
-              className="inline-flex min-h-11 items-center border border-border bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90"
-            >
-              Scarica documento
-            </a>
           </div>
         </div>
       ) : null}
@@ -397,71 +138,127 @@ const DOC_KIND_LABEL: Record<string, string> = {
 };
 
 const RESTRICTION_LABEL: Record<string, string> = {
-  CAPTCHA_REQUIRED: "Il registro richiede una verifica anti-bot",
-  AUTH_REQUIRED: "Il registro richiede autenticazione",
-  SESSION_BOUND: "I riferimenti del registro sono legati alla sessione dell'utente",
-  SOURCE_RESTRICTION: "La fonte non consente il recupero automatico",
-  RATE_LIMITED: "Il registro ha limitato temporaneamente le richieste",
-  SOURCE_UNAVAILABLE: "Fonte ufficiale momentaneamente non raggiungibile",
-  INVALID_DOCUMENT: "Documento non valido restituito dalla fonte",
+  CAPTCHA_REQUIRED: "Verifica anti-bot richiesta",
+  AUTH_REQUIRED: "Autenticazione richiesta",
+  SESSION_BOUND: "Sessione del registro richiesta",
+  SOURCE_RESTRICTION: "Recupero automatico non consentito",
+  RATE_LIMITED: "Fonte temporaneamente limitata",
+  SOURCE_UNAVAILABLE: "Fonte non disponibile",
+  INVALID_DOCUMENT: "Documento non valido",
 };
 
-function OfficialPageCard({ page }: { page: OfficialPageRef }) {
-  const browserOnly =
-    page.mode === "external" ||
-    /lbr\.lu|businessportal\.gr|rdf-przegladarka\.ms\.gov\.pl|e-beszamolo\.im\.gov\.hu/i.test(
-      page.url,
-    );
-  const actionLabel =
-    page.actionLabel ?? (browserOnly ? "Apri il registro ufficiale" : "Apri in una nuova scheda");
-
+function FinancialsCard({ financials }: { financials?: Financials }) {
+  const hasValues = Boolean(financials?.available && financials.years.length);
   return (
     <section className="border border-border bg-card p-5 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <p className="text-xs tracking-[0.18em] text-petrol uppercase">Consultazione ufficiale</p>
+          <p className="text-xs tracking-[0.18em] text-petrol uppercase">Bilanci</p>
+          <h3 className="mt-1 font-serif text-xl">
+            {hasValues ? "Conti annuali depositati" : "Disponibilità documentale"}
+          </h3>
+        </div>
+        {financials?.source ? <Chip>{financials.source}</Chip> : null}
+      </div>
+
+      {hasValues && financials ? (
+        <div className="mt-4 overflow-x-auto">
+          <table className="w-full min-w-[620px] border-collapse text-sm">
+            <thead>
+              <tr className="border-b border-border text-left text-xs tracking-wide text-muted-foreground uppercase">
+                <th className="py-2 pr-4">Periodo</th>
+                <th className="py-2 pr-4 text-right">Ricavi</th>
+                <th className="py-2 pr-4 text-right">Utile netto</th>
+                <th className="py-2 pr-4 text-right">Attivo totale</th>
+                <th className="py-2 text-right">Patrimonio</th>
+              </tr>
+            </thead>
+            <tbody>
+              {financials.years.map((year, index) => (
+                <tr key={`${year.periodLabel}-${index}`} className="border-b border-border/60">
+                  <td className="py-3 pr-4 font-medium">{year.periodLabel}</td>
+                  <td className="py-3 pr-4 text-right tabular-nums">{fmtNum(year.revenue, year.currency)}</td>
+                  <td className="py-3 pr-4 text-right tabular-nums">{fmtNum(year.netIncome, year.currency)}</td>
+                  <td className="py-3 pr-4 text-right tabular-nums">{fmtNum(year.totalAssets, year.currency)}</td>
+                  <td className="py-3 text-right tabular-nums">{fmtNum(year.equity, year.currency)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
+
+      {financials?.note ? <p className="mt-3 text-xs leading-relaxed text-muted-foreground">{financials.note}</p> : null}
+
+      {financials?.documents?.length ? (
+        <div className="mt-5">
+          <h4 className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Documenti finanziari</h4>
+          <ul className="mt-2 divide-y divide-border border border-border">
+            {financials.documents.map((doc) => (
+              <li key={doc.id} className="flex flex-wrap items-center justify-between gap-3 px-3 py-3 text-sm">
+                <span>
+                  <span className="font-medium">{doc.year ?? "Esercizio"}</span>
+                  <span className="text-muted-foreground"> · {DOC_KIND_LABEL[doc.kind] ?? doc.kind} · {doc.format.toUpperCase()}</span>
+                </span>
+                {doc.availability === "DOCUMENT_DOWNLOADABLE" && doc.downloadUrl ? (
+                  <a
+                    href={doc.downloadUrl}
+                    download
+                    className="border border-border bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground"
+                  >
+                    Scarica bilancio
+                  </a>
+                ) : (
+                  <Chip>{doc.restriction ? RESTRICTION_LABEL[doc.restriction] : "Solo consultazione"}</Chip>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {financials?.documentUrl ? (
+        <div className="mt-5 border-t border-border pt-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h4 className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Documento principale</h4>
+            <p className="mt-1 text-sm font-medium">{financials.documentTitle ?? "Bilancio"}</p>
+          </div>
+          <a
+            href={financials.documentUrl}
+            download
+            className="border border-border bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+          >
+            Scarica documento
+          </a>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function OfficialPageCard({ page }: { page: OfficialPageRef }) {
+  return (
+    <section className="border border-border bg-card p-5 sm:p-6">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-xs tracking-[0.18em] text-petrol uppercase">Destinazione documentale</p>
           <h3 className="mt-1 font-serif text-xl">{page.label}</h3>
         </div>
         <a
           href={page.url}
           target="_blank"
-          rel="noreferrer noopener"
-          className="border border-border bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+          rel="noopener noreferrer"
+          className="border border-border bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground"
         >
-          {actionLabel}
+          {page.actionLabel ?? "Apri i documenti"}
         </a>
       </div>
-      <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">{page.note}</p>
-      {browserOnly ? (
-        <div className="mt-4 border border-border bg-muted/40 p-4 text-sm leading-relaxed text-muted-foreground">
-          {page.instructions && page.instructions.length > 0 ? (
-            <ol className="ml-4 list-decimal space-y-1">
-              {page.instructions.map((step) => (
-                <li key={step}>{step}</li>
-              ))}
-            </ol>
-          ) : null}
-          <p className={page.instructions?.length ? "mt-3" : undefined}>
-            La consultazione viene eseguita nel portale ufficiale in una nuova scheda. Eventuali
-            login, CAPTCHA o verifiche del browser devono essere completati manualmente sul sito del
-            registro.
-          </p>
-        </div>
-      ) : (
-        <>
-          <iframe
-            title={`Registro ufficiale — ${page.label}`}
-            src={page.url}
-            className="mt-4 h-[680px] w-full border border-border bg-white"
-            referrerPolicy="no-referrer"
-          />
-          <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-            Pagina del registro ufficiale, caricata dal tuo browser e mostrata senza modifiche. A
-            differenza del resto della scheda, questo riquadro è l&apos;unico punto in cui il
-            browser contatta direttamente il sito del registro.
-          </p>
-        </>
-      )}
+      <p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted-foreground">{page.note}</p>
+      {page.instructions?.length ? (
+        <ol className="mt-4 ml-5 list-decimal space-y-1 text-sm text-muted-foreground">
+          {page.instructions.map((step) => <li key={step}>{step}</li>)}
+        </ol>
+      ) : null}
     </section>
   );
 }
@@ -469,31 +266,24 @@ function OfficialPageCard({ page }: { page: OfficialPageRef }) {
 function CompanyFinderPage() {
   const [query, setQuery] = useState("");
   const [vat, setVat] = useState("");
-  const [country, setCountry] = useState<string>(ANY_COUNTRY);
+  const [country, setCountry] = useState(ANY_COUNTRY);
   const [touched, setTouched] = useState(false);
-
   const run = useServerFn(findCompany);
   const mutation = useMutation({
     mutationFn: (input: { query: string; vat: string; country: string }) => run({ data: input }),
   });
-
-  const missingInput = touched && query.trim().length === 0 && vat.trim().length === 0;
   const result = mutation.data;
+  const missingInput = touched && !query.trim() && !vat.trim();
 
   function search(nextQuery: string, nextVat: string, nextCountry: string) {
     setTouched(true);
-    if (nextQuery.trim().length === 0 && nextVat.trim().length === 0) return;
-    mutation.mutate({
-      query: nextQuery,
-      vat: nextVat,
-      country: nextCountry === ANY_COUNTRY ? "" : nextCountry,
-    });
+    if (!nextQuery.trim() && !nextVat.trim()) return;
+    mutation.mutate({ query: nextQuery, vat: nextVat, country: nextCountry === ANY_COUNTRY ? "" : nextCountry });
   }
 
   return (
     <>
       <PageHeader eyebrow="Tool" title={TITLE} intro={DESCRIPTION} />
-
       <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6 sm:py-14">
         <form
           className="border border-border bg-card p-5 sm:p-6"
@@ -505,23 +295,71 @@ function CompanyFinderPage() {
         >
           <h2 className="font-serif text-xl">Ricerca società</h2>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            <div className="min-w-0 sm:col-span-2">
-              <Label htmlFor="company-query">
-                Ragione sociale <span className="text-muted-foreground">(facoltativa)</span>
-              </Label>
-              <Input
-                id="company-query"
-                value={query}
-                autoComplete="off"
-                aria-invalid={missingInput}
-                aria-describedby={missingInput ? "company-input-error" : undefined}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Es. Siemens AG oppure ORLEN SPÓŁKA AKCYJNA"
-                className="mt-2 min-h-11"
-              />
-            </div> 
+            <div className="sm:col-span-2">
+              <Label htmlFor="company-query">Ragione sociale <span className="text-muted-foreground">(facoltativa)</span></Label>
+              <Input id="company-query" value={query} onChange={(event) => setQuery(event.target.value)} autoComplete="off" className="mt-2 min-h-11" placeholder="Es. AVIO POLSKA, Siemens AG, TOD'S France" />
+            </div>
+            <div>
+              <Label htmlFor="company-vat">Partita IVA o numero di registro <span className="text-muted-foreground">(facoltativa)</span></Label>
+              <Input id="company-vat" value={vat} onChange={(event) => setVat(event.target.value)} autoComplete="off" className="mt-2 min-h-11" placeholder="Es. PL7740001454 o KRS 0000002594" />
+            </div>
+            <div>
+              <Label htmlFor="company-country">Paese <span className="text-muted-foreground">(facoltativo)</span></Label>
+              <Select value={country} onValueChange={setCountry}>
+                <SelectTrigger id="company-country" className="mt-2 min-h-11 w-full"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ANY_COUNTRY}>Qualsiasi paese</SelectItem>
+                  {COVERED_COUNTRIES.map((option) => <SelectItem key={option.iso} value={option.iso}>{option.flag} {option.nameIt}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          {missingInput ? <p role="alert" className="mt-3 text-xs text-destructive">Indica almeno la ragione sociale oppure il numero di registro/IVA.</p> : null}
+          <div className="mt-5 flex flex-wrap gap-3">
+            <Button type="submit" className="min-h-11" disabled={mutation.isPending}>
+              <Search className="size-4" aria-hidden="true" />
+              {mutation.isPending ? "Ricerca in corso…" : "Cerca società"}
+            </Button>
+          </div>
+          <div className="mt-4 border-t border-border pt-4">
+            <p className="text-xs font-medium text-muted-foreground">Esempi pronti</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {EXAMPLES.map((example) => (
+                <button
+                  key={example.label}
+                  type="button"
+                  className="cursor-pointer border border-border bg-muted px-2 py-1 text-[0.7rem] font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                  onClick={() => {
+                    setQuery(example.query);
+                    setVat(example.vat);
+                    setCountry(example.country);
+                    search(example.query, example.vat, example.country);
+                  }}
+                >
+                  {example.label}
+                </button>
+              ))}
+            </div>
           </div>
         </form>
+
+        <div aria-live="polite" className="mt-6 space-y-6">
+          {mutation.isPending ? (
+            <div className="border border-border bg-card p-5 sm:p-6">
+              <p className="font-serif text-lg">Consultazione dei registri in corso…</p>
+              <div className="mt-4 space-y-2"><Skeleton className="h-4 w-full" /><Skeleton className="h-4 w-4/5" /><Skeleton className="h-4 w-2/3" /></div>
+            </div>
+          ) : null}
+          {mutation.isError ? <div className="border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">Impossibile completare la ricerca. Riprova.</div> : null}
+          {result ? (
+            <>
+              {result.warnings.map((warning, index) => <div key={index} className="border border-gold/50 bg-gold/10 px-4 py-3 text-sm"><span className="font-semibold">Attenzione: </span>{warning}</div>)}
+              {result.company ? <CompanyCard company={result.company} /> : null}
+              {result.found ? <FinancialsCard financials={result.financials} /> : null}
+              {result.officialPage ? <OfficialPageCard page={result.officialPage} /> : null}
+            </>
+          ) : null}
+        </div>
       </div>
     </>
   );
