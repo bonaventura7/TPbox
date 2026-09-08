@@ -1,8 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { buildGermanyPublicBalanceCsv } from "@/lib/company-finder/sources/bilanci/germany-public-balance";
-
-const ALLOWED_HOSTS = new Set(["www.unternehmen24.info", "unternehmen24.info"]);
+import { downloadGermanyPublicBalanceCsv } from "@/lib/company-finder/sources/bilanci/germany-public-balance";
 
 function safeFilename(value: string): string {
   return value
@@ -18,27 +16,21 @@ export const Route = createFileRoute("/api/company-finder/germany-public-balance
     handlers: {
       GET: async ({ request }) => {
         const url = new URL(request.url);
-        const sourceUrl = url.searchParams.get("sourceUrl")?.trim();
         const company = url.searchParams.get("company")?.trim();
+        const yearParam = url.searchParams.get("year")?.trim();
 
-        if (!sourceUrl || !company) {
-          return Response.json({ error: "company/sourceUrl mancanti" }, { status: 400 });
+        if (!company) {
+          return Response.json({ error: "company mancante" }, { status: 400 });
         }
 
-        let source: URL;
-        try {
-          source = new URL(sourceUrl);
-        } catch {
-          return Response.json({ error: "sourceUrl non valido" }, { status: 400 });
+        const year = yearParam ? Number(yearParam) : undefined;
+        if (yearParam && (!Number.isInteger(year) || year < 2000 || year > 2100)) {
+          return Response.json({ error: "anno non valido" }, { status: 400 });
         }
 
-        if (source.protocol !== "https:" || !ALLOWED_HOSTS.has(source.hostname.toLowerCase())) {
-          return Response.json({ error: "fonte non autorizzata" }, { status: 403 });
-        }
-
-        const result = await buildGermanyPublicBalanceCsv(source.toString(), company);
+        const result = await downloadGermanyPublicBalanceCsv(company, year);
         if (!result) {
-          return Response.json({ error: "bilancio non disponibile dalla fonte pubblica" }, { status: 404 });
+          return Response.json({ error: "bilancio non disponibile" }, { status: 404 });
         }
 
         return new Response(result.csv, {
