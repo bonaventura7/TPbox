@@ -5,7 +5,7 @@ import { searchUrAccounting } from "../src/lib/company-finder/sources/bilanci/ur
 afterEach(() => vi.unstubAllGlobals());
 
 describe("Unternehmensregister current search contract", () => {
-  it("bootstraps the registry session, carries cookies, and resolves the publication to a PDF", async () => {
+  it("bootstraps the registry session and returns the official publication reference", async () => {
     const requests: Array<{ url: string; cookie?: string }> = [];
     vi.stubGlobal(
       "fetch",
@@ -48,30 +48,6 @@ describe("Unternehmensregister current search contract", () => {
           } as unknown as Response;
         }
 
-        if (url.includes("/de/veroeffentlichung?payload=abc123")) {
-          expect(headers.get("cookie")).toContain("URINIT=init-123");
-          expect(headers.get("cookie")).toContain("URSESSION=session-123");
-          expect(headers.get("cookie")).toContain("URSEARCH=search-456");
-          return {
-            ok: true,
-            status: 200,
-            headers: new Headers({ "content-type": "text/html" }),
-            text: async () => '<html><body><a href="/download/document.pdf">PDF</a></body></html>',
-          } as unknown as Response;
-        }
-
-        if (url.includes("/download/document.pdf")) {
-          expect(headers.get("cookie")).toContain("URINIT=init-123");
-          expect(headers.get("cookie")).toContain("URSESSION=session-123");
-          expect(headers.get("cookie")).toContain("URSEARCH=search-456");
-          return {
-            ok: true,
-            status: 200,
-            url: "https://www.unternehmensregister.de/download/document.pdf?sig=signed",
-            headers: new Headers({ "content-type": "application/pdf" }),
-          } as unknown as Response;
-        }
-
         throw new Error(`unexpected URL ${url}`);
       }),
     );
@@ -80,8 +56,7 @@ describe("Unternehmensregister current search contract", () => {
 
     expect(requests.some((r) => r.url.includes("areas=all"))).toBe(true);
     expect(result.data?.available).toBe(true);
-    const wrapperUrl = result.data?.documentUrl ?? "";
-    expect(decodeURIComponent(wrapperUrl)).toContain("download/document.pdf");
-    expect(wrapperUrl).toContain("/api/company-finder/document?url=");
+    expect(result.data?.documentUrl).toContain("/api/company-finder/document?url=");
+    expect(result.data?.documentUrl).toContain("veroeffentlichung");
   });
 });
