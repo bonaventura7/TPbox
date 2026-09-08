@@ -1,89 +1,29 @@
 import type { Financials } from "../../types";
 
 const API_BASE = "https://api.openregister.de";
-
 type JsonObject = Record<string, unknown>;
-
 type OpenRegisterCompany = { company_id?: string; name?: string; country?: string };
 type Indicator = JsonObject & { date?: string };
-
+type OpenRegisterReport = { report_id?: string; report_start_date?: string; report_end_date?: string; aktiva?: JsonObject; passiva?: JsonObject; guv?: JsonObject };
 export interface OpenRegisterResult { ok: boolean; data?: Financials; error?: string; skipped?: string }
-
-function asObject(value: unknown): JsonObject | undefined {
-  return value && typeof value === "object" && !Array.isArray(value) ? (value as JsonObject) : undefined;
-}
+export interface OpenRegisterReportResult { ok: boolean; html?: string; filename?: string; error?: string; skipped?: string }
+function asObject(value: unknown): JsonObject | undefined { return value && typeof value === "object" && !Array.isArray(value) ? (value as JsonObject) : undefined; }
 function text(value: unknown): string | undefined { return typeof value === "string" && value.trim() ? value.trim() : undefined; }
-function numberValue(value: unknown): number | undefined {
-  if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (typeof value !== "string") return undefined;
-  const normalized = value.trim().replace(/\s/g, "");
-  if (!normalized) return undefined;
-  const european = /^-?[\d.]+,\d+$/.test(normalized);
-  const cleaned = european ? normalized.replace(/\./g, "").replace(",", ".") : normalized.replace(/,/g, "");
-  const parsed = Number(cleaned.replace(/[^0-9.-]/g, ""));
-  return Number.isFinite(parsed) ? parsed : undefined;
-}
+function numberValue(value: unknown): number | undefined { if (typeof value === "number" && Number.isFinite(value)) return value; if (typeof value !== "string") return undefined; const normalized = value.trim().replace(/\s/g, ""); if (!normalized) return undefined; const european = /^-?[\d.]+,\d+$/.test(normalized); const cleaned = european ? normalized.replace(/\./g, "").replace(",", ".") : normalized.replace(/,/g, ""); const parsed = Number(cleaned.replace(/[^0-9.-]/g, "")); return Number.isFinite(parsed) ? parsed : undefined; }
 function normalizeName(value: string): string { return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/gi, "").toLowerCase(); }
-function similarity(a: string, b: string): number {
-  const x = normalizeName(a), y = normalizeName(b);
-  if (!x || !y) return 0;
-  if (x === y) return 1;
-  if (x.startsWith(y) || y.startsWith(x)) return 0.9;
-  if (x.includes(y) || y.includes(x)) return 0.75;
-  return 0;
-}
-async function getJson(url: string, apiKey: string, signal: AbortSignal): Promise<unknown> {
-  const response = await fetch(url, { headers: { Accept: "application/json", Authorization: `Bearer ${apiKey}`, "User-Agent": "TPbox-Company-Finder/1.0" }, signal, cache: "no-store" });
-  if (!response.ok) throw new Error(`OpenRegister HTTP ${response.status}`);
-  return response.json();
-}
-async function searchCompany(query: string, apiKey: string, signal: AbortSignal): Promise<OpenRegisterCompany | undefined> {
-  const payload = asObject(await getJson(`${API_BASE}/v1/autocomplete/company?${new URLSearchParams({ query })}`, apiKey, signal));
-  const results = Array.isArray(payload?.results) ? payload.results : [];
-  let best: OpenRegisterCompany | undefined;
-  let bestScore = -1;
-  for (const row of results.map(asObject).filter(Boolean) as JsonObject[]) {
-    const candidate = row as OpenRegisterCompany;
-    if (candidate.country && candidate.country.toUpperCase() !== "DE") continue;
-    const score = similarity(candidate.name ?? "", query);
-    if (score > bestScore) { best = candidate; bestScore = score; }
-  }
-  return best;
-}
-function indicatorYear(dateValue: unknown): number | undefined { const date = text(dateValue); const match = date?.match(/(20\d{2})/); return match ? Number(match[1]) : undefined; }
+function similarity(a: string, b: string): number { const x = normalizeName(a), y = normalizeName(b); if (!x || !y) return 0; if (x === y) return 1; if (x.startsWith(y) || y.startsWith(x)) return 0.9; if (x.includes(y) || y.includes(x)) return 0.75; return 0; }
+async function getJson(url: string, apiKey: string, signal: AbortSignal): Promise<unknown> { const response = await fetch(url, { headers: { Accept: "application/json", Authorization: `Bearer ${apiKey}`, "User-Agent": "TPbox-Company-Finder/1.0" }, signal, cache: "no-store" }); if (!response.ok) throw new Error(`provider HTTP ${response.status}`); return response.json(); }
+async function searchCompany(query: string, apiKey: string, signal: AbortSignal): Promise<OpenRegisterCompany | undefined> { const payload = asObject(await getJson(`${API_BASE}/v1/autocomplete/company?${new URLSearchParams({ query })}`, apiKey, signal)); const results = Array.isArray(payload?.results) ? payload.results : []; let best: OpenRegisterCompany | undefined; let bestScore = -1; for (const row of results.map(asObject).filter(Boolean) as JsonObject[]) { const candidate = row as OpenRegisterCompany; if (candidate.country && candidate.country.toUpperCase() !== "DE") continue; const score = similarity(candidate.name ?? "", query); if (score > bestScore) { best = candidate; bestScore = score; } } return best; }
+function indicatorYear(value: unknown): number | undefined { const date = text(value); const match = date?.match(/(20\d{2})/); return match ? Number(match[1]) : undefined; }
 function indicatorNumber(indicator: Indicator, key: string): number | undefined { return numberValue(indicator[key]); }
-function mapFinancials(company: OpenRegisterCompany, payload: unknown): Financials | undefined {
-  const root = asObject(payload);
-  const indicators = Array.isArray(root?.indicators) ? (root.indicators.map(asObject).filter(Boolean) as Indicator[]) : [];
-  if (!indicators.length) return undefined;
-  const years = indicators.map((indicator) => {
-    const date = text(indicator.date); const year = indicatorYear(date);
-    const balanceSheetTotal = indicatorNumber(indicator, "balance_sheet_total");
-    const equity = indicatorNumber(indicator, "equity"); const liabilities = indicatorNumber(indicator, "liabilities");
-    return {
-      periodLabel: year ? `Esercizio chiuso al ${date ?? year}` : `Esercizio ${date ?? "non indicato"}`,
-      year, currency: "EUR",
-      revenue: indicatorNumber(indicator, "revenue"), operatingProfit: indicatorNumber(indicator, "ebit"),
-      ebitda: indicatorNumber(indicator, "ebitda"), netIncome: indicatorNumber(indicator, "net_income"),
-      totalAssets: balanceSheetTotal, equity,
-      liabilitiesAndEquity: balanceSheetTotal ?? (equity !== undefined && liabilities !== undefined ? equity + liabilities : undefined),
-    };
-  }).filter((row) => row.revenue !== undefined || row.operatingProfit !== undefined || row.ebitda !== undefined || row.netIncome !== undefined || row.totalAssets !== undefined || row.equity !== undefined || row.liabilitiesAndEquity !== undefined).sort((a, b) => (b.year ?? 0) - (a.year ?? 0));
-  if (!years.length) return undefined;
-  return { available: true, years, currency: "EUR", source: "OpenRegister / Bundesanzeiger (DE)", note: `Financials strutturati per ${company.name ?? "società tedesca"}, provenienti da dati ufficiali pubblicati.` };
-}
-export async function fetchOpenRegisterFinancials(query: string, apiKey: string | undefined, timeoutMs = 15000): Promise<OpenRegisterResult> {
-  if (!apiKey?.trim()) return { ok: false, skipped: "OPENREGISTER_API_KEY non configurata" };
-  const ctrl = new AbortController(); const timer = setTimeout(() => ctrl.abort(), timeoutMs);
-  try {
-    const company = await searchCompany(query, apiKey.trim(), ctrl.signal);
-    if (!company?.company_id) return { ok: false, error: "OpenRegister: società tedesca non trovata" };
-    const details = await getJson(`${API_BASE}/v1/company/${encodeURIComponent(company.company_id)}/financials`, apiKey.trim(), ctrl.signal);
-    const financials = mapFinancials(company, details);
-    if (!financials) return { ok: false, error: "OpenRegister: financials non disponibili per la società selezionata" };
-    return { ok: true, data: financials };
-  } catch (e) {
-    const err = e as { name?: string; message?: string } | undefined;
-    return { ok: false, error: `OpenRegister: ${err?.name === "AbortError" ? "timeout" : err?.message ?? "errore"}` };
-  } finally { clearTimeout(timer); }
-}
+function esc(value: string): string { return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;"); }
+function reportRows(section: unknown): JsonObject[] { const root = asObject(section); return Array.isArray(root?.rows) ? (root.rows.map(asObject).filter(Boolean) as JsonObject[]) : []; }
+function rowHtml(row: JsonObject, depth = 0): string { const name = text(row.formatted_name) ?? text(row.name) ?? ""; const current = row.current_value; const previous = row.previous_value; const currentText = typeof current === "number" ? new Intl.NumberFormat("de-DE").format(current) : text(current) ?? ""; const previousText = typeof previous === "number" ? new Intl.NumberFormat("de-DE").format(previous) : text(previous) ?? ""; const children = Array.isArray(row.children) ? row.children.map(asObject).filter(Boolean).map((child) => rowHtml(child as JsonObject, depth + 1)).join("") : ""; return `<tr><td style="padding-left:${12 + depth * 18}px">${esc(name)}</td><td class="num">${esc(currentText)}</td><td class="num">${esc(previousText)}</td></tr>${children}`; }
+function section(title: string, data: unknown): string { const rows = reportRows(data); if (!rows.length) return ""; return `<h2>${esc(title)}</h2><table><thead><tr><th>Voce</th><th>Periodo</th><th>Periodo precedente</th></tr></thead><tbody>${rows.map((row) => rowHtml(row)).join("")}</tbody></table>`; }
+function renderReport(companyName: string, report: OpenRegisterReport, currency = "EUR"): string { const end = text(report.report_end_date) ?? ""; return `<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Bilancio annuale - ${esc(companyName)}</title><style>body{font-family:Arial,sans-serif;margin:40px;color:#15242b;line-height:1.4}h1{font-size:26px;margin:0 0 6px}h2{font-size:18px;margin:28px 0 8px;border-bottom:1px solid #ccd5d8;padding-bottom:5px}p.meta{color:#5e6c73;font-size:13px;margin:0 0 22px}table{border-collapse:collapse;width:100%;font-size:12px}th,td{border-bottom:1px solid #e1e6e8;padding:6px 8px;text-align:left;vertical-align:top}th{background:#f3f5f6;font-weight:600}.num{text-align:right;white-space:nowrap}footer{margin-top:30px;font-size:11px;color:#69777d}</style></head><body><h1>Bilancio annuale</h1><p class="meta"><strong>${esc(companyName)}</strong> · esercizio chiuso al ${esc(end)} · ${esc(currency)}</p>${section("Attivo", report.aktiva)}${section("Passivo", report.passiva)}${section("Conto economico", report.guv)}<footer>Documento finanziario fornito da TPbox.</footer></body></html>`; }
+async function loadFinancialPayload(query: string, apiKey: string, signal: AbortSignal): Promise<{ company: OpenRegisterCompany; payload: JsonObject } | { error: string }> { const company = await searchCompany(query, apiKey, signal); if (!company?.company_id) return { error: "società tedesca non trovata" }; return { company, payload: asObject(await getJson(`${API_BASE}/v1/company/${encodeURIComponent(company.company_id)}/financials`, apiKey, signal)) ?? {} }; }
+function envKey(): string | undefined { return (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.OPENREGISTER_API_KEY?.trim(); }
+function buildDocuments(companyName: string, years: Array<{ year?: number }>) { return years.filter((y) => Number.isInteger(y.year)).map((y) => ({ id: `de-${companyName}-${y.year}`, year: y.year, kind: "ANNUAL_REPORT" as const, format: "html" as const, availability: "DOCUMENT_DOWNLOADABLE" as const, title: `Bilancio annuale ${y.year}`, downloadUrl: `/api/company-finder/document?company=${encodeURIComponent(companyName)}&year=${y.year}` })); }
+function mapFinancials(company: OpenRegisterCompany, payload: unknown): Financials | undefined { const root = asObject(payload); const indicators = Array.isArray(root?.indicators) ? root.indicators.map(asObject).filter(Boolean) as Indicator[] : []; if (!indicators.length) return undefined; const years = indicators.map((indicator) => { const date = text(indicator.date); const year = indicatorYear(date); const total = indicatorNumber(indicator, "balance_sheet_total"); const equity = indicatorNumber(indicator, "equity"); const liabilities = indicatorNumber(indicator, "liabilities"); return { periodLabel: year ? `Esercizio chiuso al ${date ?? year}` : `Esercizio ${date ?? "non indicato"}`, year, currency: "EUR", revenue: indicatorNumber(indicator, "revenue"), operatingProfit: indicatorNumber(indicator, "ebit"), ebitda: indicatorNumber(indicator, "ebitda"), netIncome: indicatorNumber(indicator, "net_income"), totalAssets: total, equity, liabilitiesAndEquity: total ?? (equity !== undefined && liabilities !== undefined ? equity + liabilities : undefined) }; }).filter((row) => row.revenue !== undefined || row.operatingProfit !== undefined || row.ebitda !== undefined || row.netIncome !== undefined || row.totalAssets !== undefined || row.equity !== undefined || row.liabilitiesAndEquity !== undefined).sort((a, b) => (b.year ?? 0) - (a.year ?? 0)); if (!years.length) return undefined; const documents = buildDocuments(company.name ?? "società tedesca", years); return { available: true, years, currency: "EUR", source: "Bilancio annuale", documentUrl: documents[0]?.downloadUrl, documentTitle: documents[0]?.title, availability: documents.length ? "DOCUMENT_DOWNLOADABLE" : undefined, documents, note: `Bilanci annuali disponibili per ${company.name ?? "la società selezionata"}.` }; }
+export async function fetchOpenRegisterFinancials(query: string, apiKey: string | undefined, timeoutMs = 15000): Promise<OpenRegisterResult> { if (!apiKey?.trim()) return { ok: false, skipped: "provider non configurato" }; const ctrl = new AbortController(); const timer = setTimeout(() => ctrl.abort(), timeoutMs); try { const loaded = await loadFinancialPayload(query, apiKey.trim(), ctrl.signal); if ("error" in loaded) return { ok: false, error: loaded.error }; const financials = mapFinancials(loaded.company, loaded.payload); if (!financials) return { ok: false, error: "bilanci annuali non disponibili" }; return { ok: true, data: financials }; } catch (e) { const err = e as { name?: string; message?: string } | undefined; return { ok: false, error: `financial data: ${err?.name === "AbortError" ? "timeout" : err?.message ?? "errore"}` }; } finally { clearTimeout(timer); } }
+export async function fetchOpenRegisterAnnualReport(query: string, year: number, timeoutMs = 20000): Promise<OpenRegisterReportResult> { const apiKey = envKey(); if (!apiKey) return { ok: false, skipped: "provider non configurato" }; const ctrl = new AbortController(); const timer = setTimeout(() => ctrl.abort(), timeoutMs); try { const loaded = await loadFinancialPayload(query, apiKey, ctrl.signal); if ("error" in loaded) return { ok: false, error: loaded.error }; const reports = Array.isArray(loaded.payload.reports) ? loaded.payload.reports.map(asObject).filter(Boolean) as unknown as OpenRegisterReport[] : []; const report = reports.find((r) => indicatorYear(r.report_end_date) === year || indicatorYear(r.report_start_date) === year); if (!report) return { ok: false, error: `bilancio ${year} non disponibile` }; const html = renderReport(loaded.company.name ?? query, report); const safe = normalizeName(loaded.company.name ?? query).slice(0, 80) || "societa"; return { ok: true, html, filename: `bilancio-${safe}-${year}.html` }; } catch (e) { const err = e as { name?: string; message?: string } | undefined; return { ok: false, error: err?.name === "AbortError" ? "timeout" : err?.message ?? "errore" }; } finally { clearTimeout(timer); } }
