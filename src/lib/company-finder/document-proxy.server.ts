@@ -11,30 +11,23 @@
  * GET /api/company-finder/document?url=<url ufficiale>&accept=<mime opzionale>
  */
 export const ALLOWED_DOCUMENT_HOSTS = new Set([
-  // DE — Unternehmensregister / Bundesanzeiger
   "www.unternehmensregister.de",
   "unternehmensregister.de",
   "publikations-plattform.de",
   "www.publikations-plattform.de",
   "www.bundesanzeiger.de",
   "bundesanzeiger.de",
-  // DK — Regnskaber / CVR
   "regnskaber.virk.dk",
   "datacvr.virk.dk",
-  // NL — KVK open data
   "opendata.kvk.nl",
-  // BE — NBB Central Balance Sheet Office
   "ws.cbso.nbb.be",
   "ws.uat2.cbso.nbb.be",
-  // UK — Companies House, sito pubblico (conti annuali depositati)
   "find-and-update.company-information.service.gov.uk",
-  // GR — G.E.MI. / BusinessPortal iXBRL filings
   "filings.businessportal.gr",
   "publicity.businessportal.gr",
 ]);
 
 const HTTP_ONLY_HOSTS = new Set(["regnskaber.virk.dk"]);
-
 const MAX_BYTES = 30 * 1024 * 1024;
 const TIMEOUT_MS = 45_000;
 const UA =
@@ -80,12 +73,32 @@ function serve(doc: Fetched): Response {
   });
 }
 
+function unwrapLegacyProxyTarget(requestUrl: string, target: string, accept: string): { target: string; accept: string } {
+  let currentTarget = target;
+  let currentAccept = accept;
+
+  for (let depth = 0; depth < 3; depth += 1) {
+    if (!currentTarget.startsWith("/api/company-finder/document?")) break;
+    const nested = new URL(currentTarget, requestUrl);
+    const next = nested.searchParams.get("url");
+    if (!next) break;
+    currentTarget = next;
+    currentAccept = nested.searchParams.get("accept") || currentAccept;
+  }
+
+  return { target: currentTarget, accept: currentAccept };
+}
+
 export async function handleDocumentRequest(request: Request): Promise<Response> {
   const params = new URL(request.url).searchParams;
-  const target = params.get("url");
-  const accept = params.get("accept") || "*/*";
+  const rawTarget = params.get("url");
+  const rawAccept = params.get("accept") || "*/*";
 
-  if (!target) return fail("url mancante", 400);
+  if (!rawTarget) return fail("url mancante", 400);
+
+  const unwrapped = unwrapLegacyProxyTarget(request.url, rawTarget, rawAccept);
+  const target = unwrapped.target;
+  const accept = unwrapped.accept;
 
   let source: URL;
   try {
