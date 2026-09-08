@@ -1,8 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { numericRegistryId, searchGleif } from "../src/lib/company-finder/sources/gleif";
+import {
+  gleifNameRelevance,
+  numericRegistryId,
+  rankRelevantGleifMatches,
+  searchGleif,
+} from "../src/lib/company-finder/sources/gleif";
 
-/** Risposta reale di api.gleif.org, ridotta a un record. */
 const GLEIF_RESPONSE = {
   data: [
     {
@@ -61,11 +65,20 @@ describe("GLEIF — nome società verso identificativo di registro", () => {
   });
 
   it("accetta come identificativo solo le sequenze numeriche", () => {
-    // Il CVR danese e il codice fiscale italiano sono usabili dagli adapter.
     expect(numericRegistryId("61056416")).toBe("61056416");
     expect(numericRegistryId("00484960588")).toBe("00484960588");
-    // "HRB 6684" non è un numero che un adapter possa interrogare.
     expect(numericRegistryId("HRB 6684")).toBeUndefined();
     expect(numericRegistryId(undefined)).toBeUndefined();
+  });
+
+  it("preferisce il nome legale esatto e scarta omonimie parziali", () => {
+    expect(gleifNameRelevance("SIEMENS AG", "SIEMENS AG")).toBe(100);
+    expect(gleifNameRelevance("SIEMENS AG", "SIEMENS HEALTHINEERS AG")).toBeLessThan(80);
+
+    const matches = rankRelevantGleifMatches("SIEMENS AG", [
+      { lei: "health", name: "Siemens Healthineers AG", country: "DE" },
+      { lei: "exact", name: "SIEMENS AG", country: "DE" },
+    ]);
+    expect(matches.map((match) => match.lei)).toEqual(["exact"]);
   });
 });
