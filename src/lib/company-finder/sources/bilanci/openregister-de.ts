@@ -4,7 +4,7 @@ const API_BASE = "https://api.openregister.de";
 
 type JsonObject = Record<string, unknown>;
 
-interface OpenRegisterCompany {
+type OpenRegisterCompany = {
   company_id?: string;
   name?: string;
   country?: string;
@@ -13,7 +13,11 @@ interface OpenRegisterCompany {
   register_court?: string;
   legal_form?: string;
   active?: boolean;
-}
+};
+
+type Indicator = JsonObject & {
+  date?: string;
+};
 
 export interface OpenRegisterResult {
   ok: boolean;
@@ -34,12 +38,17 @@ function text(value: unknown): string | undefined {
 
 function numberValue(value: unknown): number | undefined {
   if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (typeof value === "string") {
-    const normalized = value.replace(/\./g, "").replace(/,/g, ".").replace(/[^0-9.-]/g, "");
-    const parsed = Number(normalized);
-    return Number.isFinite(parsed) ? parsed : undefined;
-  }
-  return undefined;
+  if (typeof value !== "string") return undefined;
+
+  const normalized = value.trim().replace(/\s/g, "");
+  if (!normalized) return undefined;
+
+  const european = /^-?[\d.]+,\d+$/.test(normalized);
+  const cleaned = european
+    ? normalized.replace(/\./g, "").replace(",", ".")
+    : normalized.replace(/,/g, "");
+  const parsed = Number(cleaned.replace(/[^0-9.-]/g, ""));
+  return Number.isFinite(parsed) ? parsed : undefined;
 }
 
 function normalizeName(value: string): string {
@@ -70,7 +79,11 @@ async function getJson(url: string, apiKey: string, signal: AbortSignal): Promis
     signal,
     cache: "no-store",
   });
-  if (!response.ok) throw new Error(`OpenRegister HTTP ${response.status}`);
+
+  if (!response.ok) {
+    throw new Error(`OpenRegister HTTP ${response.status}`);
+  }
+
   return response.json();
 }
 
@@ -79,108 +92,94 @@ async function searchCompany(
   apiKey: string,
   signal: AbortSignal,
 ): Promise<OpenRegisterCompany | undefined> {
-  const params = new URLSearchParams({ query, page: "1", per_page: "25" });
-  const payload = asObject(await getJson(`${API_BASE}/v0/search/company?${params.toString()}`, apiKey, signal));
+  const params = new URLSearchParams({ query });
+  const payload = asObject(
+    await getJson(`${API_BASE}/v1/autocomplete/company?${params.toString()}`, apiKey, signal),
+  );
   const results = Array.isArray(payload?.results) ? payload.results : [];
   const companies = results.map(asObject).filter(Boolean) as JsonObject[];
+
   let best: OpenRegisterCompany | undefined;
-  let score = 0;
+  let bestScore = -1;
+
   for (const row of companies) {
     const candidate = row as OpenRegisterCompany;
-    const s = similarity(candidate.name ?? "", query);
-    if (s > score) {
+    if (candidate.country && candidate.country.toUpperCase() !== "DE") continue;
+
+    const score = similarity(candidate.name ?? "", query);
+    if (score > bestScore) {
       best = candidate;
-      score = s;
+      bestScore = score;
     }
   }
+
   return best;
 }
 
-function findNumber(root: unknown, keys: RegExp): number | undefined {
-  if (!root || typeof root !== "object") return undefined;
-  for (const [key, value] of Object.entries(root as JsonObject)) {
-    if (keys.test(key)) {
-      const direct = numberValue(value);
-      if (direct !== undefined) return direct;
-    }
-    if (value && typeof value === "object" && !Array.isArray(value)) {
-      const nested = findNumber(value, keys);
-      if (nested !== undefined) return nested;
-    }
-  }
-  return undefined;
-}
-
-function findString(root: unknown, keys: RegExp): string | undefined {
-  if (!root || typeof root !== "object") return undefined;
-  for (const [key, value] of Object.entries(root as JsonObject)) {
-    if (keys.test(key)) {
-      const direct = text(value);
-      if (direct !== undefined) return direct;
-    }
-    if (value && typeof value === "object" && !Array.isArray(value)) {
-      const nested = findString(value, keys);
-      if (nested !== undefined) return nested;
-    }
-  }
-  return undefined;
-}
-
-function extractPeriods(payload: unknown): Array<{ periodLabel: string; currency?: string; data: JsonObject }> {
-  const root = asObject(payload);
-  const reports = Array.isArray(root?.reports) ? root.reports : [];
-  return (reports.map(asObject).filter(Boolean) as JsonObject[]).map((report) => {
-    const period =
-      findString(report, /(reporting_date|report_date|period|fiscal_year|business_year)/i) ??
-      "Esercizio non indicato";
-    const currency = findString(report, /(currency|waehrung)/i);
-    return { periodLabel: period, currency, data: report };
-  });
-}
-
-function extractYear(periodLabel: string): number | undefined {
-  const match = periodLabel.match(/(20\d{2})/);
+function indicatorYear(dateValue: unknown): number | undefined {
+  const date = text(dateValue);
+  if (!date) return undefined;
+  const match = date.match(/(20\d{2})/);
   return match ? Number(match[1]) : undefined;
 }
 
-function mapFinancials(company: OpenRegisterCompany, payload: unknown): Financials | undefined {
-  const periods = extractPeriods(payload);
-  if (periods.length === 0) return undefined;
+function indicatorNumber(indicator: Indicator, key: string): number | undefined {
+  return numberValue(indicator[key]);
+}
 
-  const years = periods
-    .map(({ periodLabel, currency, data }) => {
-      const revenue = findNumber(data, /(revenue|sales|turnover|umsatz)/i);
-      const operatingProfit = findNumber(data, /(operating_profit|operating_income|ebit|betriebsergebnis)/i);
-      const netIncome = findNumber(data, /(net_income|net_profit|jahresüberschuss|jahresergebnis|profit_after_tax)/i);
-      const totalAssets = findNumber(data, /(total_assets|balance_sheet_total|bilanzsumme)/i);
-      const equity = findNumber(data, /(equity|shareholders_equity|eigenkapital)/i);
-      const liabilitiesAndEquity = findNumber(data, /(liabilities_and_equity|passiva|balance_total)/i);
+function mapFinancials(company: OpenRegisterCompany, payload: unknown): Financials | undefined {
+  const root = asObject(payload);
+  const indicators = Array.isArray(root?.indicators)
+    ? (root.indicators.map(asObject).filter(Boolean) as Indicator[])
+    : [];
+
+  if (indicators.length === 0) return undefined;
+
+  const years = indicators
+    .map((indicator) => {
+      const date = text(indicator.date);
+      const year = indicatorYear(date);
+      const balanceSheetTotal = indicatorNumber(indicator, "balance_sheet_total");
+      const revenue = indicatorNumber(indicator, "revenue");
+      const operatingProfit = indicatorNumber(indicator, "ebit");
+      const ebitda = indicatorNumber(indicator, "ebitda");
+      const netIncome = indicatorNumber(indicator, "net_income");
+      const equity = indicatorNumber(indicator, "equity");
+      const liabilities = indicatorNumber(indicator, "liabilities");
+
       return {
-        periodLabel,
-        year: extractYear(periodLabel),
-        currency,
+        periodLabel: year ? `Esercizio chiuso al ${date ?? year}` : `Esercizio ${date ?? "non indicato"}`,
+        year,
+        currency: "EUR",
         revenue,
         operatingProfit,
+        ebitda,
         netIncome,
-        totalAssets,
+        totalAssets: balanceSheetTotal,
         equity,
-        liabilitiesAndEquity,
+        liabilitiesAndEquity:
+          balanceSheetTotal ??
+          (equity !== undefined && liabilities !== undefined ? equity + liabilities : undefined),
       };
     })
-    .filter((row) =>
-      row.revenue !== undefined ||
-      row.netIncome !== undefined ||
-      row.totalAssets !== undefined ||
-      row.equity !== undefined ||
-      row.operatingProfit !== undefined ||
-      row.liabilitiesAndEquity !== undefined,
-    );
+    .filter(
+      (row) =>
+        row.revenue !== undefined ||
+        row.operatingProfit !== undefined ||
+        row.ebitda !== undefined ||
+        row.netIncome !== undefined ||
+        row.totalAssets !== undefined ||
+        row.equity !== undefined ||
+        row.liabilitiesAndEquity !== undefined,
+    )
+    .sort((a, b) => (b.year ?? 0) - (a.year ?? 0));
 
   if (years.length === 0) return undefined;
 
   return {
     available: true,
     years,
+    currency: "EUR",
     source: "OpenRegister / Bundesanzeiger (DE)",
     note: `Financials strutturati per ${company.name ?? "società tedesca"}, provenienti da dati ufficiali pubblicati.`,
   };
@@ -194,22 +193,27 @@ export async function fetchOpenRegisterFinancials(
   if (!apiKey) {
     return { ok: false, skipped: "OPENREGISTER_API_KEY non configurata" };
   }
+
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+
   try {
     const company = await searchCompany(query, apiKey, ctrl.signal);
     if (!company?.company_id) {
       return { ok: false, error: "OpenRegister: società tedesca non trovata" };
     }
+
     const details = await getJson(
       `${API_BASE}/v1/company/${encodeURIComponent(company.company_id)}/financials`,
       apiKey,
       ctrl.signal,
     );
     const financials = mapFinancials(company, details);
+
     if (!financials) {
       return { ok: false, error: "OpenRegister: financials non disponibili per la società selezionata" };
     }
+
     return { ok: true, data: financials };
   } catch (e) {
     const err = e as { name?: string; message?: string } | undefined;
