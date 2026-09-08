@@ -274,6 +274,7 @@ function FinancialsCard({ financials }: { financials: Financials | undefined }) 
                 {doc.availability === "DOCUMENT_DOWNLOADABLE" && doc.downloadUrl ? (
                   <a
                     href={doc.downloadUrl}
+                    download
                     className="border border-border bg-muted px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
                   >
                     Scarica bilancio
@@ -295,19 +296,23 @@ function FinancialsCard({ financials }: { financials: Financials | undefined }) 
       ) : null}
 
       {financials?.documentUrl ? (
-        <div className="mt-5">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h4 className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Documento ufficiale del bilancio</h4>
-            {financials.documentTitle ? <Chip>{financials.documentTitle}</Chip> : null}
+        <div className="mt-5 border-t border-border pt-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h4 className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Documento ufficiale del bilancio</h4>
+              {financials.documentTitle ? <p className="mt-1 text-sm font-medium">{financials.documentTitle}</p> : null}
+              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                Il documento viene recuperato dal backend TPbox e restituito tramite un endpoint interno. Nessun iframe e nessun URL del registro viene esposto nel browser.
+              </p>
+            </div>
+            <a
+              href={financials.documentUrl}
+              download
+              className="inline-flex min-h-11 items-center border border-border bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90"
+            >
+              Scarica documento
+            </a>
           </div>
-          <iframe
-            title={financials.documentTitle ?? "Documento di bilancio"}
-            src={financials.documentUrl}
-            className="mt-2 h-[680px] w-full border border-border bg-white"
-          />
-          <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-            Documento gratuito del registro ufficiale, scaricato dal server dell&apos;Osservatorio e mostrato in questa pagina: nessun reindirizzamento verso siti esterni.
-          </p>
         </div>
       ) : null}
     </section>
