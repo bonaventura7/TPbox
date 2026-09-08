@@ -144,15 +144,36 @@ function similarity(a: string, b: string): number {
 }
 
 async function getSession(signal: AbortSignal): Promise<SessionResponse> {
+  let cookie = "";
+  try {
+    const bootstrap = await fetch(`${UR_BASE}/de/suche`, {
+      headers: {
+        "User-Agent": UA,
+        Accept: "text/html,application/xhtml+xml",
+        "Accept-Language": "de-DE,de;q=0.9,en;q=0.8",
+      },
+      signal,
+      cache: "no-store",
+    });
+    if (bootstrap.ok) cookie = appendSetCookies(cookie, bootstrap.headers);
+  } catch {
+    // Token endpoint may still work without the bootstrap cookie.
+  }
+
   const res = await fetch(`${UR_BASE}/api/search-token`, {
-    headers: { "User-Agent": UA, Accept: "application/json" },
+    headers: {
+      "User-Agent": UA,
+      Accept: "application/json",
+      ...(cookie ? { Cookie: cookie } : {}),
+      Referer: `${UR_BASE}/de/suche`,
+    },
     signal,
     cache: "no-store",
   });
   if (!res.ok) throw new Error(`UR search-token HTTP ${res.status}`);
   const j = (await res.json()) as { token?: string } | undefined;
   if (!j?.token) throw new Error("UR: token assente nella risposta");
-  return { token: j.token, cookie: appendSetCookies("", res.headers) };
+  return { token: j.token, cookie: appendSetCookies(cookie, res.headers) };
 }
 
 async function fetchSearch(
