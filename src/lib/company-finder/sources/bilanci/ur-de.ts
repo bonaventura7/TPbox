@@ -1,18 +1,5 @@
 // ---------- Unternehmensregister — Germania: documenti di bilancio ufficiali ----------
-// Portale UFFICIALE e GRATUITO (Unternehmensregister, dal 2022 aggrega anche
-// Bundesanzeiger): i Jahresabschlüsse (bilanci d'esercizio) delle società di
-// capitali sono pubblici, senza account né pagamento.
-//
-// Flusso (verificato live 2026-08):
-//   1. GET https://www.unternehmensregister.de/api/search-token  → { token }
-//   2. GET /de/suche?area=ACCOUNTING&companyName={q}&searchToken={t}
-//      → pagina server-rendered; i risultati (companyDto + publicationDto)
-//        sono nel payload RSC (self.__next_f.push).
-//   3. Ogni pubblicazione ha un encryptedPayload → pagina ufficiale
-//      /de/veroeffentlichung?encryptedPayload=... con il documento (PDF/XBRL).
-//
-// Il tool NON reindirizza l'utente: il documento viene servito dal proxy
-// in-page /api/company-finder/document (whitelist dei domini ufficiali).
+// Adapter server-side resiliente al contratto corrente e legacy del portale ufficiale.
 
 import type { Financials } from "../../types";
 
@@ -28,27 +15,27 @@ export interface UrResult {
 }
 
 interface UrCompany {
-  name?: string | undefined;
-  location?: string | undefined;
-  euid?: string | undefined;
-  registerNumber?: string | undefined;
+  name?: string;
+  location?: string;
+  euid?: string;
+  registerNumber?: string;
 }
 
 interface UrPublication {
-  publicationType?: { id?: number | undefined; i18n_key?: string } | undefined;
-  companyNameAtTimeOfPublication?: string | undefined;
-  companyLocation?: string | undefined;
-  sourceDate?: string | undefined;
-  title?: string | undefined;
-  language?: string | undefined;
-  hasPdf?: boolean | undefined;
-  esefPub?: boolean | undefined;
-  xmlPub?: boolean | undefined;
-  deposit?: boolean | undefined;
-  encryptedPayload?: string | undefined;
+  publicationType?: { id?: number; i18n_key?: string };
+  companyNameAtTimeOfPublication?: string;
+  companyLocation?: string;
+  sourceDate?: string;
+  title?: string;
+  language?: string;
+  hasPdf?: boolean;
+  esefPub?: boolean;
+  xmlPub?: boolean;
+  deposit?: boolean;
+  encryptedPayload?: string;
+  payload?: string;
 }
 
-/** De-escape i chunk RSC (self.__next_f.push([1,"..."])). */
 function rscBlob(html: string): string {
   const chunks = html.match(/self\.__next_f\.push\(\[1,"((?:[^"\\]|\\.)*)"\]\)/g) ?? [];
   const out: string[] = [];
@@ -58,13 +45,12 @@ function rscBlob(html: string): string {
     try {
       out.push(JSON.parse(`"${m[1]}"`));
     } catch {
-      /* ignore */
+      /* ignore malformed RSC chunks */
     }
   }
   return out.join("\n");
 }
 
-/** Estrae tutti gli oggetti JSON con balanced-brace dal punto di partenza '{'. */
 function extractObjects(blob: string, marker: string): Record<string, unknown>[] {
   const out: Record<string, unknown>[] = [];
   let i = 0;
@@ -78,8 +64,23 @@ function extractObjects(blob: string, marker: string): Record<string, unknown>[]
     }
     let depth = 0;
     let end = -1;
+    let inString = false;
+    let escaped = false;
     for (let j = start; j < blob.length && j < start + 20000; j++) {
       const ch = blob[j];
+      if (escaped) {
+        escaped = false;
+        continue;
+      }
+      if (ch === "\\" && inString) {
+        escaped = true;
+        continue;
+      }
+      if (ch === '"') {
+        inString = !inString;
+        continue;
+      }
+      if (inString) continue;
       if (ch === "{") depth++;
       else if (ch === "}") {
         depth--;
@@ -93,7 +94,7 @@ function extractObjects(blob: string, marker: string): Record<string, unknown>[]
     try {
       out.push(JSON.parse(blob.slice(start, end + 1)));
     } catch {
-      /* ignore */
+      /* ignore non-JSON RSC fragments */
     }
     i = end + 1;
   }
@@ -104,7 +105,7 @@ function norm(s: string): string {
   return s
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]/g, "")
+    .replace(/[^a-z0-9]/gi, "")
     .toLowerCase();
 }
 
@@ -126,26 +127,30 @@ async function getToken(signal: AbortSignal): Promise<string> {
   });
   if (!res.ok) throw new Error(`UR search-token HTTP ${res.status}`);
   const j = (await res.json()) as { token?: string } | undefined;
-  const token = j?.token;
-  if (!token) throw new Error("UR: token assente nella risposta");
-  return token;
+  if (!j?.token) throw new Error("UR: token assente nella risposta");
+  return j.token;
 }
 
-// 2) pubblicazioni contabili: filtro per tipo di pubblicazione.
-//    id tipo (dall'elenco ufficiale accountingPublicationTypes del portale):
-//      135 = Jahres- und Konzernabschluss (bilancio + consolidato)
-//      86  = §§ 264 Abs. 3, 264b HGB (rendiconto depositato)
-//    si prova 135, poi 86, poi area intera.
 async function fetchSearch(
   token: string,
   companyName: string,
+  mode: "current" | "legacy",
   publicationType?: number,
   signal?: AbortSignal,
 ): Promise<string> {
-  let url = `${UR_BASE}/de/suche?area=ACCOUNTING&companyName=${encodeURIComponent(companyName)}&searchToken=${encodeURIComponent(token)}`;
-  if (publicationType) url += `&publicationType=${publicationType}`;
-  // exactOptionalPropertyTypes: RequestInit.signal ammette null ma non undefined
-  const res = await fetch(url, {
+  const params = new URLSearchParams();
+  if (mode === "current") {
+    params.set("areas", "all");
+    params.set("companySearchTerm", companyName);
+    params.set("companyName", companyName);
+  } else {
+    params.set("area", "ACCOUNTING");
+    params.set("companyName", companyName);
+    if (publicationType) params.set("publicationType", String(publicationType));
+  }
+  params.set("searchToken", token);
+
+  const res = await fetch(`${UR_BASE}/de/suche?${params.toString()}`, {
     headers: { "User-Agent": UA, Accept: "text/html" },
     signal: signal ?? null,
     cache: "no-store",
@@ -154,88 +159,78 @@ async function fetchSearch(
   return res.text();
 }
 
-export async function searchUrAccounting(
-  companyName: string,
-  timeoutMs = 30000,
-): Promise<UrResult> {
+export async function searchUrAccounting(companyName: string, timeoutMs = 30000): Promise<UrResult> {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
     const token = await getToken(ctrl.signal);
-    const variants: Array<{ publicationType?: number | undefined; label: string }> = [
-      { publicationType: 135, label: "Jahres- und Konzernabschluss" },
-      { publicationType: 86, label: "Rendiconto depositato (HGB)" },
-      { publicationType: undefined, label: "tutte le pubblicazioni" },
+    const attempts: Array<{ mode: "current" | "legacy"; type?: number; label: string }> = [
+      { mode: "current", label: "contratto corrente" },
+      { mode: "legacy", type: 135, label: "Jahres- und Konzernabschluss" },
+      { mode: "legacy", type: 86, label: "Rendiconto depositato (HGB)" },
+      { mode: "legacy", label: "tutte le pubblicazioni" },
     ];
+
     let blob = "";
     let lastNote = "";
-    for (const v of variants) {
-      const html = await fetchSearch(token, companyName, v.publicationType, ctrl.signal);
+    for (const attempt of attempts) {
+      const html = await fetchSearch(token, companyName, attempt.mode, attempt.type, ctrl.signal);
       const b = rscBlob(html);
-      if (!b) continue;
+      if (!b) {
+        lastNote = `${attempt.label}: payload RSC assente`;
+        continue;
+      }
       const pubs = extractObjects(b, '"publicationDto":');
-      if (pubs.length > 0) {
+      const companies = extractObjects(b, '"companyDto":');
+      if (pubs.length > 0 || companies.length > 0) {
         blob = b;
-        lastNote = v.label;
         break;
       }
-      lastNote = `nessun documento nell'area "${v.label}"`;
+      lastNote = `${attempt.label}: nessun risultato`;
     }
+
     if (!blob) {
       return {
         ok: true,
-        data: {
-          available: false,
-          years: [],
-          note: `Impresa cercata sul Unternehmensregister: ${lastNote}.`,
-        },
+        data: { available: false, years: [], note: `Impresa cercata sul Unternehmensregister: ${lastNote}.` },
       };
     }
 
-    // 1) imprese
-    const companies = extractObjects(blob, '"companyDto":').map((c) => c as unknown as UrCompany);
-    const firstCompany = companies[0];
-    // stessa condizione di prima: elenco vuoto → nessuna impresa trovata
-    if (companies.length === 0 || !firstCompany)
-      return { ok: false, error: "UR: nessuna impresa trovata per la ricerca" };
-    // migliore per similarità al nome
-    let best = firstCompany;
-    let bestScore = 0;
-    for (const c of companies) {
-      const s = similarity(c.name ?? "", companyName);
-      if (s > bestScore) {
-        bestScore = s;
+    const companies = extractObjects(blob, '"companyDto":').map((c) => c as UrCompany);
+    if (companies.length === 0) return { ok: false, error: "UR: nessuna impresa trovata per la ricerca" };
+
+    let best = companies[0];
+    let bestScore = similarity(best.name ?? "", companyName);
+    for (const c of companies.slice(1)) {
+      const score = similarity(c.name ?? "", companyName);
+      if (score > bestScore) {
         best = c;
+        bestScore = score;
       }
     }
 
-    // 2) pubblicazioni (contabilità/bilanci)
-    const pubs = extractObjects(blob, '"publicationDto":').map(
-      (p) => p as unknown as UrPublication,
-    );
-    const companyKey = norm(best.name ?? "");
-    const isSameCompany = (p: UrPublication) => {
-      const k = norm(p.companyNameAtTimeOfPublication ?? "");
-      return !!k && (k === companyKey || k.startsWith(companyKey) || companyKey.startsWith(k));
-    };
+    const pubs = extractObjects(blob, '"publicationDto":').map((p) => p as UrPublication);
     if (pubs.length === 0) {
       return {
         ok: true,
         data: {
           available: false,
           years: [],
-          note: `Impresa trovata al Unternehmensregister (${best.name}), ma nessuna pubblicazione contabile indicizzata per l'area "Rendiconti/Financial disclosures".`,
+          note: `Impresa trovata al Unternehmensregister (${best.name}), ma nessuna pubblicazione contabile indicizzata.`,
         },
       };
     }
-    // priorità: (1) bilancio vero (titolo) dell'impresa scelta, (2) PDF/XBRL
-    // dell'impresa scelta, (3) altra pubblicazione dell'impresa scelta,
-    // (4) qualunque pubblicazione con documento.
+
+    const companyKey = norm(best.name ?? "");
+    const isSameCompany = (p: UrPublication) => {
+      const key = norm(p.companyNameAtTimeOfPublication ?? "");
+      return !!key && (key === companyKey || key.startsWith(companyKey) || companyKey.startsWith(key));
+    };
     const byDate = (a: UrPublication, b: UrPublication) =>
       (b.sourceDate ?? "").localeCompare(a.sourceDate ?? "");
     const isBilancioTitle = (p: UrPublication) =>
       /abschl|bilanz|finanzbericht|annual|consolidat/i.test(p.title ?? "");
-    const hasDoc = (p: UrPublication) => !!p.hasPdf || !!p.esefPub || !!p.xmlPub;
+    const hasDoc = (p: UrPublication) => !!p.hasPdf || !!p.esefPub || !!p.xmlPub || !!p.payload || !!p.encryptedPayload;
 
     const own = pubs.filter(isSameCompany).sort(byDate);
     const others = pubs.filter((p) => !isSameCompany(p)).sort(byDate);
@@ -247,24 +242,24 @@ export async function searchUrAccounting(
       others.find((p) => isBilancioTitle(p) && hasDoc(p)) ??
       others.find(hasDoc) ??
       others[0];
-    if (!chosen?.encryptedPayload) {
+
+    const documentPayload = chosen?.payload ?? chosen?.encryptedPayload;
+    if (!documentPayload) {
       return {
         ok: true,
         data: {
           available: false,
           years: [],
-          note: "Pubblicazioni contabili trovate ma prive di documento accessibile (nessun PDF/XBRL indicizzato).",
+          note: "Pubblicazioni contabili trovate ma prive di documento accessibile.",
         },
       };
     }
 
-    const title =
-      [chosen.title, chosen.companyNameAtTimeOfPublication, chosen.sourceDate]
-        .filter(Boolean)
-        .join(" · ") || "Documento contabile";
-    const docUrl = `/api/company-finder/document?url=${encodeURIComponent(
-      `${UR_BASE}/de/veroeffentlichung?encryptedPayload=${encodeURIComponent(chosen.encryptedPayload)}`,
-    )}`;
+    const title = [chosen.title, chosen.companyNameAtTimeOfPublication, chosen.sourceDate]
+      .filter(Boolean)
+      .join(" · ") || "Documento contabile";
+    const publicationParam = chosen.payload ? "payload" : "encryptedPayload";
+    const publicationUrl = `${UR_BASE}/de/veroeffentlichung?${publicationParam}=${encodeURIComponent(documentPayload)}`;
 
     return {
       ok: true,
@@ -272,25 +267,15 @@ export async function searchUrAccounting(
         available: true,
         years: [],
         source: `Unternehmensregister (DE) — ${chosen.title ?? "Rendiconto"}`,
-        documentUrl: docUrl,
+        documentUrl: `/api/company-finder/document?url=${encodeURIComponent(publicationUrl)}`,
         documentTitle: title,
-        note:
-          chosen.hasPdf || chosen.esefPub || chosen.xmlPub
-            ? "Documento ufficiale gratuito (Jahresabschluss / bilancio d'esercizio) servito in pagina dal proxy del tool."
-            : "Pubblicazione ufficiale gratuita servita in pagina dal proxy del tool.",
+        note: "Documento ufficiale gratuito del Unternehmensregister servito in pagina dal proxy del tool.",
       },
     };
   } catch (e) {
-    const err = e as
-      | { name?: string | undefined; message?: string | undefined; cause?: { code?: string } }
-      | undefined;
+    const err = e as { name?: string; message?: string; cause?: { code?: string } } | undefined;
     const code = err?.cause?.code;
-    const msg =
-      err?.name === "AbortError"
-        ? "timeout"
-        : code === "ENOTFOUND"
-          ? "dominio non risolto (DNS)"
-          : (err?.message ?? "errore");
+    const msg = err?.name === "AbortError" ? "timeout" : code === "ENOTFOUND" ? "dominio non risolto (DNS)" : err?.message ?? "errore";
     return { ok: false, error: `Unternehmensregister: ${msg}` };
   } finally {
     clearTimeout(timer);
