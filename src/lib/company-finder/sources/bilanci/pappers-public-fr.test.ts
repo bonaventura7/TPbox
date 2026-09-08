@@ -12,6 +12,8 @@ const fixture = `<!doctype html><html><body>
 <a href="/entreprise/acme-123456789/comptes/Acme - Comptes sociaux 2023 08-04-2024.pdf">Comptes sociaux 2023</a>
 </body></html>`;
 
+const readerFixture = `# ACME SAS\n\n[Comptes sociaux 2024](https://www.pappers.fr/entreprise/acme-123456789/comptes/Acme%20-%20Comptes%20sociaux%202024%2010-04-2025.pdf)`;
+
 describe("Pappers public FR annual reports", () => {
   it("extracts annual-report PDF links without an API key", async () => {
     const originalFetch = globalThis.fetch;
@@ -30,6 +32,35 @@ describe("Pappers public FR annual reports", () => {
       expect(result.documents?.[0]?.url).toContain(
         "www.pappers.fr/entreprise/acme-123456789/comptes/",
       );
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it("falls back to the public reader when Pappers blocks server egress", async () => {
+    const originalFetch = globalThis.fetch;
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response("forbidden", { status: 403 }))
+      .mockResolvedValueOnce(
+        new Response(readerFixture, {
+          status: 200,
+          headers: { "content-type": "text/markdown; charset=utf-8" },
+        }),
+      );
+    globalThis.fetch = fetchMock as typeof fetch;
+
+    try {
+      const result = await findPappersAnnualReports("ACME SAS", "123456789");
+      expect(result.ok).toBe(true);
+      expect(result.documents).toEqual([
+        {
+          url: "https://www.pappers.fr/entreprise/acme-123456789/comptes/Acme%20-%20Comptes%20sociaux%202024%2010-04-2025.pdf",
+          title: "Comptes sociaux 2024",
+          year: 2024,
+        },
+      ]);
+      expect(fetchMock).toHaveBeenCalledTimes(2);
     } finally {
       globalThis.fetch = originalFetch;
     }
