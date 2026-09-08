@@ -1,149 +1,24 @@
-/**
- * Proxy in pagina per i documenti ufficiali di bilancio — nessun
- * reindirizzamento verso siti esterni.
- *
- * L'iframe della scheda punta QUI (stessa origine): il server scarica il
- * documento dal registro ufficiale (whitelist stretta di host) e lo serve.
- *  - PDF  → streaming diretto (il browser lo apre nel visore interno)
- *  - HTML → si tenta l'estrazione del PDF collegato (sempre su host
- *           autorizzato); se non c'è, si serve l'HTML ufficiale nell'iframe
- *
- * GET /api/company-finder/document?url=<url ufficiale>&accept=<mime opzionale>
- */
 export const ALLOWED_DOCUMENT_HOSTS = new Set([
-  "www.unternehmensregister.de",
-  "unternehmensregister.de",
-  "publikations-plattform.de",
-  "www.publikations-plattform.de",
-  "www.bundesanzeiger.de",
-  "bundesanzeiger.de",
-  "regnskaber.virk.dk",
-  "datacvr.virk.dk",
-  "opendata.kvk.nl",
-  "ws.cbso.nbb.be",
-  "ws.uat2.cbso.nbb.be",
-  "find-and-update.company-information.service.gov.uk",
-  "filings.businessportal.gr",
-  "publicity.businessportal.gr",
+  "www.unternehmensregister.de","unternehmensregister.de","publikations-plattform.de","www.publikations-plattform.de","www.bundesanzeiger.de","bundesanzeiger.de","regnskaber.virk.dk","datacvr.virk.dk","opendata.kvk.nl","ws.cbso.nbb.be","ws.uat2.cbso.nbb.be","find-and-update.company-information.service.gov.uk","filings.businessportal.gr","publicity.businessportal.gr",
 ]);
-
 const HTTP_ONLY_HOSTS = new Set(["regnskaber.virk.dk"]);
 const MAX_BYTES = 30 * 1024 * 1024;
 const TIMEOUT_MS = 45_000;
-const UA =
-  "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36";
-
-function fail(message: string, status: number): Response {
-  return new Response(JSON.stringify({ error: message }), {
-    status,
-    headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" },
-  });
-}
-
-export function isAllowedDocumentHost(url: URL): boolean {
-  return ALLOWED_DOCUMENT_HOSTS.has(url.hostname.toLowerCase());
-}
-
-interface Fetched {
-  bytes: ArrayBuffer;
-  contentType: string;
-}
-
-async function fetchRaw(target: string, signal: AbortSignal, accept: string): Promise<Fetched> {
-  const res = await fetch(target, {
-    headers: { "User-Agent": UA, Accept: accept },
-    signal,
-    redirect: "follow",
-  });
-  if (!res.ok) throw new Error(`fonte HTTP ${res.status}`);
-  const bytes = await res.arrayBuffer();
-  if (bytes.byteLength > MAX_BYTES) throw new Error("documento troppo grande");
-  return { bytes, contentType: (res.headers.get("content-type") ?? "").toLowerCase() };
-}
-
-function serve(doc: Fetched): Response {
-  const isPdf = doc.contentType.includes("pdf");
-  return new Response(doc.bytes, {
-    headers: {
-      "Content-Type": isPdf ? "application/pdf" : doc.contentType || "application/octet-stream",
-      "Content-Disposition": "inline",
-      "Cache-Control": "no-store",
-      "X-Content-Type-Options": "nosniff",
-    },
-  });
-}
-
-function unwrapLegacyProxyTarget(requestUrl: string, target: string, accept: string): { target: string; accept: string } {
-  let currentTarget = target;
-  let currentAccept = accept;
-
-  for (let depth = 0; depth < 3; depth += 1) {
-    if (!currentTarget.startsWith("/api/company-finder/document?")) break;
-    const nested = new URL(currentTarget, requestUrl);
-    const next = nested.searchParams.get("url");
-    if (!next) break;
-    currentTarget = next;
-    currentAccept = nested.searchParams.get("accept") || currentAccept;
-  }
-
-  return { target: currentTarget, accept: currentAccept };
-}
-
-export async function handleDocumentRequest(request: Request): Promise<Response> {
-  const params = new URL(request.url).searchParams;
-  const rawTarget = params.get("url");
-  const rawAccept = params.get("accept") || "*/*";
-
-  if (!rawTarget) return fail("url mancante", 400);
-
-  const unwrapped = unwrapLegacyProxyTarget(request.url, rawTarget, rawAccept);
-  const target = unwrapped.target;
-  const accept = unwrapped.accept;
-
-  let source: URL;
-  try {
-    source = new URL(target);
-  } catch {
-    return fail("url non valida", 400);
-  }
-  const plainHttpAllowed = HTTP_ONLY_HOSTS.has(source.hostname.toLowerCase());
-  if (source.protocol !== "https:" && !(source.protocol === "http:" && plainHttpAllowed)) {
-    return fail("sono ammesse solo url https", 400);
-  }
-  if (!isAllowedDocumentHost(source)) return fail("dominio non autorizzato", 403);
-
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
-  try {
-    const first = await fetchRaw(source.toString(), controller.signal, accept);
-
-    if (first.contentType.includes("html")) {
-      const html = new TextDecoder("utf-8").decode(first.bytes);
-      const links = Array.from(html.matchAll(/(?:href|src)="([^"]+?\.(?:pdf|xml)[^"]*)"/gi))
-        .map((match) => match[1])
-        .filter((link): link is string => Boolean(link));
-      for (const link of links) {
-        try {
-          const absolute = new URL(link, source);
-          if (!isAllowedDocumentHost(absolute)) continue;
-          const doc = await fetchRaw(absolute.toString(), controller.signal, "*/*");
-          if (doc.contentType.includes("pdf")) return serve(doc);
-        } catch {
-          // link non utilizzabile: si prova il successivo
-        }
-      }
-      return new Response(html, {
-        headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" },
-      });
-    }
-
-    return serve(first);
-  } catch (error) {
-    const err = error as { name?: string; message?: string };
-    const reason =
-      err?.name === "AbortError" ? "timeout della fonte" : (err?.message ?? "errore di rete");
-    return fail(`impossibile recuperare il documento: ${reason}`, 502);
-  } finally {
-    clearTimeout(timer);
-  }
-}
+const MAX_REDIRECTS = 4;
+const UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/126.0 Safari/537.36";
+function fail(message: string, status: number): Response { return new Response(JSON.stringify({ error: message }), { status, headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" } }); }
+export function isAllowedDocumentHost(url: URL): boolean { return ALLOWED_DOCUMENT_HOSTS.has(url.hostname.toLowerCase()); }
+interface Fetched { bytes: ArrayBuffer; contentType: string; finalUrl: URL }
+interface CookieJar { values: Map<string,string> }
+function jar(): CookieJar { return { values: new Map() }; }
+function setCookies(j: CookieJar, h: Headers): void { const g=(h as Headers & {getSetCookie?:()=>string[]}).getSetCookie; const xs=typeof g === "function" ? g.call(h) : ((h.get("set-cookie")??"") ? (h.get("set-cookie")??"").split(/,(?=[^;=]+=)/) : []); for(const raw of xs){ const first=raw.trim().split(";",1)[0]; const i=first.indexOf("="); if(i>0) j.values.set(first.slice(0,i),first.slice(i+1)); } }
+function cookieHeader(j: CookieJar): string { return [...j.values].map(([k,v])=>`${k}=${v}`).join("; "); }
+function pdf(bytes: ArrayBuffer): boolean { return new TextDecoder("latin1").decode(new Uint8Array(bytes).slice(0,8)).startsWith("%PDF-"); }
+function html(contentType: string, bytes: ArrayBuffer): boolean { if(contentType.includes("html")||contentType.includes("xhtml")) return true; const h=new TextDecoder("utf-8").decode(new Uint8Array(bytes).slice(0,256)).trimStart(); return /^<!doctype html|^<html[\s>]/i.test(h); }
+function allowed(value: string, base: URL): URL|undefined { try{ const u=new URL(value,base); const http=HTTP_ONLY_HOSTS.has(u.hostname.toLowerCase()); if(!isAllowedDocumentHost(u)) return; if(u.protocol!=="https:" && !(u.protocol==="http:"&&http)) return; return u; }catch{return;} }
+function linksFrom(htmlText: string): string[] { const out=new Set<string>(); const re=/(?:href|src)\s*=\s*["']([^"']+)["']/gi; for(const m of htmlText.matchAll(re)){ const s=(m[1]??"").replace(/\\u0026/g,"&").replace(/\\u003d/g,"=").replace(/\\\//g,"/"); if(/\.pdf(?:[?#]|$)/i.test(s)||/(?:pdf|document|download|file)/i.test(s)) out.add(s); } for(const m of htmlText.matchAll(/https?:\\?\/\\?\/[^\s"'<>\\\\]+/gi)){const s=m[0].replace(/\\\//g,"/"); if(/\.pdf(?:[?#]|$)/i.test(s)||/(?:pdf|document|download|file)/i.test(s)) out.add(s);} return [...out]; }
+async function fetchRaw(target: URL, signal: AbortSignal, accept: string, j: CookieJar, ref?: URL): Promise<Fetched> { let current=target; for(let hop=0;hop<=MAX_REDIRECTS;hop++){ const hs:Record<string,string>={"User-Agent":UA,Accept:accept,"Accept-Language":"de-DE,de;q=0.9,en;q=0.8"}; const c=cookieHeader(j); if(c) hs.Cookie=c; if(ref) hs.Referer=ref.toString(); const r=await fetch(current.toString(),{headers:hs,signal,redirect:"manual",cache:"no-store"}); setCookies(j,r.headers); if([301,302,303,307,308].includes(r.status)){const loc=r.headers.get("location"); if(!loc) throw new Error("redirect senza destinazione"); const next=allowed(loc,current); if(!next) throw new Error("redirect verso dominio non autorizzato"); ref=current; current=next; continue;} if(!r.ok) throw new Error(`fonte HTTP ${r.status}`); const bytes=await r.arrayBuffer(); if(bytes.byteLength>MAX_BYTES) throw new Error("documento troppo grande"); return {bytes,contentType:(r.headers.get("content-type")??"").toLowerCase(),finalUrl:current}; } throw new Error("troppi redirect"); }
+async function bootstrap(j: CookieJar, signal: AbortSignal): Promise<void> { try{await fetchRaw(new URL("https://www.unternehmensregister.de/de/suche"),signal,"text/html,application/xhtml+xml",j);}catch{} }
+function serve(doc: Fetched, download: boolean): Response { const isP=pdf(doc.bytes)||doc.contentType.includes("pdf"); return new Response(doc.bytes,{headers:{"Content-Type":isP?"application/pdf":doc.contentType||"application/octet-stream","Content-Disposition":`${download?"attachment":"inline"}; filename="${isP?"bilancio.pdf":"documento-bilancio"}"`,"Cache-Control":"no-store","X-Content-Type-Options":"nosniff","X-Document-Source":doc.finalUrl.hostname}}); }
+function unwrap(requestUrl:string,target:string,accept:string){let t=target,a=accept;for(let i=0;i<3;i++){if(!t.startsWith("/api/company-finder/document?"))break;const n=new URL(t,requestUrl);const x=n.searchParams.get("url");if(!x)break;t=x;a=n.searchParams.get("accept")||a;}return {target:t,accept:a};}
+export async function handleDocumentRequest(request: Request): Promise<Response> { const p=new URL(request.url).searchParams; const raw=p.get("url"); if(!raw)return fail("url mancante",400); const u=unwrap(request.url,raw,p.get("accept")||"*/*"); let source:URL; try{source=new URL(u.target);}catch{return fail("url non valida",400);} const http=HTTP_ONLY_HOSTS.has(source.hostname.toLowerCase()); if(source.protocol!=="https:"&&!(source.protocol==="http:"&&http))return fail("sono ammesse solo url https",400); if(!isAllowedDocumentHost(source))return fail("dominio non autorizzato",403); const c=new AbortController(); const timer=setTimeout(()=>c.abort(),TIMEOUT_MS); const j=jar(); try{if(source.hostname.endsWith("unternehmensregister.de"))await bootstrap(j,c.signal); const first=await fetchRaw(source,c.signal,u.accept,j); const wantDownload=p.get("download")==="1"; if(!html(first.contentType,first.bytes)&& (pdf(first.bytes)||/pdf|octet-stream|zip|xml/i.test(first.contentType)))return serve(first,wantDownload); if(html(first.contentType,first.bytes)){const text=new TextDecoder("utf-8").decode(first.bytes); for(const link of linksFrom(text)){const next=allowed(link,first.finalUrl); if(!next)continue; try{const doc=await fetchRaw(next,c.signal,"application/pdf,application/octet-stream,*/*",j,first.finalUrl); if(pdf(doc.bytes)||doc.contentType.includes("pdf"))return serve(doc,wantDownload);}catch{}} return serve(first,wantDownload);} return serve(first,wantDownload);}catch(e){const err=e as {name?:string;message?:string};return fail(`impossibile recuperare il documento: ${err?.name==="AbortError"?"timeout":err?.message??"errore di rete"}`,502);}finally{clearTimeout(timer);} }
