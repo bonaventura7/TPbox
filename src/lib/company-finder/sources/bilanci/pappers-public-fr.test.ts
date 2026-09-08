@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { findPappersAnnualReports, toInternalPappersDocuments } from "./pappers-public-fr.server";
+import {
+  findPappersAnnualReports,
+  toInternalPappersDocuments,
+  withPappersDocuments,
+} from "./pappers-public-fr.server";
+import type { Financials } from "../../types";
 
 const fixture = `<!doctype html><html><body>
 <a href="/entreprise/acme-123456789/comptes/Acme - Comptes sociaux 2024 10-04-2025.pdf">Comptes sociaux 2024</a>
@@ -62,5 +67,36 @@ describe("Pappers public FR annual reports", () => {
       "/api/company-finder/document?country=FR&company=ACME%20SAS&siren=123456789&year=2024",
     );
     expect(docs[0]?.downloadUrl).not.toContain("pappers.fr");
+  });
+
+  it("merges downloadable documents into the financial result selected by the orchestrator", () => {
+    const base: Financials = {
+      available: true,
+      currency: "EUR",
+      years: [
+        {
+          periodLabel: "Esercizio 2024",
+          revenue: 100,
+          currency: "EUR",
+        },
+      ],
+      source: "Recherche d'entreprises — Stato francese",
+    };
+
+    const merged = withPappersDocuments(base, "ACME SAS", "123456789", [
+      {
+        url: "https://www.pappers.fr/entreprise/acme-123456789/comptes/Acme.pdf",
+        title: "Comptes sociaux 2024",
+        year: 2024,
+      },
+    ]);
+
+    expect(merged.available).toBe(true);
+    expect(merged.years).toEqual(base.years);
+    expect(merged.availability).toBe("DOCUMENT_DOWNLOADABLE");
+    expect(merged.documents).toHaveLength(1);
+    expect(merged.documents?.[0]?.downloadUrl).toBe(
+      "/api/company-finder/document?country=FR&company=ACME%20SAS&siren=123456789&year=2024",
+    );
   });
 });
