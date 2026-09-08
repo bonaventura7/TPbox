@@ -4,58 +4,50 @@ import { fetchGermanyPublicBalance } from "../src/lib/company-finder/sources/bil
 
 afterEach(() => vi.unstubAllGlobals());
 
+function pageHtml(company: string, year: number, total: string): string {
+  return `<html><body>
+    <h1>${company}</h1>
+    <div>Jahresabschluss zum Geschäftsjahr vom 01.01.${year} bis zum 31.12.${year}</div>
+    <div>Summe Aktiva ${total} €</div><div>Eigenkapital 494.125 €</div><div>Jahresüberschuss 332.338 €</div><div>Summe Passiva ${total} €</div>
+  </body></html>`;
+}
+
 describe("German public balance fallback", () => {
   it("finds a public balance page and extracts downloadable balance data", async () => {
-    const searchHtml = `
-      <html><a href="https://www.unternehmen24.info/Firmeninformationen/Deutschland/Firma/5064652">ORI MARTIN Deutschland GmbH</a></html>
-    `;
-    const pageHtml = `
-      <html><body>
-        <h1>ORI MARTIN Deutschland GmbH</h1>
-        <div>Jahresabschluss zum Geschäftsjahr vom 01.01.2024 bis zum 31.12.2024</div>
-        <div>Bilanzsumme 2016 1.333.189 € 2017 1.523.588 € 2024 668.995 €</div>
-        <div>Aktiva</div><div>Anlagevermögen 54.534 €</div><div>Sachanlagen 53.648 €</div><div>Umlaufvermögen 609.807 €</div>
-        <div>Forderungen und sonstige Vermögensgegenstände 212.253 €</div>
-        <div>Kassenbestand, Guthaben bei Kreditinstituten und Schecks 397.554 €</div>
-        <div>Summe Aktiva 668.995 €</div>
-        <div>Passiva gesamt 668.995 €</div><div>Eigenkapital 494.125 €</div><div>Gezeichnetes Kapital 80.000 €</div>
-        <div>Bilanzgewinn 414.125 €</div><div>Gewinnvortrag 81.787 €</div><div>Jahresüberschuss 332.338 €</div>
-        <div>Rückstellungen 154.225 €</div><div>Verbindlichkeiten 20.644 €</div><div>Summe Passiva 668.995 €</div>
-        <div>Jahresabschluss vom 06.02.2026</div>
-      </body></html>
-    `;
-
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (input: string | URL) => {
-        const url = String(input);
-        if (url.includes("html.duckduckgo.com/html")) {
-          return { ok: true, status: 200, text: async () => searchHtml } as unknown as Response;
-        }
-        if (url.includes("unternehmen24.info/Firmeninformationen/Deutschland/Firma/5064652")) {
-          return { ok: true, status: 200, text: async () => pageHtml } as unknown as Response;
-        }
-        throw new Error(`unexpected URL ${url}`);
-      }),
-    );
+    const searchHtml = `<html><a href="https://www.unternehmen24.info/Firmeninformationen/Deutschland/Firma/5064652">ORI MARTIN Deutschland GmbH</a></html>`;
+    const sourceUrl = "https://www.unternehmen24.info/Firmeninformationen/Deutschland/Firma/5064652";
+    vi.stubGlobal("fetch", vi.fn(async (input: string | URL) => {
+      const url = String(input);
+      if (url.includes("html.duckduckgo.com/html")) return { ok: true, status: 200, text: async () => searchHtml } as unknown as Response;
+      if (url === sourceUrl) return { ok: true, status: 200, text: async () => pageHtml("ORI MARTIN Deutschland GmbH", 2024, "668.995") } as unknown as Response;
+      throw new Error(`unexpected URL ${url}`);
+    }));
 
     const result = await fetchGermanyPublicBalance("ORI MARTIN Deutschland GmbH");
-
     expect(result.ok).toBe(true);
     expect(result.data?.available).toBe(true);
-    expect(result.data?.documents?.[0]).toMatchObject({
-      year: 2024,
-      availability: "DOCUMENT_DOWNLOADABLE",
-      format: "csv",
-    });
-    expect(result.data?.years[0]).toMatchObject({
-      year: 2024,
-      totalAssets: 668995,
-      equity: 494125,
-      liabilitiesAndEquity: 668995,
-      netIncome: 332338,
-      currency: "EUR",
-    });
+    expect(result.data?.documents?.[0]).toMatchObject({ year: 2024, availability: "DOCUMENT_DOWNLOADABLE", format: "csv" });
+    expect(result.data?.years[0]).toMatchObject({ year: 2024, totalAssets: 668995, equity: 494125, liabilitiesAndEquity: 668995, netIncome: 332338, currency: "EUR" });
     expect(result.data?.documents?.[0]?.downloadUrl).toContain("/api/company-finder/germany-public-balance?");
+  });
+
+  it("selects the result whose displayed name matches the requested company", async () => {
+    const wrong = "https://www.unternehmen24.info/Firmeninformationen/Deutschland/Firma/1111111";
+    const right = "https://www.unternehmen24.info/Firmeninformationen/Deutschland/Firma/5064652";
+    const searchHtml = `<a href="${wrong}">ORI MARTIN Holding GmbH</a><a href="${right}">ORI MARTIN Deutschland GmbH</a>`;
+    const seen: string[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (input: string | URL) => {
+      const url = String(input);
+      seen.push(url);
+      if (url.includes("html.duckduckgo.com/html")) return { ok: true, status: 200, text: async () => searchHtml } as unknown as Response;
+      if (url === right) return { ok: true, status: 200, text: async () => pageHtml("ORI MARTIN Deutschland GmbH", 2024, "668.995") } as unknown as Response;
+      throw new Error(`unexpected URL ${url}`);
+    }));
+
+    const result = await fetchGermanyPublicBalance("ORI MARTIN Deutschland GmbH");
+    expect(result.ok).toBe(true);
+    expect(seen).toContain(right);
+    expect(seen).not.toContain(wrong);
+    expect(result.data?.years[0]?.year).toBe(2024);
   });
 });
