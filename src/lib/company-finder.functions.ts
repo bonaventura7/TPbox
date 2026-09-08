@@ -40,8 +40,6 @@ async function resolveLuxembourgCompany(query:string, normalized:string):Promise
     resolverDetail=resolved.detail||"";
   }
 
-  // VAT-only: use the existing orchestrator/VIES once to obtain the legal name,
-  // then resolve that name to the Luxembourg RCS through GLEIF.
   if(!rcs && normalized && companyName.length===0){
     const {runSearch}=await import("./company-finder/orchestrator");
     const base=await runSearch({query:"",vat:`LU${normalized}`,country:"LU"});
@@ -63,19 +61,18 @@ async function resolveLuxembourgCompany(query:string, normalized:string):Promise
   const officialPage=officialPageFor("LU",rcs,companyName);
   const response:SearchResponse={
     found:true,
-    company:{
-      name:companyName||`${country.nameIt} — ${rcs}`,
-      country,
-      registry:{name:country.registryName,authority:country.registryAuthority,id:rcs},
-    },
+    company:{name:companyName||`${country.nameIt} — ${rcs}`,country,registry:{name:country.registryName,authority:country.registryAuthority,id:rcs}},
     financials:fin,
     sources:[{id:"rcsl-lu",label:"Luxembourg RCSL — conti annuali",state:"ok",detail:fin.documents?.length?`${fin.documents.length} documenti annuali individuati`:"registro consultabile"}],
     warnings:resolverDetail?[resolverDetail]:[],
     searchedAt:new Date().toISOString(),
     ...(officialPage?{officialPage}:{}),
   };
-
-  return hideSources(response);
+  const cleaned=hideSources(response);
+  // Se la discovery automatica non trova documenti, mantieni il deep-link
+  // ufficiale LBR visibile come fallback operativo per l'utente.
+  if(!fin.documents?.length && officialPage)cleaned.officialPage=officialPage;
+  return cleaned;
 }
 
 export const findCompany=createServerFn({method:"POST"}).inputValidator((data:unknown)=>searchSchema.parse(data??{})).handler(async({data}):Promise<SearchResponse>=>{const query=data.query.trim(),vat=data.vat.trim(),country=data.country.trim().toUpperCase(),normalized=vat.replace(/[\s.-]/g,"").toUpperCase();if(!query&&!vat)return emptyResponse("Inserisci la ragione sociale oppure il numero di partita IVA.");if(country==="GR"&&/^\d{10}$/.test(normalized)){const direct=await browserRegistryResponse("GR",normalized,query);if(direct)return direct}if(country==="LU"){const lu=await resolveLuxembourgCompany(query,normalized);if(lu)return lu}let effectiveVat=vat,polishResolution:PolishKrsResolution|undefined;if(country==="PL"&&query.length>=3&&!normalized){polishResolution=await resolvePolishKrsByName(query);if(polishResolution.krs)effectiveVat=`PL${polishResolution.krs}`}const{runSearch}=await import("./company-finder/orchestrator");try{const response=await runSearch({query,vat:effectiveVat,country});if(country==="PL"){const krs=(response.company?.registry?.id??polishResolution?.krs??normalized).replace(/\D/g,"");if(/^\d{8}$|^\d{10}$/.test(krs)){const page=officialPageFor("PL",krs,response.company?.name?.trim()||query);if(page)response.officialPage=page;await attachPolishFinancialDocuments(response,krs)}if(polishResolution)response.warnings=[polishResolution.detail??"Risoluzione KRS effettuata tramite GLEIF",...response.warnings]}return prioritizeBalanceDocument(response,normalized||polishResolution?.krs||"")}catch(error){console.error("[company-finder] errore orchestratore",error);return emptyResponse("Errore interno durante la consultazione delle fonti. Riprova tra qualche istante.")}});
