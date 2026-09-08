@@ -1,4 +1,9 @@
-import type { DocumentAvailability, FinancialDocumentSummary, RestrictionCode } from "../../types";
+import type {
+  DocumentAvailability,
+  FinancialDocumentSummary,
+  Financials,
+  RestrictionCode,
+} from "../../types";
 
 const PAPPERS_BASE = "https://www.pappers.fr";
 const UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/126.0 Safari/537.36";
@@ -190,4 +195,23 @@ export function toInternalPappersDocuments(
       downloadUrl,
     };
   });
+}
+
+export function withPappersDocuments(
+  base: Financials,
+  companyName: string,
+  siren: string,
+  documents: PappersPublicDocument[],
+): Financials {
+  if (documents.length === 0) return base;
+  const summaries = toInternalPappersDocuments(companyName, siren, documents);
+  const primary = summaries[0];
+  return {
+    ...base,
+    availability: "DOCUMENT_DOWNLOADABLE",
+    documents: summaries,
+    documentUrl: primary?.downloadUrl,
+    documentTitle: primary?.title,
+    note: base.note ?? "Bilanci annuali scaricabili tramite l'endpoint documentale interno di TPbox.",
+  };
 }
