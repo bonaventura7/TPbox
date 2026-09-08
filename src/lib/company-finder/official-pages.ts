@@ -8,22 +8,26 @@ export interface OfficialPage {
   url: string;
   label: string;
   note: string;
-  /** URL diretto al documento di bilancio, quando verificabile. */
   balanceUrl?: string | undefined;
-  /** Testo dell'azione primaria mostrata nel Company Finder. */
   actionLabel?: string | undefined;
-  /**
-   * "embed" → la pagina si può incorporare nel tool;
-   * "external" → il registro rifiuta l'incorporamento o richiede un controllo
-   * che va completato dalla persona: si apre in una nuova scheda.
-   */
   mode?: "embed" | "external" | undefined;
-  /** Passaggi operativi da compiere sul portale ufficiale. */
   instructions?: string[] | undefined;
 }
 
 function digits(value: string): string {
   return value.replace(/\D/g, "");
+}
+
+function slugify(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/ł/g, "l")
+    .replace(/đ/g, "d")
+    .replace(/&/g, " i ")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 }
 
 function normalizeLuxembourgRcs(value: string): string | undefined {
@@ -91,23 +95,27 @@ export function officialPageFor(
       label: "G.E.MI. — Publicity",
       actionLabel: "Apri il registro ufficiale",
       mode: "external",
-      note: "Apre direttamente la società nel portale ufficiale. Il portale può richiedere un CAPTCHA: la verifica va completata nel browser. Quando il record contiene il link al singolo documento iXBRL, quello viene usato come destinazione primaria.",
+      note: "Apre direttamente la società nel portale ufficiale. Il portale può richiedere un CAPTCHA: la verifica va completata nel browser.",
     };
   }
 
   const plKrs = iso === "PL" ? normalizePolandKrs(rawId) : undefined;
   if (plKrs) {
+    const companySlug = slugify(name);
+    const url = companySlug
+      ? `https://aleo.com/pl/firma/${companySlug}`
+      : `https://aleo.com/pl/szukaj-firmy?krs=${plKrs}`;
     return {
-      url: `https://www.imsig.pl/krs/${plKrs}/sprawozdania`,
-      label: `IMSiG — Sprawozdania finansowe KRS (${plKrs})`,
+      url,
+      label: `ALEO — Sprawozdania finansowe KRS (${plKrs})`,
       actionLabel: "Apri i bilanci della società",
       mode: "external",
-      note: `Pagina specifica dei bilanci depositati per KRS ${plKrs}. Elenca gli esercizi disponibili e i documenti finanziari associati; l'eventuale accesso al file è gestito dal portale IMSiG. Il riferimento istituzionale resta il KRS del Ministero della Giustizia.`,
+      note: `Pagina specifica della società associata al KRS ${plKrs}. ALEO espone pubblicamente la sezione “Sprawozdania finansowe” con i comandi “Pobierz pdf” e “Pobierz xml” quando il deposito è disponibile. I dati della società e dei depositi sono indicati come provenienti dal KRS.`,
       instructions: [
-        `Verifica il KRS ${plKrs} e la denominazione della società.`,
-        "Seleziona l'esercizio desiderato nella sezione “Sprawozdania finansowe”.",
-        "Usa il comando disponibile per aprire o scaricare il documento.",
-        "Per la fonte primaria, verifica lo stesso deposito nel Repozytorium Dokumentów Finansowych KRS.",
+        `Verifica che il KRS ${plKrs} e la denominazione coincidano con la società cercata.`,
+        "Nella sezione “Sprawozdania finansowe” seleziona l'esercizio desiderato.",
+        "Premi “Pobierz pdf” per scaricare il bilancio.",
+        "Per la fonte istituzionale primaria, verifica lo stesso deposito nel KRS/RDF del Ministero della Giustizia.",
       ],
     };
   }
