@@ -1,0 +1,105 @@
+name: Temporary Germany adapter implementation
+
+on:
+  push:
+    branches:
+      - feat/company-finder-germany-end-to-end
+
+permissions:
+  contents: write
+
+jobs:
+  implement:
+    if: github.ref == 'refs/heads/feat/company-finder-germany-end-to-end'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Patch Germany adapter architecture
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          root = Path('.')
+
+          ur = root / 'src/lib/company-finder/sources/bilanci/ur-de.ts'
+          text = ur.read_text()
+
+          text = text.replace(
+              'export interface UrResult {\n  ok: boolean;\n  data?: Financials;\n  error?: string;\n  skipped?: string;\n}',
+              'export interface GermanyCompanyMatch {\n  name: string;\n  euId?: string;\n}\n\nexport interface UrResult {\n  ok: boolean;\n  data?: Financials;\n  company?: GermanyCompanyMatch;\n  error?: string;\n  skipped?: string;\n}'
+          )
+          text = text.replace(
+              'async function resolveGermanyCompanyName(',
+              'export async function resolveGermanyCompanyName('
+          )
+          text = text.replace(
+              '    if (structured.ok && structured.data) return structured;\n',
+              '    if (structured.ok && structured.data) {\n      return { ...structured, company: { name: query } };\n    }\n'
+          )
+          text = text.replace(
+              '    if (publicBalance.ok && publicBalance.data) return publicBalance;\n',
+              '    if (publicBalance.ok && publicBalance.data) {\n      return { ...publicBalance, company: resolved ?? { name: candidate } };\n    }\n'
+          )
+          ur.write_text(text)
+
+          adapter = root / 'src/lib/company-finder/sources/germany-adapter.ts'
+          adapter.write_text('''import { getCountry } from "../countries";\nimport type { CompanyProfile, Financials } from "../types";\nimport { searchUrAccounting } from "./bilanci/ur-de";\n\nexport interface GermanyAdapterResult {\n  ok: boolean;\n  profile?: CompanyProfile;\n  financials?: Financials;\n  error?: string;\n  skipped?: string;\n}\n\nexport async function searchGermanyAdapter(\n  input: { query?: string; localVat?: string },\n  timeoutMs = 30000,\n): Promise<GermanyAdapterResult> {\n  const query = input.query?.trim() ?? "";\n  const localVat = input.localVat?.trim() ?? "";\n  const lookup = query || localVat;\n  if (lookup.length < 3) {\n    return { ok: false, error: "ragione sociale o identificativo troppo corto" };\n  }\n\n  const r = await searchUrAccounting(lookup, timeoutMs);\n  if (r.ok && r.data) {\n    const country = getCountry("DE");\n    if (!country) return { ok: false, error: "paese DE non configurato" };\n\n    const resolvedName = r.company?.name ?? lookup;\n    const euId = r.company?.euId;\n    const profile: CompanyProfile = {\n      name: resolvedName,\n      nameSource: "resolver societario tedesco",\n      country,\n      registry: {\n        name: country.registryName,\n        authority: country.registryAuthority,\n        ...(euId ? { id: euId } : {}),\n      },\n    };\n\n    return { ok: true, profile, financials: r.data };\n  }\n\n  if (r.skipped) return { ok: false, skipped: r.skipped };\n  return { ok: false, error: r.error ?? "fonte non raggiungibile" };\n}\n''')
+
+          orch = root / 'src/lib/company-finder/orchestrator.ts'
+          otext = orch.read_text()
+          otext = otext.replace(
+              'import { searchUrAccounting } from "./sources/bilanci/ur-de";\n',
+              'import { searchGermanyAdapter } from "./sources/germany-adapter";\n'
+          )
+
+          germany_block = '''  // ---- Germania: adapter combinato (scheda + bilanci) ----\n  DE: [\n    {\n      id: "germany",\n      label: "Registro imprese tedesco — scheda e bilanci",\n      input: "either",\n      run: (ctx, job, s) =>\n        (async () => {\n          if (!ctx.query && !ctx.localVat) {\n            s.state = "skipped";\n            s.detail = "servi la ragione sociale o il numero di registro/IVA";\n            return;\n          }\n          const r = await searchGermanyAdapter({ query: ctx.query, localVat: ctx.localVat });\n          if (r.ok && (r.profile || r.financials)) {\n            s.state = "ok";\n            s.detail = r.financials?.documents?.length\n              ? `${r.financials.documents.length} bilanci individuati`\n              : "scheda societaria e dati di bilancio";\n            if (r.profile) {\n              const profile = r.profile;\n              job.profile = () => profile;\n            }\n            if (r.financials) {\n              const fin = r.financials;\n              job.fin = () => fin;\n            }\n          } else if (r.skipped) {\n            s.state = "skipped";\n            s.detail = r.skipped;\n          } else {\n            s.state = "failed";\n            s.detail = r.error || "fonte non raggiungibile";\n          }\n        })(),\n    },\n  ],\n\n'''
+          marker = '  // ---- Estonia: e-Äriregister (autocomplete + scheda + bilanci, senza chiave) ----\n'
+          if '  DE: [' not in otext:
+              otext = otext.replace(marker, germany_block + marker, 1)
+
+          start = otext.find('  // ---- Germania: Unternehmensregister (Jahresabschlüsse ufficiali gratuiti) ----')
+          if start != -1:
+              end = otext.find('  // ---- Francia: Pappers (comptes annuels, chiave gratuita) ----', start)
+              if end == -1:
+                  raise SystemExit('Germany financial route end marker not found')
+              otext = otext[:start] + otext[end:]
+          orch.write_text(otext)
+
+          proxy = root / 'src/lib/company-finder/document-proxy.server.ts'
+          ptext = proxy.read_text()
+          old = '    return serve(first, download);\n  } catch (error) {'
+          new = '    return fail("la fonte ha restituito HTML invece di un documento scaricabile", 502);\n  } catch (error) {'
+          if old not in ptext:
+              raise SystemExit('document proxy HTML fallback not found')
+          ptext = ptext.replace(old, new, 1)
+          proxy.write_text(ptext)
+
+          tmp = root / '.github/workflows/_tmp-germany-adapter-implement.yml'
+          # Keep this run out of the final tree; the deletion is included in the implementation commit.
+          tmp.unlink()
+      - name: Run focused tests
+        run: npx vitest run test/company-finder-germany-resolver.test.ts test/company-finder-document-proxy.test.ts test/company-finder-germany-public-balance.test.ts
+      - name: Run typecheck
+        run: npm run typecheck
+      - name: Run build
+        run: npm run build
+      - name: Commit implementation
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/lib/company-finder/sources/bilanci/ur-de.ts src/lib/company-finder/sources/germany-adapter.ts src/lib/company-finder/orchestrator.ts src/lib/company-finder/document-proxy.server.ts .github/workflows/_tmp-germany-adapter-implement.yml
+          git diff --cached --quiet && exit 0
+          git commit -m "feat(company-finder): align Germany with Estonia adapter pattern"
+          git push origin HEAD:feat/company-finder-germany-end-to-end
