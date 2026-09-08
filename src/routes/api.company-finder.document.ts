@@ -16,6 +16,15 @@ export const Route = createFileRoute("/api/company-finder/document")({
     handlers: {
       GET: async ({ request }: { request: Request }) => {
         const url = new URL(request.url);
+        // Pass-through del proxy generico: prioritizeBalanceDocument() avvolge
+        // qui ogni documentUrl ufficiale (UK, DK, BE, GR…). L'allowlist SSRF
+        // resta in handleDocumentRequest; per gli host NBB CBSO la chiave di
+        // sottoscrizione è iniettata lato server dal proxy stesso.
+        if (url.searchParams.get("url")) {
+          const { handleDocumentRequest } =
+            await import("@/lib/company-finder/document-proxy.server");
+          return handleDocumentRequest(request);
+        }
         const country = url.searchParams.get("country")?.trim().toUpperCase() || "DE";
         const company = url.searchParams.get("company")?.trim();
         const yearValue = url.searchParams.get("year")?.trim();

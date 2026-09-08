@@ -19,6 +19,17 @@ export const ALLOWED_DOCUMENT_HOSTS = new Set([
   "ariregister.rik.ee",
 ]);
 const HTTP_ONLY_HOSTS = new Set(["regnskaber.virk.dk"]);
+
+/** Host del gateway NBB CBSO (Belgio): ogni chiamata richiede la chiave. */
+const CBSO_HOSTS = new Set(["ws.cbso.nbb.be", "ws.uat2.cbso.nbb.be"]);
+
+/** Chiave NBB-CBSO, solo lato server. Lettura difensiva (runtime edge). */
+function cbsoApiKey(): string | undefined {
+  const env = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process
+    ?.env;
+  const key = env?.["NBB_CBSO_API_KEY"]?.trim();
+  return key ? key : undefined;
+}
 const MAX_BYTES = 30 * 1024 * 1024;
 const TIMEOUT_MS = 45_000;
 const MAX_REDIRECTS = 4;
@@ -115,6 +126,16 @@ async function fetchRaw(
       Accept: accept,
       "Accept-Language": "de-DE,de;q=0.9,en;q=0.8",
     };
+    // BE — NBB CBSO: il gateway pretende la chiave di sottoscrizione su ogni
+    // chiamata, PDF incluso. La chiave resta solo qui, lato server: non
+    // transita mai nell'URL né nella risposta al browser.
+    if (CBSO_HOSTS.has(current.hostname.toLowerCase())) {
+      const key = cbsoApiKey();
+      if (!key) throw new Error("chiave NBB-CBSO non configurata sul server (NBB_CBSO_API_KEY)");
+      headers["NBB-CBSO-Subscription-Key"] = key;
+      headers["X-Request-Id"] =
+        `tpbox-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+    }
     const cookie = cookieHeader(cookies);
     if (cookie) headers.Cookie = cookie;
     if (ref) headers.Referer = ref.toString();
@@ -198,6 +219,14 @@ export async function handleDocumentRequest(request: Request): Promise<Response>
   if (source.protocol !== "https:" && !(source.protocol === "http:" && httpOnly))
     return fail("sono ammesse solo url https", 400);
   if (!isAllowedDocumentHost(source)) return fail("dominio non autorizzato", 403);
+  // BE — errore azionabile prima ancora di chiamare il gateway NBB, invece di
+  // un 401 criptico dal CBSO.
+  if (CBSO_HOSTS.has(source.hostname.toLowerCase()) && !cbsoApiKey()) {
+    return fail(
+      "conti annuali belgi non configurati: serve la chiave gratuita NBB-CBSO (NBB_CBSO_API_KEY)",
+      503,
+    );
+  }
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
   const cookies = jar();

@@ -118,8 +118,11 @@ export async function fetchCbsoAccounts(
       return { ok: false, error: "NBB CBSO: nessun conto annuale pubblicato per questo CBE" };
     }
     const docUrl = `${base}/authentic/deposit/${latest.ref}/accountingData`;
-    // servito IN PAGINA dal proxy del tool (accept PDF: il gateway CBSO sceglie
-    // la rappresentazione in base all'header Accept)
+    // Eccezione documentata al contratto documentUrl: qui l'URL esce già
+    // proxato perché il gateway CBSO sceglie la rappresentazione (PDF, XBRL,
+    // JSON) solo dall'header Accept, che viaggia nel parametro accept. La
+    // chiave NBB-CBSO-Subscription-Key non è nell'URL: la inietta il proxy
+    // lato server (document-proxy.server.ts) da NBB_CBSO_API_KEY.
     const proxied = `/api/company-finder/document?url=${encodeURIComponent(docUrl)}&accept=${encodeURIComponent("application/pdf")}`;
 
     return {
