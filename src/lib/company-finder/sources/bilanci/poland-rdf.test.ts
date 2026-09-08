@@ -44,6 +44,11 @@ describe("Polish KRS RDF financial documents", () => {
     ]);
 
     fetchMock.mockResolvedValueOnce(
+      response("<html><body>RDF viewer</body></html>", 200, {
+        "set-cookie": "XSRF-TOKEN=token123; Path=/; Secure",
+      }),
+    );
+    fetchMock.mockResolvedValueOnce(
       response("%PDF-1.7\nAVIO POLSKA", 200, {
         "content-type": "application/pdf",
       }),
