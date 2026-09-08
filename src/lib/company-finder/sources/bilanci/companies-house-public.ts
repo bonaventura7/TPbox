@@ -7,8 +7,8 @@
 //   2. /company/<n>/filing-history?category=accounts → riga dei conti annuali
 //   3. /company/<n>/filing-history/<id>/document?format=pdf → il PDF depositato
 //
-// Il PDF viene poi servito in pagina dal proxy del tool: l'utente non esce dal
-// sito. Verificato da IP datacenter, senza credenziali.
+// L'adapter espone l'URL ufficiale; l'incapsulamento nel proxy avviene una sola
+// volta a valle, prima di restituire la risposta al client.
 
 import { getCountry } from "../../countries";
 import type { CompanyProfile, Financials } from "../../types";
@@ -24,7 +24,6 @@ export interface UkPublicResult {
   error?: string | undefined;
 }
 
-/** Numero Companies House: 8 cifre, oppure 2 lettere + 6 cifre (SC…, NI…). */
 export function ukNumberFromInput(value: string): string | undefined {
   const compact = value.replace(/\s/g, "").toUpperCase();
   return /^([0-9]{8}|[A-Z]{2}[0-9]{6})$/.test(compact) ? compact : undefined;
@@ -52,7 +51,6 @@ async function get(url: string, signal: AbortSignal): Promise<string> {
   return res.text();
 }
 
-/** Primo risultato della ricerca per nome: numero + denominazione. */
 function firstSearchHit(html: string): { number: string; name: string } | undefined {
   const match = html.match(/href="\/company\/([A-Z0-9]{6,10})"[^>]*>([\s\S]{0,200}?)<\/a>/i);
   if (!match) return undefined;
@@ -62,14 +60,6 @@ function firstSearchHit(html: string): { number: string; name: string } | undefi
   return { number, name };
 }
 
-/**
- * Riga dei conti annuali: link al documento + descrizione.
- *
- * Il filtro `?category=accounts` del sito funziona solo con il cookie di
- * sessione: una GET da server lo riceve e lo ignora, restituendo la cronologia
- * intera (verificato su Rolls-Royce, che deposita decine di SH06 al mese). Si
- * scandisce quindi la cronologia non filtrata e si cerca la riga giusta.
- */
 function findAccountsRows(
   html: string,
 ): { documentPath: string; description: string; interim: boolean }[] {
@@ -80,18 +70,11 @@ function findAccountsRows(
   while ((match = linkRe.exec(html)) !== null) {
     const path = match[1];
     if (!path) continue;
-    // La descrizione precede il link NELLA STESSA riga: si taglia al <tr> più
-    // vicino, altrimenti il testo della riga precedente entra nella cattura e
-    // una riga SH06 finisce per sembrare un deposito di conti.
     const window = html.slice(Math.max(0, match.index - 1500), match.index);
     const rowStart = window.lastIndexOf("<tr");
     const text = decode(rowStart === -1 ? window : window.slice(rowStart));
-    // `<` esclude il markup del link che segue la descrizione.
     const described = text.match(/([^.;<]*accounts made up to[^.;<]{0,60})/i);
     if (!described) continue;
-    // Via la data che apre la riga: resta la sola descrizione del deposito.
-    // Via la data che apre la riga e il codice del modulo (AA, AAMD, …):
-    // resta la sola descrizione leggibile del deposito.
     const description = described[1]!
       .replace(/^\d{1,2}\s+\w+\s+\d{4}\s*/, "")
       .replace(/^[A-Z]{2,6}\s+/, "")
@@ -105,7 +88,6 @@ function findAccountsRows(
   return rows;
 }
 
-/** Prima riga di conti nelle prime pagine della cronologia, annuali su interim. */
 async function firstAccountsDocument(
   number: string,
   signal: AbortSignal,
@@ -116,11 +98,9 @@ async function firstAccountsDocument(
     ),
   );
   const rows = pages.flatMap((html) => (html ? findAccountsRows(html) : []));
-  // Il bilancio d'esercizio vale più di una relazione infrannuale.
   return rows.find((row) => !row.interim) ?? rows[0];
 }
 
-/** Scheda societaria dalla pagina /company/<n>. */
 function profileFrom(html: string, number: string, fallbackName: string): CompanyProfile {
   const nameMatch = html.match(/<h1[^>]*>([\s\S]{0,200}?)<\/h1>/i);
   const statusMatch = html.match(/id="company-status"[^>]*>([\s\S]{0,80}?)</i);
@@ -150,7 +130,6 @@ export async function lookupUkPublic(
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
-    // 1. numero società: digitato, oppure dal primo risultato della ricerca
     let number = ukNumberFromInput(localVat);
     let name = query.trim();
     if (!number) {
@@ -167,7 +146,6 @@ export async function lookupUkPublic(
       name = hit.name;
     }
 
-    // 2. scheda + 3. conti annuali depositati, in parallelo
     const [companyHtml, document] = await Promise.all([
       get(`${HOST}/company/${number}`, ctrl.signal),
       firstAccountsDocument(number, ctrl.signal),
@@ -187,7 +165,7 @@ export async function lookupUkPublic(
       };
     }
 
-    const proxied = `/api/company-finder/document?url=${encodeURIComponent(HOST + document.documentPath)}`;
+    const documentUrl = HOST + document.documentPath;
     return {
       ok: true,
       profile,
@@ -195,7 +173,7 @@ export async function lookupUkPublic(
         available: true,
         years: [],
         source: "Companies House — conti annuali depositati",
-        documentUrl: proxied,
+        documentUrl,
         documentTitle: document.description,
         note: "Documento depositato presso Companies House, pubblico e gratuito, servito in pagina dal server dell'Osservatorio.",
       },
