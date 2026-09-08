@@ -5,12 +5,15 @@ import type { SearchResponse } from "./company-finder/types";
 import { getCountry } from "./company-finder/countries";
 import { officialPageFor } from "./company-finder/official-pages";
 import { resolveGreekFilingUrl } from "./company-finder/greek-filing";
+import { numericRegistryId, searchGleif } from "./company-finder/sources/gleif";
 
 const searchSchema = z.object({
   query: z.string().max(200).default(""),
   vat: z.string().max(40).default(""),
   country: z.string().max(2).default(""),
 });
+
+const POLISH_KRS_REGISTRATION_AUTHORITY = "RA000484";
 
 function emptyResponse(warning: string): SearchResponse {
   return {
@@ -28,6 +31,48 @@ function toInPageDocumentUrl(documentUrl: string): string {
 
 function firstRegistryIdentifier(response: SearchResponse, fallback: string): string {
   return response.company?.registry?.id?.trim() || fallback.trim();
+}
+
+export interface PolishKrsResolution {
+  krs?: string | undefined;
+  detail?: string | undefined;
+}
+
+/**
+ * Resolver keyless: GLEIF viene usato esclusivamente come indice del registro
+ * nazionale. Per la Polonia accettiamo solo record il cui Registered At è il
+ * National Court Register (RA000484); il numero viene poi verificato dal KRS
+ * ufficiale tramite l'orchestratore.
+ */
+export async function resolvePolishKrsByName(
+  query: string,
+  timeoutMs = 10000,
+): Promise<PolishKrsResolution> {
+  const term = query.trim();
+  if (term.length < 3) return { detail: "nome troppo corto per la risoluzione KRS" };
+
+  const result = await searchGleif(term, "PL", timeoutMs);
+  if (!result.ok) return { detail: result.error ?? "resolver GLEIF non raggiungibile" };
+  if (result.matches.length === 0) {
+    return { detail: "nessuna entità polacca con LEI corrisponde alla denominazione" };
+  }
+
+  for (const match of result.matches) {
+    if (match.country !== "PL" || match.registeredAt !== POLISH_KRS_REGISTRATION_AUTHORITY) continue;
+    const registeredAs = numericRegistryId(match.registeredAs);
+    if (!registeredAs) continue;
+    const krs = registeredAs.padStart(10, "0");
+    if (!/^\d{10}$/.test(krs)) continue;
+    return {
+      krs,
+      detail: `KRS ${krs} risolto da GLEIF → ${POLISH_KRS_REGISTRATION_AUTHORITY}`,
+    };
+  }
+
+  return {
+    detail:
+      "GLEIF ha trovato entità polacche, ma nessuna espone un identificativo KRS verificabile come Registered At KRS",
+  };
 }
 
 async function resolveGreekBalance(response: SearchResponse, fallbackId: string): Promise<SearchResponse> {
@@ -143,10 +188,25 @@ export const findCompany = createServerFn({ method: "POST" })
       if (direct) return direct;
     }
 
+    let effectiveVat = vat;
+    let polishResolution: PolishKrsResolution | undefined;
+    if (country === "PL" && query.length >= 3 && normalized.length === 0) {
+      polishResolution = await resolvePolishKrsByName(query);
+      if (polishResolution.krs) {
+        effectiveVat = `PL${polishResolution.krs}`;
+      }
+    }
+
     const { runSearch } = await import("./company-finder/orchestrator");
     try {
-      const response = await runSearch({ query, vat, country });
-      return prioritizeBalanceDocument(response, normalized);
+      const response = await runSearch({ query, vat: effectiveVat, country });
+      if (country === "PL" && polishResolution) {
+        response.warnings = [
+          polishResolution.detail ?? "Risoluzione KRS effettuata tramite GLEIF",
+          ...response.warnings,
+        ];
+      }
+      return prioritizeBalanceDocument(response, normalized || polishResolution?.krs || "");
     } catch (error) {
       console.error("[company-finder] errore orchestratore", error);
       return emptyResponse(
