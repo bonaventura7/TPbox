@@ -80,6 +80,8 @@ describe("Unternehmensregister current search contract", () => {
 
     expect(requests.some((r) => r.url.includes("areas=all"))).toBe(true);
     expect(result.data?.available).toBe(true);
-    expect(result.data?.documentUrl).toContain("download/document.pdf");
+    const wrapperUrl = result.data?.documentUrl ?? "";
+    expect(decodeURIComponent(wrapperUrl)).toContain("download/document.pdf");
+    expect(wrapperUrl).toContain("/api/company-finder/document?url=");
   });
 });
