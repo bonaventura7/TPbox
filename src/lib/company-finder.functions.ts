@@ -153,7 +153,7 @@ async function browserRegistryResponse(
       years: [],
       note:
         countryIso === "PL"
-          ? "Per il documento finanziario usa il registro RDF ufficiale: la ricerca del deposito e il download avvengono nel browser."
+          ? "Il bilancio viene raggiunto dalla pagina finanziaria specifica della società; il KRS ufficiale resta la fonte primaria del deposito."
           : "La scheda del registro ufficiale viene aperta nel browser dell'utente; eventuali autenticazione o verifica del browser restano nel portale ufficiale.",
     },
     sources: [
@@ -198,19 +198,25 @@ export const findCompany = createServerFn({ method: "POST" })
     let polishResolution: PolishKrsResolution | undefined;
     if (country === "PL" && query.length >= 3 && normalized.length === 0) {
       polishResolution = await resolvePolishKrsByName(query);
-      if (polishResolution.krs) {
-        effectiveVat = `PL${polishResolution.krs}`;
-      }
+      if (polishResolution.krs) effectiveVat = `PL${polishResolution.krs}`;
     }
 
     const { runSearch } = await import("./company-finder/orchestrator");
     try {
       const response = await runSearch({ query, vat: effectiveVat, country });
-      if (country === "PL" && polishResolution) {
-        response.warnings = [
-          polishResolution.detail ?? "Risoluzione KRS effettuata tramite GLEIF",
-          ...response.warnings,
-        ];
+      if (country === "PL") {
+        const krs = (response.company?.registry?.id ?? polishResolution?.krs ?? normalized).replace(/\D/g, "");
+        if (/^\d{8}$|^\d{10}$/.test(krs)) {
+          const officialName = response.company?.name?.trim() || query;
+          const page = officialPageFor("PL", krs, officialName);
+          if (page) response.officialPage = page;
+        }
+        if (polishResolution) {
+          response.warnings = [
+            polishResolution.detail ?? "Risoluzione KRS effettuata tramite GLEIF",
+            ...response.warnings,
+          ];
+        }
       }
       return prioritizeBalanceDocument(response, normalized || polishResolution?.krs || "");
     } catch (error) {
