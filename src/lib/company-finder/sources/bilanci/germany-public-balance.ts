@@ -24,13 +24,22 @@ function decodeHtml(value: string): string {
 }
 
 function stripHtml(value: string): string {
-  return decodeHtml(value.replace(/<script[\s\S]*?<\/script>/gi, "").replace(/<style[\s\S]*?<\/style>/gi, "").replace(/<[^>]+>/g, " "))
+  return decodeHtml(
+    value
+      .replace(/<script[\s\S]*?<\/script>/gi, "")
+      .replace(/<style[\s\S]*?<\/style>/gi, "")
+      .replace(/<[^>]+>/g, " "),
+  )
     .replace(/\s+/g, " ")
     .trim();
 }
 
 function numberValue(value: string): number | undefined {
-  const normalized = value.replace(/\s/g, "").replace(/€/g, "").replace(/\./g, "").replace(/,/g, ".");
+  const normalized = value
+    .replace(/\s/g, "")
+    .replace(/€/g, "")
+    .replace(/\./g, "")
+    .replace(/,/g, ".");
   const parsed = Number(normalized.replace(/[^0-9.-]/g, ""));
   return Number.isFinite(parsed) ? parsed : undefined;
 }
@@ -40,18 +49,35 @@ function firstMatch(text: string, regex: RegExp): number | undefined {
   return match ? numberValue(match[1]!) : undefined;
 }
 
+function fiscalYear(pageText: string): number | undefined {
+  const patterns = [
+    /Jahresabschluss\s+(?:zum\s+)?Geschäftsjahr\s+vom\s+01\.01\.(20\d{2})\s+bis\s+zum\s+31\.12\.\d{4}/i,
+    /Jahresabschluss\s+(20\d{2})/i,
+    /Geschäftsjahr\s+vom\s+01\.01\.(20\d{2})\s+bis\s+zum\s+31\.12\./i,
+  ];
+  for (const pattern of patterns) {
+    const match = pattern.exec(pageText);
+    if (match) return Number(match[1]);
+  }
+  return undefined;
+}
+
 function searchResultUrl(html: string, companyName: string): string | undefined {
   const hrefs = [...html.matchAll(/href=["']([^"']+)["']/gi)].map((m) => decodeHtml(m[1]!));
   const candidates = hrefs
     .map((href) => {
-      if (href.includes("unternehmen24.info/Firmeninformationen/Deutschland/Firma/")) return href;
-      const target = href.match(/uddg=([^&]+)/i)?.[1];
+      if (href.startsWith(COMPANY_PAGE_PREFIX)) return href;
+      const target = href.match(/[?&]uddg=([^&]+)/i)?.[1];
       return target ? decodeURIComponent(target) : undefined;
     })
     .filter((url): url is string => Boolean(url) && url.startsWith(COMPANY_PAGE_PREFIX));
 
   const normalized = companyName.toLowerCase().replace(/[^a-z0-9äöüß]/gi, "");
-  return candidates.find((url) => url.toLowerCase().replace(/[^a-z0-9äöüß]/gi, "").includes(normalized)) ?? candidates[0];
+  return (
+    candidates.find((url) =>
+      url.toLowerCase().replace(/[^a-z0-9äöüß]/gi, "").includes(normalized),
+    ) ?? candidates[0]
+  );
 }
 
 async function fetchText(url: string, signal: AbortSignal): Promise<string> {
@@ -68,13 +94,17 @@ async function fetchText(url: string, signal: AbortSignal): Promise<string> {
   return response.text();
 }
 
-function buildCsv(companyName: string, sourceUrl: string, pageText: string): { csv: string; year?: number } | undefined {
-  const yearCandidates = [...pageText.matchAll(/Jahresabschluss(?:\s+zum|\s+vom)?[^0-9]{0,80}(20\d{2})/gi)].map((m) => Number(m[1]));
-  const year = yearCandidates.sort((a, b) => b - a)[0];
+function buildCsv(
+  companyName: string,
+  sourceUrl: string,
+  pageText: string,
+): { csv: string; year?: number } | undefined {
+  const year = fiscalYear(pageText);
   if (!year) return undefined;
 
   const rows: Array<[string, string, number | undefined]> = [];
-  const add = (section: string, label: string, regex: RegExp) => rows.push([section, label, firstMatch(pageText, regex)]);
+  const add = (section: string, label: string, regex: RegExp) =>
+    rows.push([section, label, firstMatch(pageText, regex)]);
 
   add("Aktiva", "Anlagevermögen", /Anlagevermögen\s+([\d.\s]+\s*€)/i);
   add("Aktiva", "Sachanlagen", /Sachanlagen\s+([\d.\s]+\s*€)/i);
@@ -90,14 +120,14 @@ function buildCsv(companyName: string, sourceUrl: string, pageText: string): { c
   add("Passiva", "Rückstellungen", /Rückstellungen\s+([\d.\s]+\s*€)/i);
   add("Passiva", "Verbindlichkeiten", /Verbindlichkeiten\s+([\d.\s]+\s*€)/i);
   add("Passiva", "Summe Passiva", /Summe Passiva\s+([\d.\s]+\s*€)/i);
-  add("GuV", "Gewinn / Jahresüberschuss", /Gewinn\s*\(?Jahresüberschuss\)?\s+([\d.\s]+\s*€)/i);
+  add("GuV", "Gewinn / Jahresüberschuss", /Gewinn\s+([\d.\s]+\s*€)/i);
 
   const useful = rows.filter(([, , value]) => value !== undefined);
   if (!useful.length) return undefined;
 
   const lines = [
     `\uFEFFGesellschaft;${companyName.replace(/;/g, ",")}`,
-    `Quelle;${sourceUrl.replace(/;/g, ",")}`,
+    `Fonte;${sourceUrl.replace(/;/g, ",")}`,
     `Esercizio;${year}`,
     "",
     "Sektion;Position;Wert EUR",
@@ -126,7 +156,10 @@ export async function fetchGermanyPublicBalance(companyName: string): Promise<Pu
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
   try {
-    const searchHtml = await fetchText(`${SEARCH_BASE}?q=${encodeURIComponent(`site:unternehmen24.info/Firmeninformationen/Deutschland/Firma/ "${query}"`)}`, controller.signal);
+    const searchHtml = await fetchText(
+      `${SEARCH_BASE}?q=${encodeURIComponent(`site:unternehmen24.info/Firmeninformationen/Deutschland/Firma/ "${query}"`)}`,
+      controller.signal,
+    );
     const sourceUrl = searchResultUrl(searchHtml, query);
     if (!sourceUrl) return { ok: false, error: "nessuna pagina pubblica di bilancio trovata" };
 
@@ -134,6 +167,11 @@ export async function fetchGermanyPublicBalance(companyName: string): Promise<Pu
     const pageText = stripHtml(pageHtml);
     const built = buildCsv(query, sourceUrl, pageText);
     if (!built) return { ok: false, error: "pagina trovata ma dati di bilancio non esposti" };
+
+    const totalAssets = firstMatch(pageText, /Summe Aktiva\s+([\d.\s]+\s*€)/i);
+    const equity = firstMatch(pageText, /Eigenkapital\s+([\d.\s]+\s*€)/i);
+    const liabilitiesAndEquity = firstMatch(pageText, /Summe Passiva\s+([\d.\s]+\s*€)/i);
+    const netIncome = firstMatch(pageText, /Jahresüberschuss\s+([\d.\s]+\s*€)/i);
 
     return {
       ok: true,
@@ -143,10 +181,10 @@ export async function fetchGermanyPublicBalance(companyName: string): Promise<Pu
           periodLabel: `Esercizio ${built.year}`,
           year: built.year,
           currency: "EUR",
-          netIncome: firstMatch(pageText, /Gewinn\s+([\d.\s]+\s*€)/i),
-          totalAssets: firstMatch(pageText, /Bilanzsumme\s+(?:gesamt\s+)?([\d.\s]+\s*€)/i),
-          equity: firstMatch(pageText, /Eigenkapital\s+([\d.\s]+\s*€)/i),
-          liabilitiesAndEquity: firstMatch(pageText, /Summe Passiva\s+([\d.\s]+\s*€)/i),
+          netIncome,
+          totalAssets,
+          equity,
+          liabilitiesAndEquity,
         }],
         currency: "EUR",
         source: "Öffentliche Bilanzdaten — Unternehmen24 (DE)",
@@ -162,13 +200,18 @@ export async function fetchGermanyPublicBalance(companyName: string): Promise<Pu
   }
 }
 
-export async function buildGermanyPublicBalanceCsv(sourceUrl: string, companyName: string): Promise<{ csv: string; year: number } | undefined> {
+export async function buildGermanyPublicBalanceCsv(
+  sourceUrl: string,
+  companyName: string,
+): Promise<{ csv: string; year: number } | undefined> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
   try {
-    const pageHtml = await fetchText(sourceUrl, controller.signal);
+    const source = new URL(sourceUrl);
+    if (source.protocol !== "https:" || !["www.unternehmen24.info", "unternehmen24.info"].includes(source.hostname.toLowerCase())) return undefined;
+    const pageHtml = await fetchText(source.toString(), controller.signal);
     const pageText = stripHtml(pageHtml);
-    return buildCsv(companyName, sourceUrl, pageText);
+    return buildCsv(companyName, source.toString(), pageText) as { csv: string; year: number } | undefined;
   } catch {
     return undefined;
   } finally {
