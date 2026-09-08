@@ -40,16 +40,44 @@ export const Route = createFileRoute("/api/company-finder/document")({
           const krs = company.replace(/\D/g, "").padStart(10, "0");
           if (!/^\d{10}$/.test(krs)) return errorResponse("KRS non valido", 400);
 
-          const { fetchPolishAnnualReport } = await import(
-            "@/lib/company-finder/sources/bilanci/poland-rdf"
+          const { fetchKrsOdpis } = await import(
+            "@/lib/company-finder/sources/krs"
           );
-          const result = await fetchPolishAnnualReport(krs, year, 30_000);
-          if (!result.ok || !result.bytes.byteLength) {
-            return errorResponse(result.error ?? `bilancio ${year} non disponibile`, 502);
+          const krsResult = await fetchKrsOdpis(krs, 15_000);
+          const companyName = krsResult.data?.name?.trim();
+          if (!krsResult.ok || !companyName) {
+            return errorResponse(krsResult.error ?? `società KRS ${krs} non disponibile`, 502);
           }
 
-          const contentType = result.contentType || "application/octet-stream";
-          const filename = result.filename ?? `bilancio-${krs}-${year}`;
+          const { fetchAleoAnnualReport } = await import(
+            "@/lib/company-finder/sources/bilanci/poland-aleo"
+          );
+          const result = await fetchAleoAnnualReport(companyName, year, 30_000);
+
+          if (!result.ok || !result.bytes.byteLength) {
+            const { fetchPolishAnnualReport } = await import(
+              "@/lib/company-finder/sources/bilanci/poland-rdf"
+            );
+            const rdfFallback = await fetchPolishAnnualReport(krs, year, 20_000);
+            if (!rdfFallback.ok || !rdfFallback.bytes.byteLength) {
+              return errorResponse(
+                result.error ?? rdfFallback.error ?? `bilancio ${year} non disponibile`,
+                502,
+              );
+            }
+            return new Response(rdfFallback.bytes, {
+              status: 200,
+              headers: {
+                "Content-Type": rdfFallback.contentType || "application/octet-stream",
+                "Content-Disposition": `${download ? "attachment" : "inline"}; filename="${rdfFallback.filename ?? `bilancio-${krs}-${year}.pdf`}"`,
+                "Cache-Control": "no-store",
+                "X-Content-Type-Options": "nosniff",
+              },
+            });
+          }
+
+          const contentType = result.contentType || "application/pdf";
+          const filename = result.filename ?? `bilancio-${krs}-${year}.pdf`;
           return new Response(result.bytes, {
             status: 200,
             headers: {
