@@ -11,6 +11,36 @@ function errorResponse(message: string, status: number, details?: Record<string,
   });
 }
 
+function isOfficialGdLu(url: URL): boolean {
+  return url.protocol === "https:" && url.hostname.toLowerCase() === "gd.lu" && /^\/rcsl\//i.test(url.pathname);
+}
+
+export function isValidLuxembourgPdf(bytes: ArrayBuffer): boolean {
+  if (bytes.byteLength < 8 || bytes.byteLength > 30 * 1024 * 1024) return false;
+  const head = new TextDecoder("latin1").decode(new Uint8Array(bytes).slice(0, 8));
+  return head.startsWith("%PDF-");
+}
+
+async function fetchLuxembourgPdf(url: URL, signal: AbortSignal): Promise<{ bytes: ArrayBuffer; finalUrl: URL }> {
+  const response = await fetch(url.toString(), {
+    method: "GET",
+    headers: {
+      Accept: "application/pdf",
+      "User-Agent": "TPbox-CompanyFinder/1.0",
+      "Accept-Language": "fr-FR,fr;q=0.9,en;q=0.8",
+    },
+    redirect: "follow",
+    signal,
+    cache: "no-store",
+  });
+  if (!response.ok) throw new Error(`gd.lu HTTP ${response.status}`);
+  const finalUrl = new URL(response.url || url.toString());
+  if (!isOfficialGdLu(finalUrl)) throw new Error("destinazione documentale non autorizzata");
+  const bytes = await response.arrayBuffer();
+  if (!isValidLuxembourgPdf(bytes)) throw new Error("gd.lu non ha restituito un PDF valido");
+  return { bytes, finalUrl };
+}
+
 export const Route = createFileRoute("/api/company-finder/document")({
   server: {
     handlers: {
@@ -23,6 +53,57 @@ export const Route = createFileRoute("/api/company-finder/document")({
         const year = Number(yearValue);
         if (!Number.isInteger(year) || year < 2000 || year > 2100) return errorResponse("esercizio non valido", 400);
         const download = url.searchParams.get("download") === "1";
+
+        if (country === "LU") {
+          const { luxembourgRcsFromInput, findLuxembourgAnnualReport } = await import(
+            "@/lib/company-finder/sources/bilanci/rcsl-lu"
+          );
+          const rcs = luxembourgRcsFromInput(company);
+          if (!rcs) return errorResponse("RCS lussemburghese non valido", 400);
+          const result = await findLuxembourgAnnualReport("", rcs, year, 30000);
+          if (!result.ok || !result.document?.url) {
+            return errorResponse(result.error ?? `bilancio ${year} non disponibile`, 502, {
+              fallback: "official-browser",
+            });
+          }
+          let target: URL;
+          try {
+            target = new URL(result.document.url);
+          } catch {
+            return errorResponse("riferimento documentale non valido", 502, { fallback: "official-browser" });
+          }
+          if (!isOfficialGdLu(target)) {
+            return errorResponse("riferimento documentale non autorizzato", 502, { fallback: "official-browser" });
+          }
+
+          const controller = new AbortController();
+          const timer = setTimeout(() => controller.abort(), 30000);
+          try {
+            const document = await fetchLuxembourgPdf(target, controller.signal);
+            const contentDisposition = download ? "attachment" : "inline";
+            return new Response(document.bytes, {
+              status: 200,
+              headers: {
+                "Content-Type": "application/pdf",
+                "Content-Disposition": `${contentDisposition}; filename="bilancio-LU-${rcs}-${year}.pdf"`,
+                "Cache-Control": "no-store",
+                "X-Content-Type-Options": "nosniff",
+                "X-Document-Source": "gd.lu/rcsl",
+              },
+            });
+          } catch (error) {
+            const err = error as { name?: string; message?: string } | undefined;
+            return errorResponse(
+              err?.name === "AbortError"
+                ? "timeout recupero documento lussemburghese"
+                : (err?.message ?? "documento lussemburghese non disponibile"),
+              502,
+              { fallback: "official-browser" },
+            );
+          } finally {
+            clearTimeout(timer);
+          }
+        }
 
         if (country === "PL") {
           const krs = company.replace(/\D/g, "").padStart(10, "0");
