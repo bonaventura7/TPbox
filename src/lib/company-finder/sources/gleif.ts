@@ -1,20 +1,4 @@
 // ---------- GLEIF — risoluzione "nome società" → identificativo di registro ----------
-// Il buco più grosso del Company Finder era la ricerca per SOLO NOME: senza
-// numero di IVA quasi nessun registro nazionale è interrogabile, e senza paese
-// la ricerca non partiva nemmeno.
-//
-// GLEIF (Global Legal Entity Identifier Foundation) pubblica il registro
-// mondiale dei LEI: API aperta, gratuita, senza chiave. Ogni record porta la
-// denominazione ufficiale, il paese, e soprattutto `registeredAs`, cioè
-// l'identificativo dell'entità nel registro NAZIONALE (CVR danese, HRB tedesco,
-// codice fiscale italiano, SIREN francese…). È esattamente la chiave che
-// servisse agli adapter già presenti.
-//
-//   GET https://api.gleif.org/api/v1/lei-records?filter[entity.legalName]=<nome>
-//
-// Limite dichiarato: copre solo chi ha un LEI. Le società non quotate e senza
-// operatività sui mercati finanziari spesso non ce l'hanno, e in quel caso
-// questa fonte non trova nulla: va detto, non aggirato.
 
 import type { Iso2 } from "../types";
 
@@ -24,7 +8,6 @@ export interface GleifMatch {
   lei: string;
   name: string;
   country: Iso2;
-  /** Identificativo nel registro nazionale (CVR, HRB, SIREN, codice fiscale…). */
   registeredAs?: string | undefined;
   address?: string | undefined;
   status?: string | undefined;
@@ -62,10 +45,44 @@ function formatAddress(address: GleifAddress | undefined): string | undefined {
   return parts.length > 0 ? parts.join(", ").toLowerCase() : undefined;
 }
 
+function normalizeLegalName(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
 /**
- * Cerca per denominazione. `country`, se indicato, restringe alla giurisdizione:
- * senza il filtro "Carlsberg A/S" restituisce anche le controllate estere.
+ * Score conservativo: una corrispondenza esatta vince sempre; risultati che
+ * aggiungono parole sostanziali (es. "Siemens Healthineers AG" per "Siemens AG")
+ * restano sotto soglia e non possono intestare la scheda alla società sbagliata.
  */
+export function gleifNameRelevance(query: string, candidate: string): number {
+  const q = normalizeLegalName(query);
+  const c = normalizeLegalName(candidate);
+  if (!q || !c) return 0;
+  if (q === c) return 100;
+
+  const qTokens = q.split(/\s+/).filter(Boolean);
+  const cTokens = c.split(/\s+/).filter(Boolean);
+  const common = qTokens.filter((token) => cTokens.includes(token)).length;
+  const precision = common / Math.max(cTokens.length, 1);
+  const recall = common / Math.max(qTokens.length, 1);
+  const tokenScore = Math.round(100 * (2 * precision * recall) / Math.max(precision + recall, 0.0001));
+
+  return tokenScore;
+}
+
+export function rankRelevantGleifMatches(query: string, matches: GleifMatch[]): GleifMatch[] {
+  return matches
+    .map((match) => ({ match, score: gleifNameRelevance(query, match.name) }))
+    .filter(({ score }) => score >= 80)
+    .sort((a, b) => b.score - a.score)
+    .map(({ match }) => match);
+}
+
 export async function searchGleif(
   name: string,
   country: string,
@@ -107,7 +124,7 @@ export async function searchGleif(
       })
       .filter((match): match is GleifMatch => Boolean(match));
 
-    return { ok: true, matches };
+    return { ok: true, matches: rankRelevantGleifMatches(term, matches) };
   } catch (e) {
     const err = e as { name?: string | undefined; message?: string | undefined };
     return {
@@ -121,12 +138,6 @@ export async function searchGleif(
   }
 }
 
-/**
- * Le sole cifre di `registeredAs`, quando l'identificativo nazionale è
- * numerico (CVR danese, codice fiscale italiano, SIREN francese). Per HRB
- * tedeschi e simili restituisce undefined: non sono numeri di registro
- * utilizzabili dagli adapter, che si aspettano cifre.
- */
 export function numericRegistryId(registeredAs: string | undefined): string | undefined {
   if (!registeredAs) return undefined;
   const trimmed = registeredAs.trim();
