@@ -66,15 +66,17 @@ function searchResultUrl(html: string, companyName: string): string | undefined 
   const normalizedQuery = stripHtml(companyName).toLowerCase().replace(/[^a-z0-9äöüß]/gi, "");
   const candidates: Array<{ url: string; label: string }> = [];
 
-  // Prefer actual search-result anchors so we can rank by the displayed company name,
-  // rather than choosing an arbitrary first result with an opaque numeric URL.
   for (const match of html.matchAll(/<a[^>]+href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi)) {
     let href = decodeHtml(match[1]!);
     const label = stripHtml(match[2]!);
     if (!href.startsWith(COMPANY_PAGE_PREFIX)) {
       const target = href.match(/[?&]uddg=([^&]+)/i)?.[1];
       if (!target) continue;
-      try { href = decodeURIComponent(target); } catch { continue; }
+      try {
+        href = decodeURIComponent(target);
+      } catch {
+        continue;
+      }
     }
     if (!href.startsWith(COMPANY_PAGE_PREFIX)) continue;
     candidates.push({ url: href, label });
@@ -105,14 +107,24 @@ async function fetchText(url: string, signal: AbortSignal): Promise<string> {
   return response.text();
 }
 
-function buildCsv(
+async function findPublicBalancePage(
   companyName: string,
-  sourceUrl: string,
-  pageText: string,
-): { csv: string; year?: number } | undefined {
+  signal: AbortSignal,
+): Promise<{ sourceUrl: string; pageText: string; year: number } | undefined> {
+  const query = companyName.trim();
+  const searchHtml = await fetchText(
+    `${SEARCH_BASE}?q=${encodeURIComponent(`site:unternehmen24.info/Firmeninformationen/Deutschland/Firma/ "${query}"`)}`,
+    signal,
+  );
+  const sourceUrl = searchResultUrl(searchHtml, query);
+  if (!sourceUrl) return undefined;
+  const pageText = stripHtml(await fetchText(sourceUrl, signal));
   const year = fiscalYear(pageText);
   if (!year) return undefined;
+  return { sourceUrl, pageText, year };
+}
 
+function buildCsv(companyName: string, year: number, pageText: string): string | undefined {
   const rows: Array<[string, string, number | undefined]> = [];
   const add = (section: string, label: string, regex: RegExp) =>
     rows.push([section, label, firstMatch(pageText, regex)]);
@@ -138,21 +150,20 @@ function buildCsv(
 
   const lines = [
     `\uFEFFGesellschaft;${companyName.replace(/;/g, ",")}`,
-    `Fonte;${sourceUrl.replace(/;/g, ",")}`,
     `Esercizio;${year}`,
     "",
     "Sektion;Position;Wert EUR",
     ...useful.map(([section, label, value]) => `${section};${label};${value ?? ""}`),
   ];
-  return { csv: `${lines.join("\r\n")}\r\n`, year };
+  return `${lines.join("\r\n")}\r\n`;
 }
 
-function document(companyName: string, sourceUrl: string, year: number): FinancialDocumentSummary {
-  const params = new URLSearchParams({ company: companyName, sourceUrl, year: String(year) });
+function document(companyName: string, year: number): FinancialDocumentSummary {
+  const params = new URLSearchParams({ company: companyName, year: String(year) });
   return {
-    id: `unternehmen24-${year}`,
+    id: `germany-public-balance-${year}`,
     year,
-    kind: "ANNUAL_REPORT",
+    kind: "BALANCE_SHEET",
     format: "csv",
     availability: "DOCUMENT_DOWNLOADABLE",
     title: `${companyName} - Bilancio ${year}`,
@@ -167,30 +178,21 @@ export async function fetchGermanyPublicBalance(companyName: string): Promise<Pu
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
   try {
-    const searchHtml = await fetchText(
-      `${SEARCH_BASE}?q=${encodeURIComponent(`site:unternehmen24.info/Firmeninformationen/Deutschland/Firma/ "${query}"`)}`,
-      controller.signal,
-    );
-    const sourceUrl = searchResultUrl(searchHtml, query);
-    if (!sourceUrl) return { ok: false, error: "nessuna pagina pubblica di bilancio trovata" };
+    const found = await findPublicBalancePage(query, controller.signal);
+    if (!found) return { ok: false, error: "nessuna pagina pubblica di bilancio trovata" };
 
-    const pageHtml = await fetchText(sourceUrl, controller.signal);
-    const pageText = stripHtml(pageHtml);
-    const built = buildCsv(query, sourceUrl, pageText);
-    if (!built) return { ok: false, error: "pagina trovata ma dati di bilancio non esposti" };
-
-    const totalAssets = firstMatch(pageText, /Summe Aktiva\s+([\d.\s]+\s*€)/i);
-    const equity = firstMatch(pageText, /Eigenkapital\s+([\d.\s]+\s*€)/i);
-    const liabilitiesAndEquity = firstMatch(pageText, /Summe Passiva\s+([\d.\s]+\s*€)/i);
-    const netIncome = firstMatch(pageText, /Jahresüberschuss\s+([\d.\s]+\s*€)/i);
+    const totalAssets = firstMatch(found.pageText, /Summe Aktiva\s+([\d.\s]+\s*€)/i);
+    const equity = firstMatch(found.pageText, /Eigenkapital\s+([\d.\s]+\s*€)/i);
+    const liabilitiesAndEquity = firstMatch(found.pageText, /Summe Passiva\s+([\d.\s]+\s*€)/i);
+    const netIncome = firstMatch(found.pageText, /Jahresüberschuss\s+([\d.\s]+\s*€)/i);
 
     return {
       ok: true,
       data: {
         available: true,
         years: [{
-          periodLabel: `Esercizio ${built.year}`,
-          year: built.year,
+          periodLabel: `Esercizio ${found.year}`,
+          year: found.year,
           currency: "EUR",
           netIncome,
           totalAssets,
@@ -198,14 +200,34 @@ export async function fetchGermanyPublicBalance(companyName: string): Promise<Pu
           liabilitiesAndEquity,
         }],
         currency: "EUR",
-        source: "Öffentliche Bilanzdaten — Unternehmen24 (DE)",
-        note: "Dati finanziari estratti da una pagina pubblicamente accessibile che riporta il bilancio depositato. Il file scaricabile è un export dei dati pubblici, non il PDF originale.",
-        documents: [document(query, sourceUrl, built.year!)],
+        note: "Dati finanziari estratti da una pagina pubblicamente accessibile che riporta il bilancio depositato. Il file scaricabile è un export strutturato dei dati pubblici.",
+        documents: [document(query, found.year)],
       },
     };
   } catch (error) {
     const err = error as { name?: string; message?: string };
     return { ok: false, error: err?.name === "AbortError" ? "timeout" : err?.message ?? "errore" };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+export async function downloadGermanyPublicBalanceCsv(
+  companyName: string,
+  requestedYear?: number,
+): Promise<{ csv: string; year: number } | undefined> {
+  const query = companyName.trim();
+  if (query.length < 3) return undefined;
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  try {
+    const found = await findPublicBalancePage(query, controller.signal);
+    if (!found || (requestedYear !== undefined && found.year !== requestedYear)) return undefined;
+    const csv = buildCsv(query, found.year, found.pageText);
+    return csv ? { csv, year: found.year } : undefined;
+  } catch {
+    return undefined;
   } finally {
     clearTimeout(timer);
   }
@@ -220,9 +242,11 @@ export async function buildGermanyPublicBalanceCsv(
   try {
     const source = new URL(sourceUrl);
     if (source.protocol !== "https:" || !["www.unternehmen24.info", "unternehmen24.info"].includes(source.hostname.toLowerCase())) return undefined;
-    const pageHtml = await fetchText(source.toString(), controller.signal);
-    const pageText = stripHtml(pageHtml);
-    return buildCsv(companyName, source.toString(), pageText) as { csv: string; year: number } | undefined;
+    const pageText = stripHtml(await fetchText(source.toString(), controller.signal));
+    const year = fiscalYear(pageText);
+    if (!year) return undefined;
+    const csv = buildCsv(companyName, year, pageText);
+    return csv ? { csv, year } : undefined;
   } catch {
     return undefined;
   } finally {
