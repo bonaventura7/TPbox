@@ -2,7 +2,23 @@ import type { FinancialDocumentSummary, Financials } from "../../types";
 
 type JsonObject = Record<string, unknown>;
 
-const SEARCH_BASE = "https://html.duckduckgo.com/html/";
+const SEARCH_BASES = [
+  {
+    name: "duckduckgo",
+    buildUrl: (query: string) =>
+      `https://html.duckduckgo.com/html/?q=${encodeURIComponent(`site:unternehmen24.info/Firmeninformationen/Deutschland/Firma/ "${query}"`)}`,
+  },
+  {
+    name: "google",
+    buildUrl: (query: string) =>
+      `https://www.google.com/search?hl=de&num=10&q=${encodeURIComponent(`site:unternehmen24.info/Firmeninformationen/Deutschland/Firma/ "${query}"`)}`,
+  },
+  {
+    name: "bing",
+    buildUrl: (query: string) =>
+      `https://www.bing.com/search?q=${encodeURIComponent(`site:unternehmen24.info/Firmeninformationen/Deutschland/Firma/ "${query}"`)}`,
+  },
+] as const;
 const COMPANY_PAGE_PREFIX = "https://www.unternehmen24.info/Firmeninformationen/Deutschland/Firma/";
 const UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/126.0 Safari/537.36";
 const TIMEOUT_MS = 12_000;
@@ -62,23 +78,31 @@ function fiscalYear(pageText: string): number | undefined {
   return undefined;
 }
 
+function decodeRedirectHref(href: string): string | undefined {
+  const direct = decodeHtml(href);
+  if (direct.startsWith(COMPANY_PAGE_PREFIX)) return direct;
+  const patterns = [/[?&]uddg=([^&]+)/i, /[?&]q=(https%3A%2F%2F[^&]+)/i, /\/(?:url|link)\?[^\s"']*?[?&]q=([^&]+)/i];
+  for (const pattern of patterns) {
+    const match = direct.match(pattern)?.[1];
+    if (!match) continue;
+    try {
+      const candidate = decodeURIComponent(match);
+      if (candidate.startsWith(COMPANY_PAGE_PREFIX)) return candidate;
+    } catch {
+      // Ignore malformed redirects and continue with the next result.
+    }
+  }
+  return undefined;
+}
+
 function searchResultUrl(html: string, companyName: string): string | undefined {
   const normalizedQuery = stripHtml(companyName).toLowerCase().replace(/[^a-z0-9äöüß]/gi, "");
   const candidates: Array<{ url: string; label: string }> = [];
 
   for (const match of html.matchAll(/<a[^>]+href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi)) {
-    let href = decodeHtml(match[1]!);
+    const href = decodeRedirectHref(match[1]!);
     const label = stripHtml(match[2]!);
-    if (!href.startsWith(COMPANY_PAGE_PREFIX)) {
-      const target = href.match(/[?&]uddg=([^&]+)/i)?.[1];
-      if (!target) continue;
-      try {
-        href = decodeURIComponent(target);
-      } catch {
-        continue;
-      }
-    }
-    if (!href.startsWith(COMPANY_PAGE_PREFIX)) continue;
+    if (!href) continue;
     candidates.push({ url: href, label });
   }
 
@@ -112,16 +136,19 @@ async function findPublicBalancePage(
   signal: AbortSignal,
 ): Promise<{ sourceUrl: string; pageText: string; year: number } | undefined> {
   const query = companyName.trim();
-  const searchHtml = await fetchText(
-    `${SEARCH_BASE}?q=${encodeURIComponent(`site:unternehmen24.info/Firmeninformationen/Deutschland/Firma/ "${query}"`)}`,
-    signal,
-  );
-  const sourceUrl = searchResultUrl(searchHtml, query);
-  if (!sourceUrl) return undefined;
-  const pageText = stripHtml(await fetchText(sourceUrl, signal));
-  const year = fiscalYear(pageText);
-  if (!year) return undefined;
-  return { sourceUrl, pageText, year };
+  for (const search of SEARCH_BASES) {
+    try {
+      const searchHtml = await fetchText(search.buildUrl(query), signal);
+      const sourceUrl = searchResultUrl(searchHtml, query);
+      if (!sourceUrl) continue;
+      const pageText = stripHtml(await fetchText(sourceUrl, signal));
+      const year = fiscalYear(pageText);
+      if (year) return { sourceUrl, pageText, year };
+    } catch {
+      // A single search engine must not take down the Germany resolver.
+    }
+  }
+  return undefined;
 }
 
 function buildCsv(companyName: string, year: number, pageText: string): string | undefined {
@@ -176,7 +203,7 @@ export async function fetchGermanyPublicBalance(companyName: string): Promise<Pu
   if (query.length < 3) return { ok: false, error: "ragione sociale troppo corta" };
 
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS * SEARCH_BASES.length);
   try {
     const found = await findPublicBalancePage(query, controller.signal);
     if (!found) return { ok: false, error: "nessuna pagina pubblica di bilancio trovata" };
@@ -200,7 +227,7 @@ export async function fetchGermanyPublicBalance(companyName: string): Promise<Pu
           liabilitiesAndEquity,
         }],
         currency: "EUR",
-        note: "Dati finanziari estratti da una pagina pubblicamente accessibile che riporta il bilancio depositato. Il file scaricabile è un export strutturato dei dati pubblici.",
+        note: "Bilancio disponibile per il download tramite TPBox.",
         documents: [document(query, found.year)],
       },
     };
@@ -220,7 +247,7 @@ export async function downloadGermanyPublicBalanceCsv(
   if (query.length < 3) return undefined;
 
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS * SEARCH_BASES.length);
   try {
     const found = await findPublicBalancePage(query, controller.signal);
     if (!found || (requestedYear !== undefined && found.year !== requestedYear)) return undefined;
