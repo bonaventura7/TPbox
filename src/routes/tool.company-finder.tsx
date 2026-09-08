@@ -31,6 +31,7 @@ const EXAMPLES = [
   { label: "ORLEN · PL, KRS 0000028860", query: "ORLEN", vat: "0000028860", country: "PL" },
   { label: "AVIO POLSKA · PL", query: "AVIO POLSKA", vat: "", country: "PL" },
   { label: "PROXIMUS · BE0202239951", query: "Proximus", vat: "BE0202239951", country: "BE" },
+  { label: "ESKYPE BUSINESS LOGISTICS · EE", query: "Eskype Business Logistics", vat: "", country: "EE" },
 ] as const;
 
 const COVERED_COUNTRIES = ALL_COUNTRIES.filter((country) => isCovered(country.iso));
@@ -218,18 +219,30 @@ function FinancialsCard({ financials }: { financials?: Financials }) {
       ) : null}
 
       {financials?.documentUrl ? (
-        <div className="mt-5 border-t border-border pt-4 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h4 className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Documento principale</h4>
-            <p className="mt-1 text-sm font-medium">{financials.documentTitle ?? "Bilancio"}</p>
+        <div className="mt-5 border-t border-border pt-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h4 className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Documento principale</h4>
+              <p className="mt-1 text-sm font-medium">{financials.documentTitle ?? "Bilancio"}</p>
+            </div>
+            <a
+              href={financials.documentUrl}
+              download
+              className="border border-border bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+            >
+              Scarica documento
+            </a>
           </div>
-          <a
-            href={financials.documentUrl}
-            download
-            className="border border-border bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
-          >
-            Scarica documento
-          </a>
+          <iframe
+            src={financials.documentUrl}
+            title={financials.documentTitle ?? "Anteprima del bilancio ufficiale"}
+            loading="lazy"
+            className="mt-3 h-[560px] w-full border border-border bg-white"
+          />
+          <p className="mt-2 text-xs text-muted-foreground">
+            Anteprima del documento ufficiale servito dal server dell'Osservatorio. Se non si carica, usa “Scarica
+            documento”.
+          </p>
         </div>
       ) : null}
     </section>

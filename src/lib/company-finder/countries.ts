@@ -322,11 +322,11 @@ export const COUNTRIES: CountryInfo[] = [
     nameIt: "Estonia",
     flag: "🇪🇪",
     vatPrefix: "EE",
-    registryName: "Äriregister (e-Keskkond)",
-    registryAuthority: "Registri- ja infobüro",
+    registryName: "Äriregister (e-Äriregister)",
+    registryAuthority: "Registrite ja Infosüsteemide Keskus (RIK)",
     financials: {
-      free: false,
-      note: "Le relazioni annuali (aastaaruanne) costano ~2 € su e-Keskkond; i dati anagrafici sono aperti.",
+      free: true,
+      note: "Le relazioni annuali (majandusaasta aruanne) sono pubbliche e GRATUITE: il tool risolve la denominazione o il registrikood (8 cifre), mostra valori ed esercizi e serve il documento ufficiale in questa pagina, senza reindirizzamenti.",
     },
   },
   {
