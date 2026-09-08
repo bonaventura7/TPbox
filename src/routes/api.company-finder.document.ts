@@ -36,6 +36,31 @@ export const Route = createFileRoute("/api/company-finder/document")({
 
         const download = url.searchParams.get("download") === "1";
 
+        if (country === "PL") {
+          const krs = company.replace(/\D/g, "").padStart(10, "0");
+          if (!/^\d{10}$/.test(krs)) return errorResponse("KRS non valido", 400);
+
+          const { fetchPolishAnnualReport } = await import(
+            "@/lib/company-finder/sources/bilanci/poland-rdf"
+          );
+          const result = await fetchPolishAnnualReport(krs, year, 30_000);
+          if (!result.ok || !result.bytes.byteLength) {
+            return errorResponse(result.error ?? `bilancio ${year} non disponibile`, 502);
+          }
+
+          const contentType = result.contentType || "application/octet-stream";
+          const filename = result.filename ?? `bilancio-${krs}-${year}`;
+          return new Response(result.bytes, {
+            status: 200,
+            headers: {
+              "Content-Type": contentType,
+              "Content-Disposition": `${download ? "attachment" : "inline"}; filename="${filename}"`,
+              "Cache-Control": "no-store",
+              "X-Content-Type-Options": "nosniff",
+            },
+          });
+        }
+
         if (country === "FR") {
           const siren = url.searchParams.get("siren")?.replace(/\D/g, "") ?? "";
           if (!/^\d{9}$/.test(siren)) return errorResponse("SIREN non valido", 400);
