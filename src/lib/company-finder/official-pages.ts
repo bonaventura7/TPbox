@@ -26,6 +26,16 @@ function digits(value: string): string {
   return value.replace(/\D/g, "");
 }
 
+function slugify(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/&/g, " i ")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
 function normalizeLuxembourgRcs(value: string): string | undefined {
   const normalized = value.replace(/[\s.-]/g, "").toUpperCase();
   return /^B\d+$/.test(normalized) ? normalized : undefined;
@@ -105,12 +115,20 @@ export function officialPageFor(
 
   const plKrs = iso === "PL" ? normalizePolandKrs(rawId) : undefined;
   if (plKrs) {
+    const registryId = String(Number(plKrs));
+    const companySlug = slugify(name || `krs-${plKrs}`);
     return {
-      url: "https://rdf-przegladarka.ms.gov.pl/wyszukaj-podmiot",
-      label: "RDF — Repozytorium Dokumentów Finansowych",
-      actionLabel: "Apri il registro ufficiale",
+      url: `https://rejestr.io/krs/${registryId}/${companySlug}/sprawozdania`,
+      label: `Rejestr.io — documenti finanziari KRS (${plKrs})`,
+      actionLabel: "Apri i documenti finanziari",
       mode: "external",
-      note: `Inserisci KRS ${plKrs} e premi “Szukaj”, seleziona il periodo effettivo, apri “Roczne sprawozdanie finansowe” e usa “Pobierz dokument”. Il tool non inventa l'anno del deposito.`,
+      note: `Pagina specifica della società, già posizionata sulla sezione dei documenti finanziari KRS per ${plKrs}. Il riferimento ufficiale resta il Ministero della Giustizia; TPbox non presenta come “download diretto” un URL KRS generico quando il portale ufficiale non espone un deep-link stabile.`,
+      instructions: [
+        `Verifica che il KRS della società sia ${plKrs}.`,
+        "Apri il bilancio dell'esercizio desiderato nella sezione “Sprawozdania”.",
+        "Usa il comando di download disponibile sul documento; eventuali richieste di accesso appartengono al portale terzo.",
+        "Per la fonte primaria ufficiale, usa il KRS/RDF del Ministero della Giustizia con lo stesso numero KRS.",
+      ],
     };
   }
 
