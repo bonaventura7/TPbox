@@ -13,8 +13,7 @@ export const Route = createFileRoute("/api/company-finder/document")({
       GET: async ({ request }: { request: Request }) => {
         const url = new URL(request.url);
         if (url.searchParams.get("url")) {
-          const { handleDocumentRequest } =
-            await import("@/lib/company-finder/document-proxy.server");
+          const { handleDocumentRequest } = await import("@/lib/company-finder/document-proxy.server");
           return handleDocumentRequest(request);
         }
 
@@ -31,7 +30,9 @@ export const Route = createFileRoute("/api/company-finder/document")({
           if (!/^\d{10}$/.test(krs)) return errorResponse("KRS non valido", 400);
 
           const { fetchPolishAnnualReport } = await import("@/lib/company-finder/sources/bilanci/poland-rdf");
-          const result = await fetchPolishAnnualReport(krs, year, 30000);
+          // Keep the interactive endpoint bounded on Vercel Hobby. The provider adapter
+          // uses the same deadline for RDF -> KRS-name -> ALEO fallback.
+          const result = await fetchPolishAnnualReport(krs, year, 7500);
           if (!result.ok) {
             const { polishOfficialBrowserUrl } = await import("@/lib/company-finder/pl-official-fallback");
             return new Response(null, {
@@ -45,9 +46,7 @@ export const Route = createFileRoute("/api/company-finder/document")({
           }
 
           const { isPdfBytes } = await import("@/lib/company-finder/pl-pdf-gate");
-          if (!isPdfBytes(result.bytes)) {
-            return errorResponse("il registro polacco non ha restituito un PDF valido", 502, { fallback: "official-browser" });
-          }
+          if (!isPdfBytes(result.bytes)) return errorResponse("il registro polacco non ha restituito un PDF valido", 502, { fallback: "official-browser" });
 
           return new Response(new Uint8Array(result.bytes) as unknown as BodyInit, {
             status: 200,
@@ -86,9 +85,7 @@ export const Route = createFileRoute("/api/company-finder/document")({
           if (!/^\d{9}$/.test(orgnr)) return errorResponse("org.nr norvegese non valido", 400);
           const { fetchBrregAnnualReportDocument } = await import("@/lib/company-finder/sources/bilanci/brreg-no");
           const doc = await fetchBrregAnnualReportDocument(orgnr, year, 30000);
-          if (!doc.ok || !doc.bytes) {
-            return errorResponse(doc.error ?? `bilancio ${year} non disponibile`, 502, { fallback: "official-registry" });
-          }
+          if (!doc.ok || !doc.bytes) return errorResponse(doc.error ?? `bilancio ${year} non disponibile`, 502, { fallback: "official-registry" });
           return new Response(doc.bytes, {
             status: 200,
             headers: {
@@ -110,9 +107,6 @@ export const Route = createFileRoute("/api/company-finder/document")({
           return handleDocumentRequest(new Request(new URL(`/api/company-finder/document?url=${encodeURIComponent(result.document.url)}&download=${download ? "1" : "0"}`, request.url), { headers: request.headers }));
         }
 
-        // Germania: il bilancio strutturato è servito dalle rotte dedicate
-        // (financial-document / germany-public-balance); questo endpoint non
-        // espone un documento tedesco scaricabile.
         return errorResponse("paese documento non supportato", 400);
       },
     },

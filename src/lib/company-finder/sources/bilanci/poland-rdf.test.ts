@@ -1,6 +1,23 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { fetchPolishFinancialDocument, searchPolishAnnualReports } from "./poland-rdf";
+import { fetchPolishFinancialDocument, fetchPolishAnnualReport, searchPolishAnnualReports } from "./poland-rdf";
+
+vi.mock("../krs", () => ({
+  fetchKrsOdpis: vi.fn().mockResolvedValue({
+    ok: true,
+    data: { name: "EULEO SPÓŁKA Z OGRANICZONĄ ODPOWIEDZIALNOŚCIĄ" },
+  }),
+}));
+
+vi.mock("./poland-aleo", () => ({
+  fetchAleoAnnualReport: vi.fn().mockResolvedValue({
+    ok: true,
+    bytes: new TextEncoder().encode("%PDF-1.7\nALEO FALLBACK"),
+    contentType: "application/pdf",
+    filename: "bilancio-2024.pdf",
+    document: { id: "https://aleo.com/doc/2024.pdf", year: 2024, title: "Roczne sprawozdanie finansowe", format: "pdf", url: "https://aleo.com/doc/2024.pdf" },
+  }),
+}));
 
 function response(body: string | Uint8Array, status = 200, headers: Record<string, string> = {}) {
   return new Response(body, { status, headers });
@@ -88,5 +105,18 @@ describe("Polish KRS RDF financial documents", () => {
     expect(reports.ok).toBe(true);
     expect(reports.documents[0]).toEqual(expect.objectContaining({ id: "doc-2024", year: 2024 }));
     expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it("falls back to a free secondary PDF when official RDF is unavailable", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn<typeof fetch>().mockRejectedValue(new Error("RDF WAF blocked")),
+    );
+
+    const document = await fetchPolishAnnualReport("0000961703", 2024, 200);
+
+    expect(document.ok).toBe(true);
+    expect(document.contentType).toBe("application/pdf");
+    expect(new TextDecoder("latin1").decode(document.bytes).startsWith("%PDF-")).toBe(true);
   });
 });
