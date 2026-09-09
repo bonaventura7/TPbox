@@ -69,7 +69,7 @@ function Chip({ children }: { children: React.ReactNode }) {
   );
 }
 
-function Field({ label, value }: { label: string; value?: string | null }) {
+function Field({ label, value }: { label: string; value?: string | null | undefined }) {
   if (!value) return null;
   return (
     <div>
@@ -148,7 +148,7 @@ const RESTRICTION_LABEL: Record<string, string> = {
   INVALID_DOCUMENT: "Documento non valido",
 };
 
-function FinancialsCard({ financials }: { financials?: Financials }) {
+function FinancialsCard({ financials }: { financials?: Financials | undefined }) {
   const hasValues = Boolean(financials?.available && financials.years.length);
   return (
     <section className="border border-border bg-card p-5 sm:p-6">

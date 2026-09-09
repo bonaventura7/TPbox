@@ -1,9 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-function envKey(): string | undefined {
-  const processLike = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process;
-  return processLike?.env?.["OPENREGISTER_API_KEY"]?.trim();
-}
 function errorResponse(message: string, status: number, details?: Record<string, unknown>): Response {
   return new Response(JSON.stringify({ error: message, ...details }), {
     status,
@@ -53,7 +49,7 @@ export const Route = createFileRoute("/api/company-finder/document")({
             return errorResponse("il registro polacco non ha restituito un PDF valido", 502, { fallback: "official-browser" });
           }
 
-          return new Response(result.bytes, {
+          return new Response(new Uint8Array(result.bytes) as unknown as BodyInit, {
             status: 200,
             headers: {
               "Content-Type": "application/pdf",
@@ -114,18 +110,10 @@ export const Route = createFileRoute("/api/company-finder/document")({
           return handleDocumentRequest(new Request(new URL(`/api/company-finder/document?url=${encodeURIComponent(result.document.url)}&download=${download ? "1" : "0"}`, request.url), { headers: request.headers }));
         }
 
-        if (country !== "DE") return errorResponse("paese documento non supportato", 400);
-        const key = envKey();
-        if (key) {
-          const { fetchOpenRegisterAnnualReport } = await import("@/lib/company-finder/sources/bilanci/openregister-de");
-          const result = await fetchOpenRegisterAnnualReport(company, year, 20000);
-          if (result.ok && result.html) return new Response(result.html, { status: 200, headers: { "Content-Type": "text/html; charset=utf-8", "Content-Disposition": `${download ? "attachment" : "inline"}; filename="${result.filename ?? `bilancio-${year}.html`}"`, "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" } });
-        }
-        const { findOfficialUrPublication } = await import("@/lib/company-finder/sources/bilanci/ur-de");
-        const fallback = await findOfficialUrPublication(company, year, 30000);
-        if (!fallback.ok || !fallback.document?.url) return errorResponse(fallback.error ?? `bilancio ${year} non disponibile`, 502);
-        const { handleDocumentRequest } = await import("@/lib/company-finder/document-proxy.server");
-        return handleDocumentRequest(new Request(new URL(`/api/company-finder/document?url=${encodeURIComponent(fallback.document.url)}&download=${download ? "1" : "0"}`, request.url), { headers: request.headers }));
+        // Germania: il bilancio strutturato è servito dalle rotte dedicate
+        // (financial-document / germany-public-balance); questo endpoint non
+        // espone un documento tedesco scaricabile.
+        return errorResponse("paese documento non supportato", 400);
       },
     },
   },

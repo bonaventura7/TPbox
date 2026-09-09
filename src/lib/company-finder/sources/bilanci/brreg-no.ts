@@ -70,13 +70,13 @@ export function parseBrregAnnualYears(payload: unknown): number[] {
     }
     // Alcune rappresentazioni espongono direttamente una singola lista in
     // `data`, per cui la trattiamo come ulteriore contenitore noto.
-    if (Array.isArray(record.data)) candidates.push(...record.data);
+    if (Array.isArray(record["data"])) candidates.push(...record["data"]);
   }
   const years = candidates
     .flatMap((value) => {
       if (value && typeof value === "object") {
         const record = value as Record<string, unknown>;
-        return [record.aar, record.år, record.year, record.regnskapsaar, record.regnskapsår];
+        return [record["aar"], record["år"], record["year"], record["regnskapsaar"], record["regnskapsår"]];
       }
       return [value];
     })
