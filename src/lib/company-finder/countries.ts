@@ -206,7 +206,7 @@ export const COUNTRIES: CountryInfo[] = [
     registryAuthority: "Oficiul Național al Registrului Comerțului",
     financials: {
       free: true,
-      note: "Le situazioni finanziarie (situații financiare) sono depositate presso l'ONRC e pubbliche; l'accesso strutturato è in espansione.",
+      note: "Indicatori ufficiali di bilancio (bilanț) gratuiti via API pubblica ANAF per CUI: fatturato, risultato, attivo e patrimonio per esercizio in RON.",
     },
   },
   {
@@ -278,7 +278,7 @@ export const COUNTRIES: CountryInfo[] = [
     registryAuthority: "Ministerstvo spravodlivosti SR",
     financials: {
       free: true,
-      note: "Le relazioni finanziarie (účetná závierka) sono depositate presso l'ORSR; l'accesso strutturato è in espansione.",
+      note: "RÚZ Open API ufficiale (JSON, senza chiave): elenco delle účtovné závierky e PDF ufficiale dei dati strutturati per IČO o DIČ.",
     },
   },
   {

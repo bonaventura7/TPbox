@@ -17,6 +17,9 @@ export const ALLOWED_DOCUMENT_HOSTS = new Set([
   "pappers.fr",
   // EE — e-Äriregister (RIK): scheda e bilanci pubblici
   "ariregister.rik.ee",
+  // SK — RÚZ: PDF ufficiali dei dati strutturati (/domain/financialreport/pdf/{id})
+  "www.registeruz.sk",
+  "registeruz.sk",
 ]);
 const HTTP_ONLY_HOSTS = new Set(["regnskaber.virk.dk"]);
 

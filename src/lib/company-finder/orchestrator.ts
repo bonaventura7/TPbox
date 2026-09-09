@@ -21,6 +21,8 @@ import { searchBg } from "./sources/registry-bg";
 import { fetchEeFinancials } from "./sources/bilanci/ariregister-ee";
 import { fetchKvkJaarrekeningen, kvkFromInput } from "./sources/bilanci/kvk-nl";
 import { fetchAtFirmenbuchBilanci } from "./sources/bilanci/justizonline-at";
+import { fetchRoBilanta, cuiFromInput } from "./sources/bilanci/anaf-ro";
+import { fetchSkZavierky, skIdentifierFromInput } from "./sources/bilanci/registeruz-sk";
 import { searchUrAccounting } from "./sources/bilanci/ur-de";
 import { fetchPappersFinancials } from "./sources/bilanci/pappers-fr";
 import { fetchDkRegnskaber, cvrFromVat } from "./sources/bilanci/regnskaber-dk";
@@ -432,6 +434,62 @@ const FINANCIALS_ROUTES: Record<
         if (r.ok && r.data) {
           s.state = "ok";
           s.detail = r.data.note || "atti del Firmenbuch";
+          job.fin = () => r.data!;
+        } else if (r.skipped) {
+          s.state = "skipped";
+          s.detail = r.skipped;
+        } else {
+          s.state = "failed";
+          s.detail = r.error || "fonte non raggiungibile";
+        }
+      })(),
+  },
+
+  // ---- Slovacchia: RÚZ Open API (ufficiale, senza chiave) ----
+  SK: {
+    id: "fin-registeruz-sk",
+    label: "Register účtovných závierok — RÚZ Open API",
+    run: (ctx, job, s) =>
+      (async () => {
+        const ident = skIdentifierFromInput(ctx.localVat);
+        if (!ident) {
+          s.state = "skipped";
+          s.detail = "servi l'IČO (8 cifre) o il DIČ/partita IVA (10 cifre) nel campo partita IVA";
+          return;
+        }
+        const r = await fetchSkZavierky(ident);
+        if (r.ok && r.data) {
+          s.state = "ok";
+          s.detail = r.data.note || "závierky RÚZ";
+          job.fin = () => r.data!;
+        } else if (r.skipped) {
+          s.state = "skipped";
+          s.detail = r.skipped;
+        } else {
+          s.state = "failed";
+          s.detail = r.error || "fonte non raggiungibile";
+        }
+      })(),
+  },
+
+  // ---- Romania: ANAF bilanț (ufficiale, senza chiave, valori per CUI) ----
+  RO: {
+    id: "fin-anaf-ro",
+    label: "ANAF bilanț — situații financiare",
+    run: (ctx, job, s) =>
+      (async () => {
+        const cui = cuiFromInput(ctx.localVat);
+        if (!cui) {
+          s.state = "skipped";
+          s.detail = "servi il CUI (le cifre della partita IVA rumena) nel campo partita IVA";
+          return;
+        }
+        const r = await fetchRoBilanta(cui);
+        if (r.ok && r.data) {
+          s.state = "ok";
+          s.detail = r.note
+            ? `${r.data.years.length} esercizi (parziale: rate limit ANAF)`
+            : `${r.data.years.length} esercizi`;
           job.fin = () => r.data!;
         } else if (r.skipped) {
           s.state = "skipped";
