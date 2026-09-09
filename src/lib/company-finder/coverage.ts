@@ -12,7 +12,7 @@
 //     dichiararne l'assenza.
 
 /** Livello A: bilancio recuperato dal server e mostrato in pagina. */
-export const AUTO_ISOS = ["DE", "NL", "DK", "UK", "FR", "EE", "NO"] as const;
+export const AUTO_ISOS = ["DE", "NL", "DK", "UK", "FR", "EE", "NO", "GR"] as const;
 
 /**
  * Livello B: bilancio gratuito, consultazione ufficiale incorporata.

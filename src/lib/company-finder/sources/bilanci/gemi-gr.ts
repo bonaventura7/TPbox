@@ -83,7 +83,9 @@ function isAllowedDocumentUrl(raw: string | undefined): raw is string {
     const url = new URL(raw);
     return (
       url.protocol === "https:" &&
-      ["filings.businessportal.gr", "publicity.businessportal.gr"].includes(url.hostname.toLowerCase())
+      ["filings.businessportal.gr", "publicity.businessportal.gr"].includes(
+        url.hostname.toLowerCase(),
+      )
     );
   } catch {
     return false;
@@ -103,9 +105,7 @@ function toCompanyProfile(company: GemiCompany): CompanyProfile {
   return {
     name: company.coNamesEn?.[0] || company.coNameEl,
     nameSource: "GEMI Open Data",
-    vat: company.afm
-      ? { number: `EL${company.afm}`, country: "EL", valid: null }
-      : undefined,
+    vat: company.afm ? { number: `EL${company.afm}`, country: "EL", valid: null } : undefined,
     country: {
       iso: "GR",
       nameIt: "Grecia",
@@ -127,7 +127,10 @@ function toCompanyProfile(company: GemiCompany): CompanyProfile {
     address: address || undefined,
     website: company.url,
     email: company.email,
-    capital: capital?.capitalStock != null ? `${capital.capitalStock} ${capital.currency ?? "EUR"}` : undefined,
+    capital:
+      capital?.capitalStock != null
+        ? `${capital.capitalStock} ${capital.currency ?? "EUR"}`
+        : undefined,
     activityCodes: company.activities?.flatMap((entry) =>
       entry.activity?.id ? [{ code: entry.activity.id, label: entry.activity.descr }] : [],
     ),
@@ -272,7 +275,9 @@ export async function fetchGreekFinancials(options: {
   signal?: AbortSignal;
   fetchImpl?: typeof fetch;
   resolveFilingUrlImpl?: (gemi: string, signal?: AbortSignal) => Promise<string | undefined>;
-}): Promise<{ ok: true; profile?: CompanyProfile; financials: Financials } | { ok: false; skipped: string }> {
+}): Promise<
+  { ok: true; profile?: CompanyProfile; financials: Financials } | { ok: false; skipped: string }
+> {
   const apiKey = options.apiKey?.trim();
 
   if (apiKey) {
@@ -301,10 +306,18 @@ export async function fetchGreekFinancials(options: {
             available: documents.length > 0,
             years: documents
               .filter((document) => document.year)
-              .map((document) => ({ periodLabel: String(document.year), year: document.year, currency: "EUR" })),
+              .map((document) => ({
+                periodLabel: String(document.year),
+                year: document.year,
+                currency: "EUR",
+              })),
             currency: "EUR",
             source: "GEMI Open Data",
-            availability: first ? "DOCUMENT_DOWNLOADABLE" : documents.length ? "DOCUMENT_FOUND" : "REGISTRY_ONLY",
+            availability: first
+              ? "DOCUMENT_DOWNLOADABLE"
+              : documents.length
+                ? "DOCUMENT_FOUND"
+                : "REGISTRY_ONLY",
             documentUrl: first?.downloadUrl,
             documentTitle: first?.title,
             documents,
@@ -332,7 +345,9 @@ export async function fetchGreekFinancials(options: {
     const url = await resolveFiling(gemi, options.signal);
     if (url && isAllowedDocumentUrl(url)) {
       const document = await requestPublicDocument(url, options.signal, options.fetchImpl);
-      const parsed = document.ok ? parseGreekFinancialDocument({ text: document.text, sourceUrl: url }) : undefined;
+      const parsed = document.ok
+        ? parseGreekFinancialDocument({ text: document.text, sourceUrl: url })
+        : undefined;
       const years = parsed?.matched ? parsed.years : [];
       const title = parsed?.matched
         ? `GEMI — bilancio iXBRL (${years.map((year) => year.periodLabel).join(", ")})`

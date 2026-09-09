@@ -241,8 +241,8 @@ export const COUNTRIES: CountryInfo[] = [
     registryName: "ΓΕΜΗ (GEMI) — Business Portal",
     registryAuthority: "Ministero dello Sviluppo",
     financials: {
-      free: false,
-      note: "Le pubblicazioni con i bilanci (Οικονομικές Καταστάσεις) sono scaricabili GRATIS dal portale GEMI (publicity.businessportal.gr), ma il portale è protetto da reCAPTCHA: l'estrazione automatica è in studio. In questa vista: identità e stato dal VIES.",
+      free: true,
+      note: "I documenti finanziari pubblici GEMI sono gratuiti: con GEMI_API_KEY il tool risolve IVA/nome → GEMI → fascicolo documentale; senza chiave, un numero GEMI consente il fallback al filing iXBRL pubblico. CAPTCHA/sessione non vengono aggirati.",
     },
   },
   {

@@ -1,10 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  fetchGreekFinancials,
-  gemiFromInput,
-  looksLikeGreekFinancialDocument,
-} from "./gemi-gr";
+import { fetchGreekFinancials, gemiFromInput, looksLikeGreekFinancialDocument } from "./gemi-gr";
 import { parseGreekFinancialDocument } from "./gemi-gr-financials";
 
 describe("gemiFromInput", () => {
@@ -37,9 +33,9 @@ describe("looksLikeGreekFinancialDocument", () => {
   });
 
   it("rejects a generic company announcement", () => {
-    expect(
-      looksLikeGreekFinancialDocument({ decisionSubject: "Αλλαγή έδρας εταιρείας" }),
-    ).toBe(false);
+    expect(looksLikeGreekFinancialDocument({ decisionSubject: "Αλλαγή έδρας εταιρείας" })).toBe(
+      false,
+    );
   });
 });
 

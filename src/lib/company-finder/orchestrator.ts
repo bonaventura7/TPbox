@@ -29,6 +29,7 @@ import { officialPageFor } from "./official-pages";
 import { numericRegistryId, searchGleif } from "./sources/gleif";
 import { searchRechercheEntreprises } from "./sources/recherche-entreprises-fr";
 import { lookupUkPublic } from "./sources/bilanci/companies-house-public";
+import { fetchGreekFinancials } from "./sources/bilanci/gemi-gr";
 import type { GleifMatch } from "./sources/gleif";
 import { searchByName as ocSearch } from "./sources/open-corporates";
 import { lookupCompany as chLookup } from "./sources/companies-house";
@@ -52,6 +53,7 @@ const INPI_KEY = ENV["INPI_KEY"];
 const PAPPERS_KEY = ENV["PAPPERS_API_KEY"];
 const NBB_CBSO_KEY = ENV["NBB_CBSO_API_KEY"];
 const NBB_CBSO_BASE = ENV["NBB_CBSO_BASE"]; // es. https://ws.uat2.cbso.nbb.be (test, chiave gratuita)
+const GEMI_API_KEY = ENV["GEMI_API_KEY"];
 
 interface Job {
   status: SourceStatus;
@@ -575,6 +577,46 @@ const FINANCIALS_ROUTES: Record<
         }
       })(),
   },
+  // ---- Grecia: ΓΕΜΗ Open Data + fallback pubblico iXBRL ----
+  GR: {
+    id: "fin-gemi-gr",
+    label: "ΓΕΜΗ — bilanci e documenti finanziari pubblici",
+    run: (ctx, job, s) =>
+      (async () => {
+        const r = await fetchGreekFinancials({
+          localVat: ctx.localVat,
+          query: ctx.query,
+          ...(GEMI_API_KEY ? { apiKey: GEMI_API_KEY } : {}),
+        });
+        if (r.ok) {
+          s.state = "ok";
+          const n = r.financials.documents?.length ?? 0;
+          s.detail =
+            n > 0
+              ? n + " documenti finanziari"
+              : (r.financials.documentTitle ?? "filing GEMI disponibile");
+          if (r.profile) {
+            const profile = r.profile;
+            job.profile = () => profile;
+          }
+          const fin = r.financials;
+          job.fin = () => fin;
+          return;
+        }
+        s.state = "skipped";
+        s.detail = r.skipped;
+        job.fin = () => ({
+          available: false,
+          years: [],
+          source: "ΓΕΜΗ — Business Portal",
+          availability: "REGISTRY_ONLY",
+          restriction: "SOURCE_RESTRICTION",
+          documents: [],
+          note: r.skipped,
+        });
+      })(),
+  },
+
 };
 
 // ============================================================================
