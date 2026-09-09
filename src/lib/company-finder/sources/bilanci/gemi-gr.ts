@@ -1,5 +1,6 @@
 import type { CompanyProfile, Financials, FinancialDocumentSummary } from "../../types";
 import { resolveGreekFilingUrl } from "../../greek-filing";
+import { parseGreekFinancialDocument } from "./gemi-gr-financials";
 
 const GEMI_BASE = "https://opendata-api.businessportal.gr/api/opendata/v1";
 const PUBLICITY_BASE = "https://publicity.businessportal.gr";
@@ -17,6 +18,7 @@ const FINANCIAL_TERMS = [
 const RETRYABLE = new Set([408, 425, 429, 500, 502, 503, 504]);
 const MAX_ATTEMPTS = 3;
 const TIMEOUT_MS = 15_000;
+const MAX_DOCUMENT_TEXT = 8_000_000;
 
 interface GemiCompany {
   arGemi?: number;
@@ -112,7 +114,11 @@ function toCompanyProfile(company: GemiCompany): CompanyProfile {
       registryAuthority: "Ministero dello Sviluppo",
       financials: { free: true, note: "Documenti finanziari pubblici GEMI" },
     },
-    registry: { name: "GEMI", authority: "Business Portal", id: company.arGemi?.toString() },
+    registry: {
+      name: "GEMI",
+      authority: "Business Portal",
+      ...(company.arGemi ? { id: company.arGemi.toString() } : {}),
+    },
     legalForm: company.legalType?.descr,
     status: company.status?.descr,
     registeredSince: company.incorporationDate,
@@ -144,6 +150,46 @@ async function requestJson<T>(
         signal: controller.signal,
       });
       if (response.ok) return { ok: true, data: (await response.json()) as T };
+      if (!RETRYABLE.has(response.status) || attempt === MAX_ATTEMPTS) {
+        return { ok: false, status: response.status };
+      }
+    } catch {
+      if (attempt === MAX_ATTEMPTS) return { ok: false, status: 503 };
+    } finally {
+      clearTimeout(timer);
+      signal?.removeEventListener("abort", onAbort);
+    }
+    await new Promise((resolve) => setTimeout(resolve, 150 * 2 ** (attempt - 1)));
+  }
+  return { ok: false, status: 503 };
+}
+
+async function requestPublicDocument(
+  url: string,
+  signal?: AbortSignal,
+  fetchImpl: typeof fetch = fetch,
+): Promise<{ ok: true; text: string } | { ok: false; status: number }> {
+  if (!isAllowedDocumentUrl(url)) return { ok: false, status: 400 };
+
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+    const onAbort = () => controller.abort();
+    signal?.addEventListener("abort", onAbort, { once: true });
+    try {
+      const response = await fetchImpl(url, {
+        headers: { Accept: "text/html,application/xhtml+xml,text/plain" },
+        signal: controller.signal,
+      });
+      if (response.ok) {
+        const contentType = response.headers.get("content-type")?.toLowerCase() ?? "";
+        if (contentType && !contentType.includes("html") && !contentType.includes("text/plain")) {
+          return { ok: false, status: 415 };
+        }
+        const text = await response.text();
+        if (text.length > MAX_DOCUMENT_TEXT) return { ok: false, status: 413 };
+        return { ok: true, text };
+      }
       if (!RETRYABLE.has(response.status) || attempt === MAX_ATTEMPTS) {
         return { ok: false, status: response.status };
       }
@@ -196,9 +242,9 @@ function mapDocuments(gemi: string, docs: GemiDocuments): FinancialDocumentSumma
   return (docs.decision ?? [])
     .filter((decision) =>
       looksLikeGreekFinancialDocument({
-        summary: decision.summary,
-        decisionSubject: decision.decisionSubject,
-        url: decision.assemblyDecisionUrl,
+        ...(decision.summary ? { summary: decision.summary } : {}),
+        ...(decision.decisionSubject ? { decisionSubject: decision.decisionSubject } : {}),
+        ...(decision.assemblyDecisionUrl ? { url: decision.assemblyDecisionUrl } : {}),
       }),
     )
     .map((decision, index) => {
@@ -224,6 +270,7 @@ export async function fetchGreekFinancials(options: {
   apiKey?: string;
   signal?: AbortSignal;
   fetchImpl?: typeof fetch;
+  resolveFilingUrlImpl?: (gemi: string, signal?: AbortSignal) => Promise<string | undefined>;
 }): Promise<{ ok: true; profile?: CompanyProfile; financials: Financials } | { ok: false; skipped: string }> {
   const apiKey = options.apiKey?.trim();
 
@@ -280,27 +327,38 @@ export async function fetchGreekFinancials(options: {
   }
 
   try {
-    const url = await resolveGreekFilingUrl(gemi, options.signal);
-    if (url) {
+    const resolveFiling = options.resolveFilingUrlImpl ?? resolveGreekFilingUrl;
+    const url = await resolveFiling(gemi, options.signal);
+    if (url && isAllowedDocumentUrl(url)) {
+      const document = await requestPublicDocument(url, options.signal, options.fetchImpl);
+      const parsed = document.ok ? parseGreekFinancialDocument({ text: document.text, sourceUrl: url }) : undefined;
+      const years = parsed?.matched ? parsed.years : [];
+      const title = parsed?.matched
+        ? `GEMI — bilancio iXBRL (${years.map((year) => year.periodLabel).join(", ")})`
+        : "GEMI — bilancio / filing iXBRL";
       return {
         ok: true,
         financials: {
           available: true,
-          years: [],
+          years,
+          currency: "EUR",
           source: "GEMI Publicity — filing iXBRL pubblico",
           availability: "DOCUMENT_DOWNLOADABLE",
           documentUrl: url,
-          documentTitle: "GEMI — bilancio / filing iXBRL",
+          documentTitle: title,
           documents: [
             {
               id: `${gemi}-public-ixbrl`,
               kind: "ANNUAL_REPORT",
               format: "html",
               availability: "DOCUMENT_DOWNLOADABLE",
-              title: "GEMI — filing iXBRL pubblico",
+              title,
               downloadUrl: url,
             },
           ],
+          note: parsed?.matched
+            ? `Valori finanziari estratti dal filing iXBRL pubblico con confidenza ${parsed.confidence}.`
+            : "Filing iXBRL pubblico individuato; estrazione strutturata non confermata dal parser.",
         },
       };
     }
