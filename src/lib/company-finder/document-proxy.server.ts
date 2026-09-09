@@ -68,6 +68,7 @@ function setCookies(j: CookieJar, headers: Headers): void {
         : [];
   for (const raw of values) {
     const first = raw.trim().split(";", 1)[0];
+    if (!first) continue;
     const eq = first.indexOf("=");
     if (eq > 0) j.values.set(first.slice(0, eq), first.slice(eq + 1));
   }
@@ -137,8 +138,8 @@ async function fetchRaw(
         `tpbox-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
     }
     const cookie = cookieHeader(cookies);
-    if (cookie) headers.Cookie = cookie;
-    if (ref) headers.Referer = ref.toString();
+    if (cookie) headers["Cookie"] = cookie;
+    if (ref) headers["Referer"] = ref.toString();
     const response = await fetch(current.toString(), {
       headers,
       signal,
