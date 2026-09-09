@@ -1,0 +1,56 @@
+name: Apply Greece GEMI fix
+
+on:
+  push:
+    branches:
+      - fix/greece-gemi-financials
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-verify:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout isolated branch
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Apply Greece adapter wiring
+        run: node scripts/apply-greece-patch.mjs
+
+      - name: Diff sanity
+        run: git diff --check
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Tests
+        run: npm run test
+
+      - name: Build
+        run: npm run build
+
+      - name: Commit validated patch
+        run: |
+          if git diff --quiet; then
+            echo "Greece patch already applied; nothing to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/lib/company-finder/orchestrator.ts src/lib/company-finder/coverage.ts src/lib/company-finder/countries.ts .env.example
+          git commit -m "feat(greece): wire GEMI financials into company finder"
+          git push
