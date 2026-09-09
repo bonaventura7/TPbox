@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi, afterEach } from "vitest";
 
 import {
   ALLOWED_DOCUMENT_HOSTS,
@@ -14,6 +14,8 @@ import {
 function get(query: string): Request {
   return new Request(`https://osservatorio.example/api/company-finder/document${query}`);
 }
+
+afterEach(() => vi.unstubAllGlobals());
 
 describe("proxy dei documenti di bilancio", () => {
   it("accetta solo i registri ufficiali censiti", () => {
@@ -69,5 +71,24 @@ describe("proxy dei documenti di bilancio", () => {
     for (const host of ALLOWED_DOCUMENT_HOSTS) {
       expect(host).toMatch(/\.(de|dk|nl|be|uk|gr|fr|ee)$/);
     }
+  });
+
+  it("non serve HTML del registro tedesco come documento TPBox", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        new Response("<html><body>Unternehmensregister</body></html>", {
+          status: 200,
+          headers: { "content-type": "text/html; charset=utf-8" },
+        }),
+      ),
+    );
+
+    const res = await handleDocumentRequest(
+      get("?url=https%3A%2F%2Fwww.unternehmensregister.de%2Fde%2Fveroeffentlichung%3Fid%3Dtest"),
+    );
+
+    expect(res.status).toBe(502);
+    expect(res.headers.get("content-type") ?? "").not.toContain("text/html");
   });
 });

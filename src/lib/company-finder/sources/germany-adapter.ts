@@ -17,30 +17,31 @@ export async function searchGermanyAdapter(
   const query = input.query?.trim() ?? "";
   const localVat = input.localVat?.trim() ?? "";
   const lookup = query || localVat;
-
   if (lookup.length < 3) {
     return { ok: false, error: "ragione sociale o identificativo troppo corto" };
   }
 
-  const result = await searchUrAccounting(lookup, timeoutMs);
-  if (!result.ok || !result.data) {
-    if (result.skipped) return { ok: false, skipped: result.skipped };
-    return { ok: false, error: result.error ?? "fonte non raggiungibile" };
+  const r = await searchUrAccounting(lookup, timeoutMs);
+  if (r.ok && r.data) {
+    const country = getCountry("DE");
+    if (!country) return { ok: false, error: "paese DE non configurato" };
+
+    const resolvedName = r.company?.name ?? lookup;
+    const euId = r.company?.euId;
+    const profile: CompanyProfile = {
+      name: resolvedName,
+      nameSource: "resolver societario tedesco",
+      country,
+      registry: {
+        name: country.registryName,
+        authority: country.registryAuthority,
+        ...(euId ? { id: euId } : {}),
+      },
+    };
+
+    return { ok: true, profile, financials: r.data };
   }
 
-  const country = getCountry("DE");
-  if (!country) return { ok: false, error: "paese DE non configurato" };
-
-  const profile: CompanyProfile = {
-    name: result.company?.name ?? lookup,
-    nameSource: "resolver societario tedesco",
-    country,
-    registry: {
-      name: country.registryName,
-      authority: country.registryAuthority,
-      ...(result.company?.euId ? { id: result.company.euId } : {}),
-    },
-  };
-
-  return { ok: true, profile, financials: result.data };
+  if (r.skipped) return { ok: false, skipped: r.skipped };
+  return { ok: false, error: r.error ?? "fonte non raggiungibile" };
 }
