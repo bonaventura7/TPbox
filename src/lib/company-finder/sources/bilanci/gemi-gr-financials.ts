@@ -89,7 +89,7 @@ export function parseGreekFinancialDocument(input: {
   const years = extractYears(text);
   if (!years.length) return emptyResult();
 
-  const parsed: Array<Partial<FinancialYear>> = years.map((year) => ({
+  const parsed: FinancialYear[] = years.map((year) => ({
     periodLabel: String(year),
     year,
     currency: "EUR",
@@ -115,6 +115,6 @@ export function parseGreekFinancialDocument(input: {
   return {
     matched: true,
     confidence: matchedFields >= 3 ? "high" : matchedFields >= 2 ? "medium" : "low",
-    years: parsed as FinancialYear[],
+    years: parsed,
   };
 }
