@@ -121,19 +121,3 @@ gemi = gemi.replace(
   '      looksLikeGreekFinancialDocument({\n        ...(decision.summary ? { summary: decision.summary } : {}),\n        ...(decision.decisionSubject ? { decisionSubject: decision.decisionSubject } : {}),\n        ...(decision.assemblyDecisionUrl ? { url: decision.assemblyDecisionUrl } : {}),\n      }),',
 );
 write(gemiPath, gemi);
-
-const companyFinderFunctionsPath = "src/lib/company-finder.functions.ts";
-let companyFinderFunctions = read(companyFinderFunctionsPath);
-companyFinderFunctions = companyFinderFunctions.replace(
-  'years:selected,',
-  'years:selected.map((year)=>({periodLabel:String(year),year,currency:"PLN"})),',
-);
-write(companyFinderFunctionsPath, companyFinderFunctions);
-
-const polandRdfPath = "src/lib/company-finder/sources/bilanci/poland-rdf.ts";
-let polandRdf = read(polandRdfPath);
-polandRdf = polandRdf.replace(
-  'document:secondary.document?{id:secondary.document.id,year:secondary.document.year??year,title:secondary.document.title,format:"pdf"}:undefined',
-  '...(secondary.document?{document:{id:secondary.document.id,year:secondary.document.year??year,title:secondary.document.title,format:"pdf"}}:{})',
-);
-write(polandRdfPath, polandRdf);
