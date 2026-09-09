@@ -27,7 +27,7 @@ const greekRoute = `
         const r = await fetchGreekFinancials({
           localVat: ctx.localVat,
           query: ctx.query,
-          apiKey: GEMI_API_KEY,
+          ...(GEMI_API_KEY ? { apiKey: GEMI_API_KEY } : {}),
         });
         if (r.ok) {
           s.state = "ok";
@@ -109,3 +109,31 @@ if (!env.includes("GEMI_API_KEY=")) {
   env += "\n\n# Grecia: ΓΕΜΗ Open Data — chiave personale richiesta dal registro ufficiale.\n# https://opendata.businessportal.gr/register/\nGEMI_API_KEY=\n";
 }
 write(envPath, env);
+
+const gemiPath = "src/lib/company-finder/sources/bilanci/gemi-gr.ts";
+let gemi = read(gemiPath);
+gemi = gemi.replace(
+  'registry: { name: "GEMI", authority: "Business Portal", id: company.arGemi?.toString() },',
+  'registry: {\n      name: "GEMI",\n      authority: "Business Portal",\n      ...(company.arGemi ? { id: company.arGemi.toString() } : {}),\n    },',
+);
+gemi = gemi.replace(
+  '      looksLikeGreekFinancialDocument({\n        summary: decision.summary,\n        decisionSubject: decision.decisionSubject,\n        url: decision.assemblyDecisionUrl,\n      }),',
+  '      looksLikeGreekFinancialDocument({\n        ...(decision.summary ? { summary: decision.summary } : {}),\n        ...(decision.decisionSubject ? { decisionSubject: decision.decisionSubject } : {}),\n        ...(decision.assemblyDecisionUrl ? { url: decision.assemblyDecisionUrl } : {}),\n      }),',
+);
+write(gemiPath, gemi);
+
+const companyFinderFunctionsPath = "src/lib/company-finder.functions.ts";
+let companyFinderFunctions = read(companyFinderFunctionsPath);
+companyFinderFunctions = companyFinderFunctions.replace(
+  'years:selected,',
+  'years:selected.map((year)=>({periodLabel:String(year),year,currency:"PLN"})),',
+);
+write(companyFinderFunctionsPath, companyFinderFunctions);
+
+const polandRdfPath = "src/lib/company-finder/sources/bilanci/poland-rdf.ts";
+let polandRdf = read(polandRdfPath);
+polandRdf = polandRdf.replace(
+  'document:secondary.document?{id:secondary.document.id,year:secondary.document.year??year,title:secondary.document.title,format:"pdf"}:undefined',
+  '...(secondary.document?{document:{id:secondary.document.id,year:secondary.document.year??year,title:secondary.document.title,format:"pdf"}}:{})',
+);
+write(polandRdfPath, polandRdf);
