@@ -68,8 +68,8 @@ const YEAR = /\b(20\d{2})\b/g;
 function toPlainText(input: string): string {
   return input
     .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<\/tr\s*>/gi, "\n")
-    .replace(/<\/p\s*>/gi, "\n")
+    .replace(/<\/(?:tr|p|div|section|h[1-6])\s*>/gi, "\n")
+    .replace(/<\/(?:td|th)\s*>/gi, " ")
     .replace(/<[^>]+>/g, " ")
     .replace(/&nbsp;/gi, " ")
     .replace(/&amp;/gi, "&")
