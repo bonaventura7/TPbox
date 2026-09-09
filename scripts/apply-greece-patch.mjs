@@ -32,7 +32,10 @@ const greekRoute = `
         if (r.ok) {
           s.state = "ok";
           const n = r.financials.documents?.length ?? 0;
-          s.detail = n > 0 ? n + " documenti finanziari" : r.financials.documentTitle ?? "filing GEMI disponibile";
+          s.detail =
+            n > 0
+              ? n + " documenti finanziari"
+              : (r.financials.documentTitle ?? "filing GEMI disponibile");
           if (r.profile) {
             const profile = r.profile;
             job.profile = () => profile;
@@ -103,6 +106,6 @@ write(countriesPath, countries);
 const envPath = ".env.example";
 let env = read(envPath);
 if (!env.includes("GEMI_API_KEY=")) {
-  env += '\n\n# Grecia: ΓΕΜΗ Open Data — chiave personale richiesta dal registro ufficiale.\n# https://opendata.businessportal.gr/register/\nGEMI_API_KEY=\n';
+  env += "\n\n# Grecia: ΓΕΜΗ Open Data — chiave personale richiesta dal registro ufficiale.\n# https://opendata.businessportal.gr/register/\nGEMI_API_KEY=\n";
 }
 write(envPath, env);
