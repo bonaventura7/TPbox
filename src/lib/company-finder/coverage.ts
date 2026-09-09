@@ -27,10 +27,6 @@ export const CONSULT_PAGES: Record<string, { url: string; label: string }> = {
     url: "https://ekrs.ms.gov.pl/rdf/pd/search_df",
     label: "KRS — Repozytorium Dokumentów Finansowych",
   },
-  LU: {
-    url: "https://www.lbr.lu/mjrcs-web-front/",
-    label: "LBR — Registre de commerce et des sociétés",
-  },
   GR: {
     url: "https://publicity.businessportal.gr/",
     label: "ΓΕΜΗ — Registro generale del commercio",
@@ -91,6 +87,10 @@ export const BROWSER_ONLY_PAGES: Record<string, { url: string; label: string }> 
   HU: {
     url: "https://e-beszamolo.im.gov.hu/oldal/beszamolo_kereses",
     label: "e-Beszámoló — Ministero della Giustizia",
+  },
+  LU: {
+    url: "https://www.lbr.lu/mjrcs-web-front/",
+    label: "LBR — Registre de commerce et des sociétés",
   },
 };
 

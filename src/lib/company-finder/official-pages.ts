@@ -77,14 +77,25 @@ export function officialPageFor(
     };
   }
 
-  const luRcs = iso === "LU" ? normalizeLuxembourgRcs(rawId) : undefined;
-  if (luRcs) {
+  if (iso === "LU") {
+    const luRcs = normalizeLuxembourgRcs(rawId);
+    const url = luRcs
+      ? `https://www.lbr.lu/mjrcs-web-front/consult-company/${luRcs}?tab=deposit`
+      : "https://www.lbr.lu/mjrcs-web-front/";
     return {
-      url: `https://www.lbr.lu/mjrcs-web-front/consult-company/${luRcs}?tab=deposit`,
+      url,
       label: "LBR — Luxembourg Business Registers",
       actionLabel: "Apri il registro ufficiale",
       mode: "external",
-      note: "Apre direttamente la sezione depositi della società nel registro ufficiale. Se il deposito richiede autenticazione, la procedura prosegue sul portale LBR.",
+      note: "Il registro lussemburghese consente la ricerca gratuita, ma lo scarico dei conti annuali richiede un account gratuito (LuxTrust/eIDAS): la consultazione e il download si completano nella scheda della società sul portale ufficiale.",
+      instructions: [
+        luRcs
+          ? `Apri la scheda della società con numero RCS ${luRcs} (sezione “Dépôts / Comptes annuels”).`
+          : "Cerca la società per denominazione o numero RCS nel portale LBR.",
+        "Accedi o crea un account gratuito LuxTrust/eIDAS quando richiesto per il download.",
+        "Nella sezione “Comptes annuels” scegli l'esercizio desiderato.",
+        "Scarica il documento ufficiale in formato PDF.",
+      ],
     };
   }
 
