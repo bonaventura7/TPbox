@@ -27,15 +27,7 @@ export interface AleoDocumentResult {
 }
 
 function slugify(value: string): string {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/ł/g, "l")
-    .replace(/đ/g, "d")
-    .replace(/&/g, " i ")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/ł/g, "l").replace(/đ/g, "d").replace(/&/g, " i ").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 }
 
 function isPdf(bytes: Uint8Array, contentType: string): boolean {
@@ -49,49 +41,21 @@ function yearNear(text: string, index: number): number | undefined {
 }
 
 function normalizeUrl(raw: string): string {
-  const value = raw
-    .trim()
-    .replace(/&amp;/g, "&")
-    .replace(/&#x2F;/gi, "/")
-    .replace(/&#47;/g, "/")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/\\u0026/g, "&")
-    .replace(/\\u002F/g, "/")
-    .replace(/\\\//g, "/");
+  const value = raw.trim().replace(/&amp;/g, "&").replace(/&#x2F;/gi, "/").replace(/&#47;/g, "/").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/\\u0026/g, "&").replace(/\\u002F/g, "/").replace(/\\\//g, "/");
   return new URL(value.startsWith("//") ? `https:${value}` : value, ALEO_ORIGIN).toString();
 }
 
-function pushDocument(
-  documents: AleoAnnualDocument[],
-  seen: Set<string>,
-  href: string,
-  text: string,
-  sourceText: string,
-  requestedYear?: number,
-  position = 0,
-): void {
+function pushDocument(documents: AleoAnnualDocument[], seen: Set<string>, href: string, text: string, sourceText: string, requestedYear?: number, position = 0): void {
   let url: string;
-  try {
-    url = normalizeUrl(href);
-  } catch {
-    return;
-  }
+  try { url = normalizeUrl(href); } catch { return; }
   if (url.startsWith("https://aleo.com/") && !/\.pdf(?:[?#]|$)/i.test(url)) return;
   const context = `${text} ${sourceText} ${url}`;
-  if (!/pdf/i.test(context)) return;
-  if (!/sprawozdanie|financial|bilans|annual/i.test(context)) return;
+  if (!/pdf/i.test(context) || !/sprawozdanie|financial|bilans|annual/i.test(context)) return;
   const year = yearNear(sourceText, position);
   if (requestedYear && year && year !== requestedYear) return;
   if (seen.has(url)) return;
   seen.add(url);
-  documents.push({
-    id: url,
-    ...(year === undefined ? {} : { year }),
-    title: text || `Roczne sprawozdanie finansowe${year ? ` ${year}` : ""}`,
-    format: "pdf",
-    url,
-  });
+  documents.push({ id: url, ...(year === undefined ? {} : { year }), title: text || `Roczne sprawozdanie finansowe${year ? ` ${year}` : ""}`, format: "pdf", url });
 }
 
 export function extractAleoAnnualDocuments(html: string, requestedYear?: number): AleoAnnualDocument[] {
@@ -99,21 +63,11 @@ export function extractAleoAnnualDocuments(html: string, requestedYear?: number)
   const seen = new Set<string>();
   const anchorPattern = /<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
   for (const match of html.matchAll(anchorPattern)) {
-    const href = match[1] ?? "";
-    const text = (match[2] ?? "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-    pushDocument(documents, seen, href, text, html, requestedYear, match.index ?? 0);
+    pushDocument(documents, seen, match[1] ?? "", (match[2] ?? "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim(), html, requestedYear, match.index ?? 0);
   }
-
   const markdownPattern = /\[([^\]]*(?:pobierz|download|sprawozdanie)[^\]]*)\]\(([^)]+)\)/gi;
-  for (const match of html.matchAll(markdownPattern)) {
-    const text = (match[1] ?? "").trim();
-    pushDocument(documents, seen, match[2] ?? "", text, html, requestedYear, match.index ?? 0);
-  }
-
-  for (const match of html.matchAll(/(?:https?:)?(?:\\\/\\\/|\/\/)[^\s"'<>]+\.pdf(?:\?[^\s"'<>]*)?/gi)) {
-    pushDocument(documents, seen, match[0] ?? "", "Roczne sprawozdanie finansowe", html, requestedYear, match.index ?? 0);
-  }
-
+  for (const match of html.matchAll(markdownPattern)) pushDocument(documents, seen, match[2] ?? "", (match[1] ?? "").trim(), html, requestedYear, match.index ?? 0);
+  for (const match of html.matchAll(/(?:https?:)?(?:\\\/\\\/|\/\/)[^\s"'<>]+\.pdf(?:\?[^\s"'<>]*)?/gi)) pushDocument(documents, seen, match[0] ?? "", "Roczne sprawozdanie finansowe", html, requestedYear, match.index ?? 0);
   return documents.sort((a, b) => (b.year ?? 0) - (a.year ?? 0));
 }
 
@@ -122,15 +76,7 @@ async function fetchReaderPage(companyName: string, signal: AbortSignal): Promis
   if (!slug) throw new Error("denominazione polacca non valida");
   const aleoUrl = `${ALEO_ORIGIN}/pl/firma/${slug}`;
   const readerUrl = `${JINA_ORIGIN}${aleoUrl.replace(/^https?:\/\//, "")}`;
-  const response = await fetch(readerUrl, {
-    headers: {
-      "User-Agent": UA,
-      Accept: "text/plain,text/markdown,text/html,*/*",
-      "Accept-Language": "pl-PL,pl;q=0.9,en;q=0.8",
-    },
-    signal,
-    cache: "no-store",
-  });
+  const response = await fetch(readerUrl, { headers: { "User-Agent": UA, Accept: "text/plain,text/markdown,text/html,*/*", "Accept-Language": "pl-PL,pl;q=0.9,en;q=0.8" }, signal, cache: "no-store" });
   if (!response.ok) throw new Error(`ALEO reader HTTP ${response.status}`);
   return { text: await response.text(), url: aleoUrl };
 }
@@ -138,47 +84,28 @@ async function fetchReaderPage(companyName: string, signal: AbortSignal): Promis
 async function fetchDirectPage(companyName: string, signal: AbortSignal): Promise<{ text: string; url: string }> {
   const slug = slugify(companyName);
   const url = `${ALEO_ORIGIN}/pl/firma/${slug}`;
-  const response = await fetch(url, {
-    headers: {
-      "User-Agent": UA,
-      Accept: "text/html,application/xhtml+xml",
-      "Accept-Language": "pl-PL,pl;q=0.9,en;q=0.8",
-    },
-    signal,
-    cache: "no-store",
-  });
+  const response = await fetch(url, { headers: { "User-Agent": UA, Accept: "text/html,application/xhtml+xml", "Accept-Language": "pl-PL,pl;q=0.9,en;q=0.8" }, signal, cache: "no-store" });
   if (!response.ok) throw new Error(`ALEO HTTP ${response.status}`);
   return { text: await response.text(), url };
 }
 
 async function fetchAleoPage(companyName: string, signal: AbortSignal): Promise<{ text: string; url: string }> {
   try {
-    return await fetchReaderPage(companyName, signal);
-  } catch {
-    return fetchDirectPage(companyName, signal);
+    return await fetchDirectPage(companyName, signal);
+  } catch (directError) {
+    try {
+      return await fetchReaderPage(companyName, signal);
+    } catch (readerError) {
+      throw new Error(`ALEO non disponibile: ${directError instanceof Error ? directError.message : String(readerError)}`);
+    }
   }
 }
 
 async function fetchPdf(url: string, signal: AbortSignal): Promise<AleoDocumentResult> {
   let source: URL;
-  try {
-    source = new URL(url);
-  } catch {
-    return { ok: false, bytes: new Uint8Array(), contentType: "", error: "URL ALEO non valida" };
-  }
-  if (source.protocol !== "https:" || source.hostname !== "aleo.com") {
-    return { ok: false, bytes: new Uint8Array(), contentType: "", error: "dominio documento ALEO non autorizzato" };
-  }
-  const response = await fetch(source.toString(), {
-    headers: {
-      "User-Agent": UA,
-      Accept: "application/pdf,application/octet-stream,*/*",
-      Referer: `${ALEO_ORIGIN}/`,
-    },
-    signal,
-    redirect: "follow",
-    cache: "no-store",
-  });
+  try { source = new URL(url); } catch { return { ok: false, bytes: new Uint8Array(), contentType: "", error: "URL ALEO non valida" }; }
+  if (source.protocol !== "https:" || source.hostname !== "aleo.com") return { ok: false, bytes: new Uint8Array(), contentType: "", error: "dominio documento ALEO non autorizzato" };
+  const response = await fetch(source.toString(), { headers: { "User-Agent": UA, Accept: "application/pdf,application/octet-stream,*/*", Referer: `${ALEO_ORIGIN}/` }, signal, redirect: "follow", cache: "no-store" });
   if (!response.ok) throw new Error(`ALEO PDF HTTP ${response.status}`);
   const bytes = new Uint8Array(await response.arrayBuffer());
   if (bytes.byteLength > MAX_BYTES) throw new Error("PDF ALEO troppo grande");
@@ -187,32 +114,20 @@ async function fetchPdf(url: string, signal: AbortSignal): Promise<AleoDocumentR
   return { ok: true, bytes, contentType: "application/pdf", filename: "bilancio.pdf" };
 }
 
-export async function searchAleoAnnualReports(
-  companyName: string,
-  requestedYear?: number,
-  timeoutMs = TIMEOUT_MS,
-): Promise<AleoSearchResult> {
+export async function searchAleoAnnualReports(companyName: string, requestedYear?: number, timeoutMs = TIMEOUT_MS): Promise<AleoSearchResult> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const page = await fetchAleoPage(companyName, controller.signal);
     const documents = extractAleoAnnualDocuments(page.text, requestedYear);
-    return documents.length
-      ? { ok: true, documents }
-      : { ok: false, documents: [], error: requestedYear ? `bilancio ${requestedYear} non trovato su ALEO` : "nessun PDF di bilancio trovato su ALEO" };
+    return documents.length ? { ok: true, documents } : { ok: false, documents: [], error: requestedYear ? `bilancio ${requestedYear} non trovato su ALEO` : "nessun PDF di bilancio trovato su ALEO" };
   } catch (error) {
     const err = error as { name?: string; message?: string };
     return { ok: false, documents: [], error: err?.name === "AbortError" ? "timeout ALEO" : (err?.message ?? "errore ALEO") };
-  } finally {
-    clearTimeout(timer);
-  }
+  } finally { clearTimeout(timer); }
 }
 
-export async function fetchAleoAnnualReport(
-  companyName: string,
-  year: number,
-  timeoutMs = TIMEOUT_MS,
-): Promise<AleoDocumentResult & { document?: AleoAnnualDocument }> {
+export async function fetchAleoAnnualReport(companyName: string, year: number, timeoutMs = TIMEOUT_MS): Promise<AleoDocumentResult & { document?: AleoAnnualDocument }> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -225,7 +140,5 @@ export async function fetchAleoAnnualReport(
   } catch (error) {
     const err = error as { name?: string; message?: string };
     return { ok: false, bytes: new Uint8Array(), contentType: "", error: err?.name === "AbortError" ? "timeout download ALEO" : (err?.message ?? "errore download ALEO") };
-  } finally {
-    clearTimeout(timer);
-  }
+  } finally { clearTimeout(timer); }
 }
