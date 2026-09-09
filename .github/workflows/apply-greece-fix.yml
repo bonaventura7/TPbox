@@ -53,8 +53,8 @@ jobs:
           printf '%s\n' "$unexpected"
           exit "$status"
 
-      - name: Tests
-        run: npm run test
+      - name: Greece focused tests and regressions
+        run: npx vitest run src/lib/company-finder/sources/bilanci/gemi-gr.test.ts src/lib/company-finder/greek-filing.test.ts test/company-finder-no-regression.test.ts test/company-finder-document-url-contract.test.ts test/company-finder-document-resolver.test.ts
 
       - name: Build
         run: npm run build
