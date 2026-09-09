@@ -121,3 +121,9 @@ gemi = gemi.replace(
   '      looksLikeGreekFinancialDocument({\n        ...(decision.summary ? { summary: decision.summary } : {}),\n        ...(decision.decisionSubject ? { decisionSubject: decision.decisionSubject } : {}),\n        ...(decision.assemblyDecisionUrl ? { url: decision.assemblyDecisionUrl } : {}),\n      }),',
 );
 write(gemiPath, gemi);
+
+const functionsPath = "src/lib/company-finder.functions.ts";
+let functions = read(functionsPath);
+functions = functions.replace('country==="GR"&&/^\\d{10}$/.test(normalized)', 'country==="GR"&&/^\\d{10,12}$/.test(normalized)');
+functions = functions.replace('if(!/^\\d{10}$/.test(gemi))return response;', 'if(!/^\\d{10,12}$/.test(gemi))return response;');
+write(functionsPath, functions);
