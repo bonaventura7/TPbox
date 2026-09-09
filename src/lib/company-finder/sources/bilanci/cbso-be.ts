@@ -4,8 +4,7 @@
 //
 // Documentazione ufficiale:
 //   https://www.nbb.be/en/central-balance-sheet-office/consultation/web-services
-// Endpoint "Authentic Data Query" (verificata dal bundle SPA consult.cbso.nbb.be
-// e dalla doc NBB):
+// Endpoint "Authentic Data Query":
 //   GET {base}/authentic/legalEntity/{CBE}/references      (Accept: application/json)
 //   GET {base}/authentic/deposit/{depositRef}/accountingData
 //        Accept: application/pdf        → PDF ufficiale dei conti
@@ -54,7 +53,6 @@ function parseReferences(
     }
     if (typeof o === "object") {
       const obj = o as Record<string, unknown>;
-      // un nodo con un campo "reference"-like nel testo
       const text = JSON.stringify(obj);
       const m = text.match(DEP_REF);
       if (m && !seen.has(m[0]) && text.length < 2000) {
@@ -65,7 +63,6 @@ function parseReferences(
     }
   };
   walk(raw, 0);
-  // ordinamento: i ref NBB sono tipo 2024-00000123 → decrescente
   out.sort((a, b) => b.ref.localeCompare(a.ref));
   return out;
 }
@@ -81,7 +78,7 @@ export async function fetchCbsoAccounts(
     return {
       ok: false,
       skipped:
-        "servi la chiave gratuita NBB-CBSO (developer.cbso.nbb.be → prodotto “Authentic Data Query”; ambiente test gratuito: developer.uat2.cbso.nbb.be) nel campo partita IVA inserisci il CBE (10 cifre)",
+        "serve la chiave gratuita NBB-CBSO (developer.cbso.nbb.be → prodotto “Authentic Data Query”; ambiente test gratuito: developer.uat2.cbso.nbb.be) nel campo partita IVA inserisci il CBE (10 cifre)",
     };
   }
   const base = (baseOverride || DEFAULT_BASE).replace(/\/$/, "");
@@ -113,13 +110,13 @@ export async function fetchCbsoAccounts(
     const raw = await res.json();
     const refs = parseReferences(raw);
     const latest = refs[0];
-    // stessa condizione di prima: nessun riferimento estratto → nessun conto pubblicato
     if (refs.length === 0 || !latest) {
       return { ok: false, error: "NBB CBSO: nessun conto annuale pubblicato per questo CBE" };
     }
     const docUrl = `${base}/authentic/deposit/${latest.ref}/accountingData`;
-    // servito IN PAGINA dal proxy del tool (accept PDF: il gateway CBSO sceglie
-    // la rappresentazione in base all'header Accept)
+    // Eccezione documentata al contratto documentUrl: URL già proxato. Il
+    // gateway CBSO sceglie PDF/XBRL/JSON dall'header Accept, passato al proxy.
+    // La chiave non è mai nell'URL: viene iniettata lato server dal proxy.
     const proxied = `/api/company-finder/document?url=${encodeURIComponent(docUrl)}&accept=${encodeURIComponent("application/pdf")}`;
 
     return {
