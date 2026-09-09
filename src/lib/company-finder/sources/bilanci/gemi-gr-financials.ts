@@ -62,7 +62,7 @@ const LABELS: Array<{ field: FinancialField; patterns: RegExp[] }> = [
   },
 ];
 
-const NUMBER = /(?:\(\s*)?[-−+]?\s*\d{1,3}(?:[.\s]\d{3})*(?:,\d+)?\s*\)?|(?:\(\s*)?[-−+]?\s*\d+(?:,\d+)?\s*\)?/g;
+const NUMBER = /(?:\(\s*)?[-−+]?\s*\d{1,3}(?:\.\d{3})*(?:,\d+)?\s*\)?|(?:\(\s*)?[-−+]?\s*\d+(?:,\d+)?\s*\)?/g;
 const YEAR = /\b(20\d{2})\b/g;
 
 function toPlainText(input: string): string {
