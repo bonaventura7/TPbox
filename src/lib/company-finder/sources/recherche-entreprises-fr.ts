@@ -54,9 +54,9 @@ interface ApiCompany {
 
 export interface RechercheOptions {
   /**
-   * Discover public Pappers PDF links in addition to the state financial data.
-   * Disabled for profile resolution so a slow document source cannot delay the
-   * primary company search. The financial route enables it explicitly.
+   * Esegue anche la discovery dei PDF pubblici Pappers durante la ricerca.
+   * Di default è disabilitata: i link documentali sono lazy e vengono risolti
+   * solo quando l'utente richiede il download.
    */
   includePublicDocuments?: boolean | undefined;
 }
@@ -88,7 +88,7 @@ function toFinancials(finances: Record<string, ApiFinance> | undefined): Financi
     note:
       "Cifra d'affari e risultato netto dai conti depositati, pubblicati dall'API di Stato francese. " +
       "Stato patrimoniale e patrimonio netto non sono esposti da questa fonte: il documento integrale " +
-      "è recuperabile dal repertorio pubblico Pappers quando disponibile.",
+      "è recuperabile tramite il download documentale pubblico quando disponibile.",
   };
 }
 
@@ -147,6 +147,40 @@ function mergePublicDocuments(
   };
 }
 
+function attachLazyDocumentLinks(
+  financials: Financials | undefined,
+  companyName: string,
+  siren: string,
+): Financials | undefined {
+  if (!financials || financials.years.length === 0 || !/^\d{9}$/.test(siren)) return financials;
+  if (financials.documents?.length) return financials;
+
+  const documents = financials.years.map((year) => {
+    const match = year.periodLabel.match(/20\d{2}/)?.[0];
+    const numericYear = match ? Number(match) : undefined;
+    if (!numericYear) return undefined;
+    return {
+      id: `fr-${siren}-${numericYear}`,
+      year: numericYear,
+      kind: "ANNUAL_REPORT" as const,
+      format: "pdf" as const,
+      availability: "DOCUMENT_FOUND" as const,
+      title: `Comptes annuels ${numericYear}`,
+      downloadUrl: `/api/company-finder/document?country=FR&company=${encodeURIComponent(companyName)}&siren=${encodeURIComponent(siren)}&year=${numericYear}&download=1`,
+    };
+  }).filter((document): document is NonNullable<typeof document> => Boolean(document));
+
+  if (documents.length === 0) return financials;
+  return {
+    ...financials,
+    availability: "DOCUMENT_FOUND",
+    documents,
+    documentUrl: documents[0]?.downloadUrl,
+    documentTitle: documents[0]?.title,
+    note: `${financials.note ?? "Dati finanziari pubblici francesi."} I PDF vengono risolti al momento del download, così una fonte documentale lenta non blocca la ricerca della società.`,
+  };
+}
+
 export async function searchRechercheEntreprises(
   query: string,
   localVat: string,
@@ -174,8 +208,7 @@ export async function searchRechercheEntreprises(
 
     let financials = toFinancials(company.finances);
     if (options.includePublicDocuments) {
-      // Pappers è un arricchimento documentale opzionale: un suo timeout/blocco
-      // non deve mai impedire la restituzione dei dati gratuiti dello Stato.
+      // Arricchimento opzionale: non è nel critical path della ricerca.
       const publicDocs = await findPappersAnnualReports(
         profile.name ?? query,
         company.siren ?? "",
@@ -189,6 +222,7 @@ export async function searchRechercheEntreprises(
       );
     }
 
+    financials = attachLazyDocumentLinks(financials, profile.name ?? query, company.siren ?? "");
     return { ok: true, profile, financials };
   } catch (e) {
     const err = e as { name?: string | undefined; message?: string | undefined };
