@@ -32,10 +32,10 @@ jobs:
         run: git diff --check
 
       - name: Format new Greece files
-        run: npx prettier --write src/lib/company-finder/sources/bilanci/gemi-gr.ts src/lib/company-finder/sources/bilanci/gemi-gr.test.ts
+        run: npx prettier --write src/lib/company-finder/sources/bilanci/gemi-gr.ts src/lib/company-finder/sources/bilanci/gemi-gr.test.ts src/lib/company-finder/sources/bilanci/gemi-gr-financials.ts
 
       - name: Targeted lint for Greece files
-        run: npx eslint src/lib/company-finder/sources/bilanci/gemi-gr.ts src/lib/company-finder/sources/bilanci/gemi-gr.test.ts
+        run: npx eslint src/lib/company-finder/sources/bilanci/gemi-gr.ts src/lib/company-finder/sources/bilanci/gemi-gr.test.ts src/lib/company-finder/sources/bilanci/gemi-gr-financials.ts
 
       - name: Typecheck
         run: npm run typecheck
