@@ -48,8 +48,7 @@ function normalizeUrl(raw: string): string {
 function pushDocument(documents: AleoAnnualDocument[], seen: Set<string>, href: string, text: string, sourceText: string, requestedYear?: number, position = 0): void {
   let url: string;
   try { url = normalizeUrl(href); } catch { return; }
-  if (url.startsWith("https://aleo.com/") && !/pdf/i.test(url)) return;
-  const context = `${text} ${sourceText} ${url}`;
+  const context = `${text} ${sourceText.slice(Math.max(0, position - 500), Math.min(sourceText.length, position + 500))} ${url}`;
   if (!/pdf/i.test(context) || !/sprawozdanie|financial|bilans|annual/i.test(context)) return;
   const year = yearNear(sourceText, position);
   if (requestedYear && year && year !== requestedYear) return;
