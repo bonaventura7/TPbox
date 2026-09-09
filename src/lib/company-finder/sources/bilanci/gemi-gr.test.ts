@@ -12,6 +12,10 @@ describe("gemiFromInput", () => {
     expect(gemiFromInput("", "2636010000")).toBe("2636010000");
   });
 
+  it("accepts a 12-digit GEMI number used by public filings", () => {
+    expect(gemiFromInput("140330201000", "")).toBe("140330201000");
+  });
+
   it("does not mistake the 9-digit Greek VAT for a GEMI number", () => {
     expect(gemiFromInput("123456789", "")).toBeUndefined();
   });
