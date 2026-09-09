@@ -87,7 +87,7 @@ function pushDocument(
   seen.add(url);
   documents.push({
     id: url,
-    year,
+    ...(year === undefined ? {} : { year }),
     title: text || `Roczne sprawozdanie finansowe${year ? ` ${year}` : ""}`,
     format: "pdf",
     url,

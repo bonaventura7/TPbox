@@ -109,19 +109,20 @@ async function resolveGermanyCompanyName(
     });
     if (!response.ok) return undefined;
     const payload = asObject(await response.json());
-    const rows = Array.isArray(payload?.data)
-      ? payload.data.map(asObject).filter(Boolean) as JsonObject[]
+    const rows = Array.isArray(payload?.["data"])
+      ? (payload["data"] as unknown[]).map(asObject).filter(Boolean) as JsonObject[]
       : [];
     let best: { name: string; euId?: string; score: number } | undefined;
     for (const row of rows) {
-      const name = text(row.legal_name) ?? text(row.display_name);
+      const name = text(row["legal_name"]) ?? text(row["display_name"]);
       if (!name) continue;
       const score = similarity(name, query);
       if (!best || score > best.score) {
-        best = { name, euId: text(row.eu_id), score };
+        const euId = text(row["eu_id"]);
+        best = { name, ...(euId === undefined ? {} : { euId }), score };
       }
     }
-    return best && best.score >= 0.8 ? { name: best.name, euId: best.euId } : undefined;
+    return best && best.score >= 0.8 ? { name: best.name, ...(best.euId === undefined ? {} : { euId: best.euId }) } : undefined;
   } catch {
     return undefined;
   } finally {
@@ -141,7 +142,7 @@ export async function searchUrAccounting(companyName: string, timeoutMs = 30000)
   const query = companyName.trim();
   if (query.length < 3) return { ok: false, error: "ragione sociale troppo corta" };
 
-  const key = env().OPENREGISTER_API_KEY?.trim();
+  const key = env()["OPENREGISTER_API_KEY"]?.trim();
   if (key) {
     const structured = await fetchOpenRegisterFinancials(query, key, Math.min(timeoutMs, 15000));
     if (structured.ok && structured.data) return structured;

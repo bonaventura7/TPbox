@@ -49,7 +49,7 @@ export const Route = createFileRoute("/api/company-finder/document")({
             return errorResponse("il registro polacco non ha restituito un PDF valido", 502, { fallback: "official-browser" });
           }
 
-          return new Response(result.bytes, {
+          return new Response(new Uint8Array(result.bytes) as unknown as BodyInit, {
             status: 200,
             headers: {
               "Content-Type": "application/pdf",

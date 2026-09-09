@@ -24,7 +24,7 @@ export const Route = createFileRoute("/api/company-finder/germany-public-balance
         }
 
         const year = yearParam ? Number(yearParam) : undefined;
-        if (yearParam && (!Number.isInteger(year) || year < 2000 || year > 2100)) {
+        if (yearParam && (year === undefined || !Number.isInteger(year) || year < 2000 || year > 2100)) {
           return Response.json({ error: "anno non valido" }, { status: 400 });
         }
 

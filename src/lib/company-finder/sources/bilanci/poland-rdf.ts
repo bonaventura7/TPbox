@@ -49,6 +49,7 @@ function setCookies(jar: CookieJar, headers: Headers): void {
 
   for (const raw of values) {
     const first = raw.trim().split(";", 1)[0];
+    if (!first) continue;
     const separator = first.indexOf("=");
     if (separator <= 0) continue;
     jar.values.set(first.slice(0, separator), first.slice(separator + 1));
@@ -151,7 +152,7 @@ function requestHeaders(jar: CookieJar, xsrf?: string): Record<string, string> {
     Referer: `${RDF_ORIGIN}/wyszukaj-podmiot`,
   };
   const cookies = cookieHeader(jar);
-  if (cookies) headers.Cookie = cookies;
+  if (cookies) headers["Cookie"] = cookies;
   if (xsrf) headers["X-XSRF-TOKEN"] = xsrf;
   return headers;
 }
@@ -250,7 +251,7 @@ export function extractPolishAnnualDocuments(payload: unknown, requestedYear?: n
     if (requestedYear && year && year !== requestedYear) continue;
     documents.push({
       id,
-      year,
+      ...(year === undefined ? {} : { year }),
       title: documentTitle(record),
       format: documentFormat(record) === "unknown" ? "pdf" : documentFormat(record),
     });

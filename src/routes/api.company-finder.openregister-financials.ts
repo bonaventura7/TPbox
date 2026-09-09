@@ -26,7 +26,7 @@ export const Route = createFileRoute("/api/company-finder/openregister-financial
         const url = new URL(request.url);
         const companyId = url.searchParams.get("companyId")?.trim();
         const reportId = url.searchParams.get("reportId")?.trim();
-        const apiKey = env().OPENREGISTER_API_KEY?.trim();
+        const apiKey = env()["OPENREGISTER_API_KEY"]?.trim();
 
         if (!apiKey) {
           return Response.json({ error: "OPENREGISTER_API_KEY non configurata" }, { status: 503 });
@@ -45,13 +45,13 @@ export const Route = createFileRoute("/api/company-finder/openregister-financial
           }
 
           const report = reportId
-            ? reports.find((candidate) => String(candidate.report_id ?? "") === reportId)
+            ? reports.find((candidate) => String(candidate["report_id"] ?? "") === reportId)
             : reports[0];
           if (!report) {
             return Response.json({ error: "Bilancio richiesto non trovato" }, { status: 404 });
           }
 
-          const endDate = String(report.report_end_date ?? "");
+          const endDate = String(report["report_end_date"] ?? "");
           const year = /20\d{2}/.exec(endDate)?.[0] ?? "bilancio";
           const csv = buildOpenRegisterFinancialCsv(report, companyId);
           const filename = `${safeFilename(companyId)}-${year}.csv`;
