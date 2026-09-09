@@ -28,6 +28,9 @@ function slugify(value: string): string {
   return value
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
+    // Pappers canonical slugs remove apostrophes (TOD'S -> TODS), rather than
+    // turning them into a separator (TOD-S). This is critical for FR names.
+    .replace(/[\u0027\u2019]/g, "")
     .toLowerCase()
     .replace(/&/g, " et ")
     .replace(/[^a-z0-9]+/g, "-")
@@ -79,17 +82,19 @@ function extractPdfLinks(html: string, pageUrl: URL): PappersPublicDocument[] {
     const attrsAfter = match[3] ?? "";
     const body = match[4] ?? "";
     const context = `${href} ${attrsBefore} ${attrsAfter} ${body}`;
-    if (!isPappersPdf(new URL(href, pageUrl).toString())) continue;
-
-    const absolute = new URL(href, pageUrl);
-    const url = absolute.toString();
-    if (seen.has(url)) continue;
-
-    const year = yearFrom(context);
-    if (!year) continue;
-    seen.add(url);
-    const title = cleanText(body) || `Comptes sociaux ${year}`;
-    candidates.push({ url, title, year });
+    try {
+      const absolute = new URL(href, pageUrl);
+      if (!isPappersPdf(absolute.toString())) continue;
+      const url = absolute.toString();
+      if (seen.has(url)) continue;
+      const year = yearFrom(context);
+      if (!year) continue;
+      seen.add(url);
+      const title = cleanText(body) || `Comptes sociaux ${year}`;
+      candidates.push({ url, title, year });
+    } catch {
+      // Ignore malformed public links and keep scanning the page.
+    }
   }
 
   return candidates.sort((a, b) => b.year - a.year || a.title.localeCompare(b.title, "fr"));

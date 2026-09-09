@@ -52,6 +52,15 @@ interface ApiCompany {
   finances?: Record<string, ApiFinance> | undefined;
 }
 
+export interface RechercheOptions {
+  /**
+   * Esegue anche la discovery dei PDF pubblici Pappers durante la ricerca.
+   * Di default è disabilitata: i link documentali sono lazy e vengono risolti
+   * solo quando l'utente richiede il download.
+   */
+  includePublicDocuments?: boolean | undefined;
+}
+
 export function sirenFromInput(localVat: string): string | undefined {
   const digits = localVat.replace(/\D/g, "");
   if (/^\d{9}$/.test(digits)) return digits;
@@ -79,7 +88,7 @@ function toFinancials(finances: Record<string, ApiFinance> | undefined): Financi
     note:
       "Cifra d'affari e risultato netto dai conti depositati, pubblicati dall'API di Stato francese. " +
       "Stato patrimoniale e patrimonio netto non sono esposti da questa fonte: il documento integrale " +
-      "è recuperabile dal repertorio pubblico Pappers quando disponibile.",
+      "è recuperabile tramite il download documentale pubblico quando disponibile.",
   };
 }
 
@@ -138,10 +147,45 @@ function mergePublicDocuments(
   };
 }
 
+function attachLazyDocumentLinks(
+  financials: Financials | undefined,
+  companyName: string,
+  siren: string,
+): Financials | undefined {
+  if (!financials || financials.years.length === 0 || !/^\d{9}$/.test(siren)) return financials;
+  if (financials.documents?.length) return financials;
+
+  const documents = financials.years.map((year) => {
+    const match = year.periodLabel.match(/20\d{2}/)?.[0];
+    const numericYear = match ? Number(match) : undefined;
+    if (!numericYear) return undefined;
+    return {
+      id: `fr-${siren}-${numericYear}`,
+      year: numericYear,
+      kind: "ANNUAL_REPORT" as const,
+      format: "pdf" as const,
+      availability: "DOCUMENT_FOUND" as const,
+      title: `Comptes annuels ${numericYear}`,
+      downloadUrl: `/api/company-finder/document?country=FR&company=${encodeURIComponent(companyName)}&siren=${encodeURIComponent(siren)}&year=${numericYear}&download=1`,
+    };
+  }).filter((document): document is NonNullable<typeof document> => Boolean(document));
+
+  if (documents.length === 0) return financials;
+  return {
+    ...financials,
+    availability: "DOCUMENT_FOUND",
+    documents,
+    documentUrl: documents[0]?.downloadUrl,
+    documentTitle: documents[0]?.title,
+    note: `${financials.note ?? "Dati finanziari pubblici francesi."} I PDF vengono risolti al momento del download, così una fonte documentale lenta non blocca la ricerca della società.`,
+  };
+}
+
 export async function searchRechercheEntreprises(
   query: string,
   localVat: string,
   timeoutMs = 12000,
+  options: RechercheOptions = {},
 ): Promise<RechercheResult> {
   const siren = sirenFromInput(localVat);
   const term = siren ?? query.trim();
@@ -162,22 +206,23 @@ export async function searchRechercheEntreprises(
     const profile = toProfile(company);
     if (!profile) return { ok: false, error: "risposta priva di SIREN o denominazione" };
 
-    const baseFinancials = toFinancials(company.finances);
-    let financials = baseFinancials;
-    // Pappers è usato come repertorio pubblico documentale: nessuna API key.
-    // Un eventuale errore non deve invalidare i dati ufficiali già restituiti.
-    const publicDocs = await findPappersAnnualReports(
-      profile.name ?? query,
-      company.siren ?? "",
-      10000,
-    );
-    financials = mergePublicDocuments(
-      financials,
-      publicDocs,
-      profile.name ?? query,
-      company.siren ?? "",
-    );
+    let financials = toFinancials(company.finances);
+    if (options.includePublicDocuments) {
+      // Arricchimento opzionale: non è nel critical path della ricerca.
+      const publicDocs = await findPappersAnnualReports(
+        profile.name ?? query,
+        company.siren ?? "",
+        Math.min(timeoutMs, 10000),
+      );
+      financials = mergePublicDocuments(
+        financials,
+        publicDocs,
+        profile.name ?? query,
+        company.siren ?? "",
+      );
+    }
 
+    financials = attachLazyDocumentLinks(financials, profile.name ?? query, company.siren ?? "");
     return { ok: true, profile, financials };
   } catch (e) {
     const err = e as { name?: string | undefined; message?: string | undefined };
