@@ -1,0 +1,38 @@
+name: Temporary Germany merge verification
+
+on:
+  push:
+    branches:
+      - feat/company-finder-germany-free-main-sync
+
+permissions:
+  contents: write
+
+jobs:
+  merge:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: git fetch origin feat/company-finder-germany-end-to-end
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git merge --no-commit --no-ff origin/feat/company-finder-germany-end-to-end || true
+          git checkout --theirs -- src/lib/company-finder/orchestrator.ts src/lib/company-finder/sources/bilanci/ur-de.ts src/lib/company-finder/sources/germany-adapter.ts src/lib/company-finder/document-proxy.server.ts test/company-finder-document-proxy.test.ts test/company-finder-germany-resolver.test.ts
+          rm -f .github/workflows/_tmp-germany-fulltest.yml
+          git add -A
+          git commit -m "feat(company-finder): sync Germany adapter onto current main"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx vitest run test/company-finder-germany-resolver.test.ts test/company-finder-document-proxy.test.ts
+      - run: npm run build
+      - run: |
+          rm .github/workflows/_tmp-germany-merge.yml
+          git add .github/workflows/_tmp-germany-merge.yml
+          git commit -m "chore: remove temporary Germany verification workflow"
+          git push origin HEAD:feat/company-finder-germany-free-main-sync
