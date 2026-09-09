@@ -14,13 +14,27 @@ type FinancialField = keyof Pick<
 const LABELS: Array<{ field: FinancialField; patterns: RegExp[] }> = [
   {
     field: "revenue",
-    patterns: [/κύκλος\s+εργασιών/i, /πωλήσεις/i, /έσοδα/i, /turnover/i, /revenue/i, /sales/i],
+    patterns: [
+      /κύκλος\s+εργασιών/i,
+      /πωλήσεις/i,
+      /έσοδα/i,
+      /rental\s+income/i,
+      /turnover/i,
+      /revenue/i,
+      /sales/i,
+    ],
   },
   {
     field: "operatingProfit",
-    patterns: [/λειτουργικά\s+κέρδη/i, /κέρδη\s+εκμετάλλευσης/i, /operating\s+profit/i, /operating\s+income/i, /ebit(?!da)/i],
+    patterns: [
+      /λειτουργικά\s+κέρδη/i,
+      /κέρδη\s+εκμετάλλευσης/i,
+      /operating\s+profit/i,
+      /operating\s+income/i,
+      /ebit(?!da)/i,
+    ],
   },
-  { field: "ebitda", patterns: [/\bebitda\b/i] },
+  { field: "ebitda", patterns: [/\bebitda\b/i, /earnings\s+before\s+interest/i] },
   {
     field: "netIncome",
     patterns: [
@@ -28,6 +42,7 @@ const LABELS: Array<{ field: FinancialField; patterns: RegExp[] }> = [
       /καθαρά\s+αποτελέσματα/i,
       /κέρδη\s+μετά\s+φόρων/i,
       /net\s+income/i,
+      /net\s+profit/i,
       /profit\s+after\s+tax/i,
     ],
   },
@@ -37,11 +52,32 @@ const LABELS: Array<{ field: FinancialField; patterns: RegExp[] }> = [
   },
   {
     field: "equity",
-    patterns: [/ίδια\s+κεφάλαια/i, /καθαρή\s+θέση/i, /σύνολο\s+ιδίων/i, /equity/i],
+    patterns: [
+      /ίδια\s+κεφάλαια/i,
+      /καθαρή\s+θέση/i,
+      /σύνολο\s+ιδίων/i,
+      /total\s+equity/i,
+      /equity/i,
+    ],
   },
 ];
 
 const NUMBER = /(?:\(\s*)?[-−+]?\s*\d{1,3}(?:[.\s]\d{3})*(?:,\d+)?\s*\)?|(?:\(\s*)?[-−+]?\s*\d+(?:,\d+)?\s*\)?/g;
+const YEAR = /\b(20\d{2})\b/g;
+
+function toPlainText(input: string): string {
+  return input
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/tr\s*>/gi, "\n")
+    .replace(/<\/p\s*>/gi, "\n")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&euro;/gi, "€")
+    .replace(/&#8364;/g, "€")
+    .replace(/\u00a0/g, " ")
+    .replace(/\r/g, "");
+}
 
 function parseGreekNumber(raw: string): number | undefined {
   const value = raw.trim();
@@ -66,8 +102,15 @@ function extractNumbers(line: string): number[] {
 }
 
 function extractYears(text: string): number[] {
-  const years = [...text.matchAll(/\b(20\d{2})\b/g)].map((match) => Number(match[1]));
-  return [...new Set(years)].filter((year) => year >= 2000 && year <= 2100).slice(0, 6);
+  const lines = text.split("\n");
+  for (const line of lines) {
+    const years = [...line.matchAll(YEAR)].map((match) => Number(match[1]));
+    const distinct = [...new Set(years)].filter((year) => year >= 2000 && year <= 2100);
+    if (distinct.length >= 2) return distinct.slice(0, 2);
+  }
+
+  const allYears = [...text.matchAll(YEAR)].map((match) => Number(match[1]));
+  return [...new Set(allYears)].filter((year) => year >= 2000 && year <= 2100).slice(0, 2);
 }
 
 function findField(line: string): FinancialField | undefined {
@@ -85,7 +128,7 @@ export function parseGreekFinancialDocument(input: {
   text: string;
   sourceUrl?: string;
 }): GreekFinancialParseResult {
-  const text = input.text.replace(/\u00a0/g, " ").replace(/\r/g, "");
+  const text = toPlainText(input.text);
   const years = extractYears(text);
   if (!years.length) return emptyResult();
 
@@ -105,7 +148,8 @@ export function parseGreekFinancialDocument(input: {
 
     const usable = values.slice(0, years.length);
     usable.forEach((value, index) => {
-      parsed[index][field] = value;
+      const target = parsed[index];
+      if (target) target[field] = value;
     });
     matchedFields += 1;
   }
