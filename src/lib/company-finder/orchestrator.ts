@@ -20,6 +20,7 @@ import { searchBg } from "./sources/registry-bg";
 // ---- layer BILANCI (fonti gratuite, lato server) ----
 import { fetchEeFinancials } from "./sources/bilanci/ariregister-ee";
 import { fetchKvkJaarrekeningen, kvkFromInput } from "./sources/bilanci/kvk-nl";
+import { fetchAtFirmenbuchBilanci } from "./sources/bilanci/justizonline-at";
 import { searchUrAccounting } from "./sources/bilanci/ur-de";
 import { fetchPappersFinancials } from "./sources/bilanci/pappers-fr";
 import { fetchDkRegnskaber, cvrFromVat } from "./sources/bilanci/regnskaber-dk";
@@ -52,6 +53,7 @@ const INPI_KEY = ENV["INPI_KEY"];
 const PAPPERS_KEY = ENV["PAPPERS_API_KEY"];
 const NBB_CBSO_KEY = ENV["NBB_CBSO_API_KEY"];
 const NBB_CBSO_BASE = ENV["NBB_CBSO_BASE"]; // es. https://ws.uat2.cbso.nbb.be (test, chiave gratuita)
+const AT_JO_KEY = ENV["AT_JUSTIZONLINE_API_KEY"]; // chiave gratuita HVD: justizonline.gv.at/jop/web/iwg/register
 
 interface Job {
   status: SourceStatus;
@@ -410,6 +412,37 @@ const FINANCIALS_ROUTES: Record<
         });
       })(),
   },
+  // ---- Austria: JustizOnline HVD (Firmenbuch, dati BMJ in CC-BY) ----
+  // Da marzo 2025 i bilanci austriaci sono High Value Dataset: l'elenco dei
+  // depositi arriva dal server; senza chiave (gratuita) resta la pagina
+  // gratuita openfirmenbuch.at, gestita da official-pages.ts.
+  AT: {
+    id: "fin-justizonline-at",
+    label: "JustizOnline HVD — Firmenbuch (Jahresabschlüsse)",
+    run: (ctx, job, s) =>
+      (async () => {
+        const subject = ctx.query || ctx.localVat;
+        if (!subject) {
+          s.state = "skipped";
+          s.detail =
+            "servi la ragione sociale (Firmenwortlaut) oppure la Firmenbuchnummer nel formato “FN 123456a”";
+          return;
+        }
+        const r = await fetchAtFirmenbuchBilanci(subject, AT_JO_KEY);
+        if (r.ok && r.data) {
+          s.state = "ok";
+          s.detail = r.data.note || "atti del Firmenbuch";
+          job.fin = () => r.data!;
+        } else if (r.skipped) {
+          s.state = "skipped";
+          s.detail = r.skipped;
+        } else {
+          s.state = "failed";
+          s.detail = r.error || "fonte non raggiungibile";
+        }
+      })(),
+  },
+
   // ---- Paesi Bassi: KVK Open Dataset Jaarrekeningen (ufficiale, senza chiave) ----
 
   NL: {

@@ -43,10 +43,6 @@ export const CONSULT_PAGES: Record<string, { url: string; label: string }> = {
   },
   SI: { url: "https://www.ajpes.si/jolp/", label: "AJPES JOLP — Bilanci annuali" },
   LV: { url: "https://www.ur.gov.lv/lv/", label: "Uzņēmumu reģistrs — sezione pubblica" },
-  LT: {
-    url: "https://www.registrucentras.lt/jar/p/",
-    label: "Registrų centras — Registro imprese",
-  },
   BG: {
     url: "https://portal.registryagency.bg/CR/en/Reports/VerificationPersonOrg",
     label: "Търговски регистър — Registry Agency",
@@ -63,6 +59,9 @@ export const CONSULT_PAGES: Record<string, { url: string; label: string }> = {
     url: "https://rgfi.fina.hr/JavnaObjava-web/jsp/prijavaKorisnika.jsp",
     label: "FINA RGFI — Registro dei bilanci",
   },
+  // LT era qui per errore: su Registrų centras i documenti finanziari si
+  // ORDINANO a pagamento ("Finansinių ataskaitų dokumentų užsakymas"); gratis
+  // è solo il deposito. Spostata correttamente in NO_FREE_SOURCE.
 };
 
 /**
@@ -72,25 +71,38 @@ export const CONSULT_PAGES: Record<string, { url: string; label: string }> = {
 export const NO_FREE_SOURCE: Record<string, string> = {
   IT: "I bilanci sono depositati presso le CCIAA: copia integrale 4,50–6 € su registroimprese.it. Gratis solo la propria impresa, via Impresa Italia con SPID.",
   ES: "Le cuentas anuales del Registro Mercantil sono a pagamento. Gratuiti solo i conti auditati delle società quotate, sul portale CNMV.",
-  SE: "Bolagsverket rilascia l'årsredovisning a tariffa, circa 100 SEK a documento.",
   CY: "Il fascicolo societario del DRCOR, che contiene i conti, costa 10 €.",
-  AT: "Il Firmenbuch consente la ricerca gratuita ma il documento Jahresabschluss costa circa 1,44 € a copia.",
   IE: "Il CRO rilascia i documenti, conti inclusi, a tariffa per documento.",
   MT: "Il Malta Business Registry applica un costo per la documentazione societaria.",
+  LT: "Su Registrų centras la consultazione dei documenti finanziari (Finansinių ataskaitų dokumentų užsakymas) è a tariffa, pochi euro a documento; gratuito è solo il deposito. Gli open data JAR coprono anagrafiche e organi, non i bilanci.",
   IS: "Nessun canale gratuito verificato per i bilanci islandesi.",
   LI: "In Liechtenstein i conti annuali non sono pubblicati online.",
+  // SE e AT erano qui con tariffe ormai superate:
+  //  - SE: i documenti Bolagsverket si scaricano gratis da allaarsredovisningar.se
+  //  - AT: da marzo 2025 i dati del Firmenbuch sono HVD (CC-BY), vedi BROWSER_ONLY
 };
 
 /**
- * Livello B2 — SOLO BROWSER. Il bilancio è gratuito, ma il registro impone un
- * controllo che va completato dalla persona (verifica anti-bot, sessione) e
- * rifiuta di essere incorporato in un iframe (X-Frame-Options: DENY). Si apre
- * quindi in una nuova scheda, con istruzioni: nessun controllo viene aggirato.
+ * Livello B2 — SOLO BROWSER. Il bilancio è gratuito, ma la consultazione va
+ * completata nel browser della persona: perché il registro impone un controllo
+ * anti-bot e rifiuta l'incorporamento (HU, verificato: X-Frame-Options DENY),
+ * oppure perché la via gratuita è l'interfaccia pubblica di un terzo che
+ * redistribuisce i dati ufficiali (AT, SE) la cui incorporabilità non è
+ * garantita. Si apre in una nuova scheda, con istruzioni: nessun controllo
+ * viene aggirato.
  */
 export const BROWSER_ONLY_PAGES: Record<string, { url: string; label: string }> = {
   HU: {
     url: "https://e-beszamolo.im.gov.hu/oldal/beszamolo_kereses",
     label: "e-Beszámoló — Ministero della Giustizia",
+  },
+  AT: {
+    url: "https://openfirmenbuch.at/",
+    label: "OpenFirmenbuch — interfaccia gratuita dei dati Firmenbuch (BMJ, CC-BY)",
+  },
+  SE: {
+    url: "https://allaarsredovisningar.se/",
+    label: "Allaårsredovisningar — årsredovisningar ufficiali Bolagsverket",
   },
 };
 

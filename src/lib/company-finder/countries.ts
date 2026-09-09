@@ -85,8 +85,8 @@ export const COUNTRIES: CountryInfo[] = [
     registryName: "Firmenbuch / Unternehmensregister",
     registryAuthority: "Tribunali (Bezirksgericht)",
     financials: {
-      free: false,
-      note: "I bilanci (Jahresabschluss) sono a pagamento su Unternehmensregister.at (registrazione gratuita). Alternativa gratuita: per le società quotate, i bilanci ESEF sono gratuiti presso FMA/ESMA.",
+      free: true,
+      note: "Da marzo 2025 i dati del Firmenbuch (Jahresabschlüsse e Lageberichte) sono High Value Dataset del BMJ in licenza CC-BY: API ufficiale JustizOnline con chiave gratuita, PDF senza account su openfirmenbuch.at. Canale ufficiale consultabile anche su JustizOnline.",
     },
   },
   {
@@ -133,8 +133,8 @@ export const COUNTRIES: CountryInfo[] = [
     registryName: "Bolagsverket (allmänt företagsregister)",
     registryAuthority: "Bolagsverket",
     financials: {
-      free: false,
-      note: "I bilanci ufficiali (årsredovisning) costano 60-100 SEK su Bolagsverket. Alternativa gratuita: per le società quotate, i bilanci ESEF sono gratuiti presso Nasdaq Stockholm/ESMA.",
+      free: true,
+      note: "Il canale ufficiale Bolagsverket resta a tariffa (ca. 60-100 SEK), ma gli stessi documenti ufficiali si scaricano in PDF, gratis e senza account, da allaarsredovisningar.se (aggregatore di documenti Bolagsverket).",
     },
   },
   {
@@ -302,7 +302,7 @@ export const COUNTRIES: CountryInfo[] = [
     registryAuthority: "Registrų centras",
     financials: {
       free: false,
-      note: "Le relazioni finanziarie (finansinės ataskaitos) su JAR costano ~2-4 €.",
+      note: "La consultazione dei documenti finanziari su JAR è il servizio a tariffa “Finansinių ataskaitų dokumentų užsakymas” (pochi euro a documento). Gli open data JAR (Spinta API, data.gov.lt) coprono anagrafiche e organi, non i bilanci.",
     },
   },
   {

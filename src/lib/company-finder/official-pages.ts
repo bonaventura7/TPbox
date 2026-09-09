@@ -77,6 +77,50 @@ export function officialPageFor(
     };
   }
 
+  if (iso === "AT") {
+    return {
+      url: BROWSER_ONLY_PAGES["AT"]?.url ?? "https://openfirmenbuch.at/",
+      label: "OpenFirmenbuch — dati ufficiali Firmenbuch (BMJ, CC-BY)",
+      actionLabel: "Apri la consultazione gratuita",
+      mode: "external",
+      note: "Da marzo 2025 i dati del Firmenbuch, bilanci inclusi, sono High Value Dataset (reg. UE 2023/138) sotto licenza CC-BY: questa pagina gratuita legge l'API ufficiale JustizOnline e restituisce il Jahresabschluss in PDF senza account né pagamento.",
+      instructions: [
+        name
+          ? `Cerca la società per denominazione: “${name}”.`
+          : "Cerca la società per denominazione (Firmenwortlaut) o per Firmenbuchnummer (FN).",
+        "Apri la scheda della società: nella sezione documenti trovi Jahresabschlüsse e Lageberichte.",
+        "Scarica il PDF dell'esercizio che ti serve: è gratuito e senza registrazione.",
+        "Per uso automatico: la stessa fonte è disponibile via API ufficiale HVD di JustizOnline con chiave gratuita (justizonline.gv.at/jop/web/iwg/register).",
+      ],
+    };
+  }
+
+  if (iso === "SE") {
+    const seDigits = digits(rawId);
+    const orgnr =
+      seDigits.length === 12
+        ? seDigits.slice(0, 10) // IVA SE: orgnr (10 cifre) + suffisso "01"
+        : seDigits.length === 10
+          ? seDigits
+          : undefined;
+    return {
+      url: BROWSER_ONLY_PAGES["SE"]?.url ?? "https://allaarsredovisningar.se/",
+      label: "Allaårsredovisningar — årsredovisningar ufficiali Bolagsverket",
+      actionLabel: "Apri la consultazione gratuita",
+      mode: "external",
+      note: "L'årsredovisning di Bolagsverket resta a tariffa sul canale ufficiale (ca. 100 SEK), ma questi stessi documenti ufficiali si scaricano qui in PDF, gratis e senza account.",
+      instructions: [
+        orgnr
+          ? `Cerca per organisationsnummer ${orgnr} (le 10 cifre centrali della partita IVA svedese) o per nome.`
+          : name
+            ? `Cerca per nome (“${name}”) o per organisationsnummer (10 cifre).`
+            : "Cerca per nome o per organisationsnummer (10 cifre: le cifre centrali della partita IVA SE, senza il suffisso 01 finale).",
+        "Apri la società e scegli l'esercizio dall'elenco dei documenti ufficiali.",
+        "Premi il comando di download: il PDF dell'årsredovisning è gratuito.",
+      ],
+    };
+  }
+
   const luRcs = iso === "LU" ? normalizeLuxembourgRcs(rawId) : undefined;
   if (luRcs) {
     return {
@@ -84,7 +128,7 @@ export function officialPageFor(
       label: "LBR — Luxembourg Business Registers",
       actionLabel: "Apri il registro ufficiale",
       mode: "external",
-      note: "Apre direttamente la sezione depositi della società nel registro ufficiale. Se il deposito richiede autenticazione, la procedura prosegue sul portale LBR.",
+      note: "Apre direttamente la sezione depositi della società nel registro ufficiale: i documenti depositati, comptes annuels inclusi, si aprono gratuitamente dall'icona PDF del fascicolo. Restano a pagamento solo gli estratti RCS e le copie autenticate (portale europeo e-Justice).",
     };
   }
 
