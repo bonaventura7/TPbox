@@ -17,7 +17,44 @@ if (!orchestrator.includes('const GEMI_API_KEY = ENV["GEMI_API_KEY"];')) {
     'const NBB_CBSO_BASE = ENV["NBB_CBSO_BASE"]; // es. https://ws.uat2.cbso.nbb.be (test, chiave gratuita)\nconst GEMI_API_KEY = ENV["GEMI_API_KEY"];\n',
   );
 }
-const greekRoute = `\n  // ---- Grecia: ΓΕΜΗ Open Data + fallback pubblico iXBRL ----\n  GR: {\n    id: "fin-gemi-gr",\n    label: "ΓΕΜΗ — bilanci e documenti finanziari pubblici",\n    run: (ctx, job, s) =>\n      (async () => {\n        const r = await fetchGreekFinancials({\n          localVat: ctx.localVat,\n          query: ctx.query,\n          apiKey: GEMI_API_KEY,\n        });\n        if (r.ok) {\n          s.state = "ok";\n          const n = r.financials.documents?.length ?? 0;\n          s.detail = n > 0 ? \\\`${n} documenti finanziari\\\` : r.financials.documentTitle ?? "filing GEMI disponibile";\n          if (r.profile) {\n            const profile = r.profile;\n            job.profile = () => profile;\n          }\n          const fin = r.financials;\n          job.fin = () => fin;\n          return;\n        }\n        s.state = "skipped";\n        s.detail = r.skipped;\n        job.fin = () => ({\n          available: false,\n          years: [],\n          source: "ΓΕΜΗ — Business Portal",\n          availability: "REGISTRY_ONLY",\n          restriction: "SOURCE_RESTRICTION",\n          documents: [],\n          note: r.skipped,\n        });\n      })(),\n  },\n`;
+const greekRoute = `
+  // ---- Grecia: ΓΕΜΗ Open Data + fallback pubblico iXBRL ----
+  GR: {
+    id: "fin-gemi-gr",
+    label: "ΓΕΜΗ — bilanci e documenti finanziari pubblici",
+    run: (ctx, job, s) =>
+      (async () => {
+        const r = await fetchGreekFinancials({
+          localVat: ctx.localVat,
+          query: ctx.query,
+          apiKey: GEMI_API_KEY,
+        });
+        if (r.ok) {
+          s.state = "ok";
+          const n = r.financials.documents?.length ?? 0;
+          s.detail = n > 0 ? n + " documenti finanziari" : r.financials.documentTitle ?? "filing GEMI disponibile";
+          if (r.profile) {
+            const profile = r.profile;
+            job.profile = () => profile;
+          }
+          const fin = r.financials;
+          job.fin = () => fin;
+          return;
+        }
+        s.state = "skipped";
+        s.detail = r.skipped;
+        job.fin = () => ({
+          available: false,
+          years: [],
+          source: "ΓΕΜΗ — Business Portal",
+          availability: "REGISTRY_ONLY",
+          restriction: "SOURCE_RESTRICTION",
+          documents: [],
+          note: r.skipped,
+        });
+      })(),
+  },
+`;
 if (!orchestrator.includes('id: "fin-gemi-gr"')) {
   const marker = '\n};\n\n// ============================================================================\n// Esecuzione';
   if (!orchestrator.includes(marker)) throw new Error("FINANCIALS_ROUTES marker not found");
@@ -35,10 +72,32 @@ write(coveragePath, coverage);
 
 const countriesPath = "src/lib/company-finder/countries.ts";
 let countries = read(countriesPath);
-countries = countries.replace(
-  /iso: "GR",\n    nameIt: "Grecia",[\\s\\S]*?financials: \{\n      free: false,\n      note: "Le pubblicazioni con i bilanci[^\\n]+\n    \},/,
-  `iso: "GR",\n    nameIt: "Grecia",\n    flag: "🇬🇷",\n    vatPrefix: "EL",\n    registryName: "ΓΕΜΗ (GEMI) — Business Portal",\n    registryAuthority: "Ministero dello Sviluppo",\n    financials: {\n      free: true,\n      note: "I documenti finanziari pubblici GEMI sono gratuiti: con GEMI_API_KEY il tool risolve IVA/nome → GEMI → fascicolo documentale; senza chiave, un numero GEMI consente il fallback al filing iXBRL pubblico. CAPTCHA/sessione non vengono aggirati.",\n    },`,
-);
+const oldGreece = `  {
+    iso: "GR",
+    nameIt: "Grecia",
+    flag: "🇬🇷",
+    vatPrefix: "EL",
+    registryName: "ΓΕΜΗ (GEMI) — Business Portal",
+    registryAuthority: "Ministero dello Sviluppo",
+    financials: {
+      free: false,
+      note: "Le pubblicazioni con i bilanci (Οικονομικές Καταστάσεις) sono scaricabili GRATIS dal portale GEMI (publicity.businessportal.gr), ma il portale è protetto da reCAPTCHA: l'estrazione automatica è in studio. In questa vista: identità e stato dal VIES.",
+    },
+  },`;
+const newGreece = `  {
+    iso: "GR",
+    nameIt: "Grecia",
+    flag: "🇬🇷",
+    vatPrefix: "EL",
+    registryName: "ΓΕΜΗ (GEMI) — Business Portal",
+    registryAuthority: "Ministero dello Sviluppo",
+    financials: {
+      free: true,
+      note: "I documenti finanziari pubblici GEMI sono gratuiti: con GEMI_API_KEY il tool risolve IVA/nome → GEMI → fascicolo documentale; senza chiave, un numero GEMI consente il fallback al filing iXBRL pubblico. CAPTCHA/sessione non vengono aggirati.",
+    },
+  },`;
+if (countries.includes(oldGreece)) countries = countries.replace(oldGreece, newGreece);
+else if (!countries.includes('iso: "GR"')) throw new Error("GR country block not found");
 write(countriesPath, countries);
 
 const envPath = ".env.example";
