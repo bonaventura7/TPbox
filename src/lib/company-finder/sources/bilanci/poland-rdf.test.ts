@@ -61,4 +61,21 @@ describe("Polish KRS RDF financial documents", () => {
     expect(document.bytes).toBeInstanceOf(Uint8Array);
     expect(new TextDecoder("latin1").decode(document.bytes).startsWith("%PDF-")).toBe(true);
   });
+
+  it("fails fast when the RDF bootstrap is an Incapsula challenge without a session cookie", async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValueOnce(
+      response(
+        "<html><title>Incapsula incident id</title><body>Request unsuccessful</body></html>",
+        200,
+        { "content-type": "text/html" },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const reports = await searchPolishAnnualReports("0000002594", 2024);
+
+    expect(reports.ok).toBe(false);
+    expect(reports.error).toContain("RDF challenge");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
 });
