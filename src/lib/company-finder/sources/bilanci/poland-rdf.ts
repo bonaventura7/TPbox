@@ -1,6 +1,8 @@
 import { createCipheriv } from "node:crypto";
 
 import { isRdfWafChallenge } from "./rdf-session";
+import { fetchKrsOdpis } from "../krs";
+import { fetchAleoAnnualReport } from "./poland-aleo";
 
 const RDF_ORIGIN = "https://rdf-przegladarka.ms.gov.pl";
 const SEARCH_PATH = "/services/rdf/przegladarka-dokumentow-finansowych/dokumenty/wyszukiwanie";
@@ -210,25 +212,11 @@ function collectDocumentRecords(value: unknown, out: Record<string, unknown>[] =
 }
 
 function documentId(record: Record<string, unknown>): string | undefined {
-  return firstString(record, [
-    "idDokumentu",
-    "identyfikatorDokumentu",
-    "documentId",
-    "identyfikator",
-    "id",
-  ]);
+  return firstString(record, ["idDokumentu", "identyfikatorDokumentu", "documentId", "identyfikator", "id"]);
 }
 
 function documentTitle(record: Record<string, unknown>): string {
-  return (
-    firstString(record, [
-      "nazwaDokumentu",
-      "rodzajDokumentu",
-      "typDokumentu",
-      "nazwa",
-      "opis",
-    ]) ?? "Roczne sprawozdanie finansowe"
-  );
+  return firstString(record, ["nazwaDokumentu", "rodzajDokumentu", "typDokumentu", "nazwa", "opis"]) ?? "Roczne sprawozdanie finansowe";
 }
 
 export function extractPolishAnnualDocuments(payload: unknown, requestedYear?: number): PolishAnnualDocument[] {
@@ -239,51 +227,24 @@ export function extractPolishAnnualDocuments(payload: unknown, requestedYear?: n
   for (const record of records) {
     const id = documentId(record);
     if (!id || seen.has(id)) continue;
-    const year = firstNumber(record, [
-      "rokObrotowy",
-      "rok",
-      "rokSprawozdawczy",
-      "dataOkresuDo",
-      "okresDo",
-      "dataDo",
-      "dataZlozenia",
-    ]);
+    const year = firstNumber(record, ["rokObrotowy", "rok", "rokSprawozdawczy", "dataOkresuDo", "okresDo", "dataDo", "dataZlozenia"]);
     if (requestedYear && year && year !== requestedYear) continue;
-    documents.push({
-      id,
-      ...(year === undefined ? {} : { year }),
-      title: documentTitle(record),
-      format: documentFormat(record) === "unknown" ? "pdf" : documentFormat(record),
-    });
+    const format = documentFormat(record);
+    documents.push({ id, ...(year === undefined ? {} : { year }), title: documentTitle(record), format: format === "unknown" ? "pdf" : format });
     seen.add(id);
   }
 
   return documents.sort((a, b) => (b.year ?? 0) - (a.year ?? 0));
 }
 
-async function fetchJsonWithSession(
-  krs: string,
-  jar: CookieJar,
-  signal: AbortSignal,
-): Promise<unknown> {
+async function fetchJsonWithSession(krs: string, jar: CookieJar, signal: AbortSignal): Promise<unknown> {
   let xsrf = await bootstrapSession(jar, signal);
   const encryptedKrs = encryptPolishKrs(krs);
   const request = () =>
     fetch(`${RDF_ORIGIN}${SEARCH_PATH}`, {
       method: "POST",
-      headers: {
-        ...requestHeaders(jar, xsrf),
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify({
-        nrKRS: encryptedKrs,
-        metadaneStronicowania: {
-          numerStrony: 0,
-          rozmiarStrony: 100,
-          metadaneSortowania: [{ atrybut: "id", kierunek: "MALEJACO" }],
-        },
-      }),
+      headers: { ...requestHeaders(jar, xsrf), "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ nrKRS: encryptedKrs, metadaneStronicowania: { numerStrony: 0, rozmiarStrony: 100, metadaneSortowania: [{ atrybut: "id", kierunek: "MALEJACO" }] } }),
       signal,
       cache: "no-store",
     });
@@ -298,11 +259,7 @@ async function fetchJsonWithSession(
   return response.json();
 }
 
-export async function searchPolishAnnualReports(
-  krsNumber: string,
-  requestedYear?: number,
-  timeoutMs = TIMEOUT_MS,
-): Promise<PolishAnnualSearchResult> {
+export async function searchPolishAnnualReports(krsNumber: string, requestedYear?: number, timeoutMs = TIMEOUT_MS): Promise<PolishAnnualSearchResult> {
   const krs = normalizeKrs(krsNumber);
   if (!/^\d{10}$/.test(krs)) return { ok: false, documents: [], error: "KRS non valido" };
 
@@ -316,42 +273,26 @@ export async function searchPolishAnnualReports(
       : { ok: false, documents: [], error: requestedYear ? `bilancio ${requestedYear} non trovato nel RDF KRS` : "nessun bilancio individuato nel RDF KRS" };
   } catch (error) {
     const err = error as { name?: string; message?: string };
-    return {
-      ok: false,
-      documents: [],
-      error: err?.name === "AbortError" ? "timeout RDF KRS" : (err?.message ?? "errore di rete RDF KRS"),
-    };
+    return { ok: false, documents: [], error: err?.name === "AbortError" ? "timeout RDF KRS" : (err?.message ?? "errore di rete RDF KRS") };
   } finally {
     clearTimeout(timer);
   }
 }
 
-async function fetchDocumentContent(
-  krsNumber: string,
-  documentIdValue: string,
-  timeoutMs: number,
-): Promise<PolishFinancialDocument> {
+async function fetchDocumentContent(krsNumber: string, documentIdValue: string, timeoutMs: number): Promise<PolishFinancialDocument> {
   const krs = normalizeKrs(krsNumber);
-  if (!/^\d{10}$/.test(krs) || !documentIdValue.trim()) {
-    return { ok: false, bytes: new Uint8Array(), contentType: "", error: "parametri documento non validi" };
-  }
+  if (!/^\d{10}$/.test(krs) || !documentIdValue.trim()) return { ok: false, bytes: new Uint8Array(), contentType: "", error: "parametri documento non validi" };
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   const jar = createCookieJar();
   try {
     const xsrf = await bootstrapSession(jar, controller.signal);
-    const response = await fetch(
-      `${RDF_ORIGIN}${CONTENT_PATH}/${encodeURIComponent(documentIdValue)}/tresc?bezPodpisu=false`,
-      {
-        headers: {
-          ...requestHeaders(jar, xsrf),
-          Accept: "application/pdf,application/octet-stream,application/xml,text/xml,text/html,*/*",
-        },
-        signal: controller.signal,
-        cache: "no-store",
-      },
-    );
+    const response = await fetch(`${RDF_ORIGIN}${CONTENT_PATH}/${encodeURIComponent(documentIdValue)}/tresc?bezPodpisu=false`, {
+      headers: { ...requestHeaders(jar, xsrf), Accept: "application/pdf,application/octet-stream,application/xml,text/xml,text/html,*/*" },
+      signal: controller.signal,
+      cache: "no-store",
+    });
     setCookies(jar, response.headers);
     if (!response.ok) throw new Error(`RDF documento HTTP ${response.status}`);
     const arrayBuffer = await response.arrayBuffer();
@@ -359,51 +300,61 @@ async function fetchDocumentContent(
     const bytes = new Uint8Array(arrayBuffer);
     const contentType = (response.headers.get("content-type") ?? "application/octet-stream").toLowerCase();
     const isPdf = contentType.includes("pdf") || new TextDecoder("latin1").decode(bytes.slice(0, 8)).startsWith("%PDF-");
-    if (!isPdf && !contentType.includes("xml") && !contentType.includes("html") && !contentType.includes("octet-stream")) {
-      throw new Error("RDF ha restituito un formato non riconosciuto");
-    }
-    return {
-      ok: true,
-      bytes,
-      contentType: isPdf ? "application/pdf" : contentType,
-      filename: isPdf ? `bilancio-${krs}-${documentIdValue}.pdf` : `bilancio-${krs}-${documentIdValue}`,
-    };
+    if (!isPdf && !contentType.includes("xml") && !contentType.includes("html") && !contentType.includes("octet-stream")) throw new Error("RDF ha restituito un formato non riconosciuto");
+    return { ok: true, bytes, contentType: isPdf ? "application/pdf" : contentType, filename: isPdf ? `bilancio-${krs}-${documentIdValue}.pdf` : `bilancio-${krs}-${documentIdValue}` };
   } catch (error) {
     const err = error as { name?: string; message?: string };
-    return {
-      ok: false,
-      bytes: new Uint8Array(),
-      contentType: "",
-      error: err?.name === "AbortError" ? "timeout download RDF KRS" : (err?.message ?? "errore download RDF KRS"),
-    };
+    return { ok: false, bytes: new Uint8Array(), contentType: "", error: err?.name === "AbortError" ? "timeout download RDF KRS" : (err?.message ?? "errore download RDF KRS") };
   } finally {
     clearTimeout(timer);
   }
 }
 
-export async function fetchPolishFinancialDocument(
-  krsNumber: string,
-  documentIdValue: string,
-  timeoutMs = TIMEOUT_MS,
-): Promise<PolishFinancialDocument> {
+export async function fetchPolishFinancialDocument(krsNumber: string, documentIdValue: string, timeoutMs = TIMEOUT_MS): Promise<PolishFinancialDocument> {
   return fetchDocumentContent(krsNumber, documentIdValue, timeoutMs);
 }
 
-export async function fetchPolishAnnualReport(
-  krsNumber: string,
-  year: number,
-  timeoutMs = TIMEOUT_MS,
-): Promise<PolishFinancialDocument & { document?: PolishAnnualDocument }> {
-  const found = await searchPolishAnnualReports(krsNumber, year, timeoutMs);
-  if (!found.ok || !found.documents[0]) {
-    return {
-      ok: false,
-      bytes: new Uint8Array(),
-      contentType: "",
-      error: found.error ?? `bilancio ${year} non disponibile`,
-    };
+export async function fetchPolishAnnualReport(krsNumber: string, year: number, timeoutMs = TIMEOUT_MS): Promise<PolishFinancialDocument & { document?: PolishAnnualDocument }> {
+  const krs = normalizeKrs(krsNumber);
+  if (!/^\d{10}$/.test(krs)) return { ok: false, bytes: new Uint8Array(), contentType: "", error: "KRS non valido" };
+
+  const deadline = Date.now() + timeoutMs;
+  const remaining = () => Math.max(1, deadline - Date.now());
+  let primaryError = `bilancio ${year} non disponibile`;
+
+  const found = await searchPolishAnnualReports(krs, year, remaining());
+  if (found.ok && found.documents[0]) {
+    const document = found.documents[0];
+    const result = await fetchDocumentContent(krs, document.id, remaining());
+    if (result.ok) return { ...result, document };
+    primaryError = result.error ?? primaryError;
+  } else {
+    primaryError = found.error ?? primaryError;
   }
-  const document = found.documents[0];
-  const result = await fetchDocumentContent(krsNumber, document.id, timeoutMs);
-  return { ...result, document };
+
+  if (remaining() <= 0) return { ok: false, bytes: new Uint8Array(), contentType: "", error: primaryError };
+
+  try {
+    const krsResult = await fetchKrsOdpis(krs, remaining());
+    const companyName = krsResult.ok ? krsResult.data?.name : undefined;
+    if (companyName && remaining() > 0) {
+      const secondary = await fetchAleoAnnualReport(companyName, year, remaining());
+      if (secondary.ok && secondary.bytes.byteLength > 0) {
+        return {
+          ok: true,
+          bytes: secondary.bytes,
+          contentType: "application/pdf",
+          filename: secondary.filename ?? `bilancio-${krs}-${year}.pdf`,
+          document: secondary.document
+            ? { id: secondary.document.id, year: secondary.document.year ?? year, title: secondary.document.title, format: "pdf" }
+            : undefined,
+        };
+      }
+      primaryError = secondary.error ?? primaryError;
+    }
+  } catch (error) {
+    primaryError = error instanceof Error ? error.message : primaryError;
+  }
+
+  return { ok: false, bytes: new Uint8Array(), contentType: "", error: primaryError };
 }
