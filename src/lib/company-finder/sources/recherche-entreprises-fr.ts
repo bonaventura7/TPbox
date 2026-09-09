@@ -52,6 +52,15 @@ interface ApiCompany {
   finances?: Record<string, ApiFinance> | undefined;
 }
 
+export interface RechercheOptions {
+  /**
+   * Discover public Pappers PDF links in addition to the state financial data.
+   * Disabled for profile resolution so a slow document source cannot delay the
+   * primary company search. The financial route enables it explicitly.
+   */
+  includePublicDocuments?: boolean | undefined;
+}
+
 export function sirenFromInput(localVat: string): string | undefined {
   const digits = localVat.replace(/\D/g, "");
   if (/^\d{9}$/.test(digits)) return digits;
@@ -142,6 +151,7 @@ export async function searchRechercheEntreprises(
   query: string,
   localVat: string,
   timeoutMs = 12000,
+  options: RechercheOptions = {},
 ): Promise<RechercheResult> {
   const siren = sirenFromInput(localVat);
   const term = siren ?? query.trim();
@@ -162,21 +172,22 @@ export async function searchRechercheEntreprises(
     const profile = toProfile(company);
     if (!profile) return { ok: false, error: "risposta priva di SIREN o denominazione" };
 
-    const baseFinancials = toFinancials(company.finances);
-    let financials = baseFinancials;
-    // Pappers è usato come repertorio pubblico documentale: nessuna API key.
-    // Un eventuale errore non deve invalidare i dati ufficiali già restituiti.
-    const publicDocs = await findPappersAnnualReports(
-      profile.name ?? query,
-      company.siren ?? "",
-      10000,
-    );
-    financials = mergePublicDocuments(
-      financials,
-      publicDocs,
-      profile.name ?? query,
-      company.siren ?? "",
-    );
+    let financials = toFinancials(company.finances);
+    if (options.includePublicDocuments) {
+      // Pappers è un arricchimento documentale opzionale: un suo timeout/blocco
+      // non deve mai impedire la restituzione dei dati gratuiti dello Stato.
+      const publicDocs = await findPappersAnnualReports(
+        profile.name ?? query,
+        company.siren ?? "",
+        Math.min(timeoutMs, 10000),
+      );
+      financials = mergePublicDocuments(
+        financials,
+        publicDocs,
+        profile.name ?? query,
+        company.siren ?? "",
+      );
+    }
 
     return { ok: true, profile, financials };
   } catch (e) {
