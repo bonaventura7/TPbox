@@ -16,10 +16,6 @@ export const Route = createFileRoute("/api/company-finder/document")({
     handlers: {
       GET: async ({ request }: { request: Request }) => {
         const url = new URL(request.url);
-        // Pass-through del proxy generico: prioritizeBalanceDocument() avvolge
-        // qui ogni documentUrl ufficiale (UK, DK, BE, GR…). L'allowlist SSRF
-        // resta in handleDocumentRequest; per gli host NBB CBSO la chiave di
-        // sottoscrizione è iniettata lato server dal proxy stesso.
         if (url.searchParams.get("url")) {
           const { handleDocumentRequest } =
             await import("@/lib/company-finder/document-proxy.server");
@@ -41,7 +37,15 @@ export const Route = createFileRoute("/api/company-finder/document")({
           const { fetchPolishAnnualReport } = await import("@/lib/company-finder/sources/bilanci/poland-rdf");
           const result = await fetchPolishAnnualReport(krs, year, 30000);
           if (!result.ok) {
-            return errorResponse(result.error ?? `bilancio ${year} non disponibile nel KRS RDF`, 502, { fallback: "official-browser" });
+            const { polishOfficialBrowserUrl } = await import("@/lib/company-finder/pl-official-fallback");
+            return new Response(null, {
+              status: 302,
+              headers: {
+                Location: polishOfficialBrowserUrl(krs),
+                "Cache-Control": "no-store",
+                "X-Company-Finder-Fallback": "official-polish-rdf-browser",
+              },
+            });
           }
 
           const { isPdfBytes } = await import("@/lib/company-finder/pl-pdf-gate");

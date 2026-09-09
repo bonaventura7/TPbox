@@ -1,5 +1,7 @@
 import { createCipheriv } from "node:crypto";
 
+import { isRdfWafChallenge } from "./rdf-session";
+
 const RDF_ORIGIN = "https://rdf-przegladarka.ms.gov.pl";
 const SEARCH_PATH = "/services/rdf/przegladarka-dokumentow-finansowych/dokumenty/wyszukiwanie";
 const CONTENT_PATH = "/services/rdf/przegladarka-dokumentow-finansowych/dokumenty";
@@ -111,19 +113,34 @@ export function encryptPolishKrs(krsNumber: string, now = new Date()): string {
 }
 
 async function bootstrapSession(jar: CookieJar, signal: AbortSignal): Promise<string | undefined> {
-  const response = await fetch(`${RDF_ORIGIN}/`, {
-    headers: {
-      "User-Agent": UA,
-      Accept: "text/html,application/xhtml+xml",
-      "Accept-Language": "pl-PL,pl;q=0.9,en;q=0.8",
-    },
-    signal,
-    cache: "no-store",
-  });
-  setCookies(jar, response.headers);
-  const xsrf = jar.values.get("XSRF-TOKEN");
-  if (!response.ok) throw new Error(`RDF session HTTP ${response.status}`);
-  return xsrf ? decodeURIComponent(xsrf) : undefined;
+  const paths = ["/wyszukaj-podmiot", "/"];
+  let lastError: Error | undefined;
+
+  for (const path of paths) {
+    const response = await fetch(`${RDF_ORIGIN}${path}`, {
+      headers: {
+        "User-Agent": UA,
+        Accept: "text/html,application/xhtml+xml",
+        "Accept-Language": "pl-PL,pl;q=0.9,en;q=0.8",
+      },
+      signal,
+      cache: "no-store",
+    });
+    const body = await response.clone().text();
+    setCookies(jar, response.headers);
+    if (!response.ok) {
+      lastError = new Error(`RDF session HTTP ${response.status}`);
+      continue;
+    }
+    if (isRdfWafChallenge(body) && !jar.values.has("XSRF-TOKEN")) {
+      lastError = new Error("RDF challenge: public viewer returned a WAF/Incapsula challenge");
+      continue;
+    }
+    const xsrf = jar.values.get("XSRF-TOKEN");
+    if (xsrf) return decodeURIComponent(xsrf);
+  }
+
+  throw lastError ?? new Error("RDF session non stabilita");
 }
 
 function requestHeaders(jar: CookieJar, xsrf?: string): Record<string, string> {
@@ -131,7 +148,7 @@ function requestHeaders(jar: CookieJar, xsrf?: string): Record<string, string> {
     "User-Agent": UA,
     "Accept-Language": "pl-PL,pl;q=0.9,en;q=0.8",
     Origin: RDF_ORIGIN,
-    Referer: `${RDF_ORIGIN}/`,
+    Referer: `${RDF_ORIGIN}/wyszukaj-podmiot`,
   };
   const cookies = cookieHeader(jar);
   if (cookies) headers.Cookie = cookies;
