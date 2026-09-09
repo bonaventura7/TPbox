@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  fetchGreekFinancials,
   gemiFromInput,
   looksLikeGreekFinancialDocument,
 } from "./gemi-gr";
@@ -82,6 +83,34 @@ describe("parseGreekFinancialDocument", () => {
         currency: "EUR",
       }),
     ]);
+  });
+
+  it("accepts a public iXBRL HTML document and extracts financial values", async () => {
+    const result = await fetchGreekFinancials({
+      localVat: "140330201000",
+      query: "BriQ Properties",
+      resolveFilingUrlImpl: async () =>
+        "https://filings.businessportal.gr/ixbrl/test_ixbrlview.html",
+      fetchImpl: async () =>
+        new Response(
+          `<html><body><h1>Statement of Financial Position</h1><div>31.12.2025 31.12.2024</div><div>Total assets 288.650 296.164</div><div>Total equity 181.352 159.704</div><div>Net profit for the year 26.078 29.253</div></body></html>`,
+          { status: 200, headers: { "content-type": "text/html" } },
+        ),
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.financials.availability).toBe("DOCUMENT_DOWNLOADABLE");
+      expect(result.financials.currency).toBe("EUR");
+      expect(result.financials.years[0]).toEqual(
+        expect.objectContaining({
+          year: 2025,
+          totalAssets: 288650,
+          equity: 181352,
+          netIncome: 26078,
+        }),
+      );
+    }
   });
 
   it("does not fabricate financial values from an unrelated registry page", () => {
