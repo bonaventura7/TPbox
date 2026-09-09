@@ -14,6 +14,7 @@ const FINANCIAL_TERMS = [
   /balance sheet/i,
   /financial statements?/i,
   /accounts?/i,
+  /ixbrl/i,
 ];
 const RETRYABLE = new Set([408, 425, 429, 500, 502, 503, 504]);
 const MAX_ATTEMPTS = 3;
@@ -62,7 +63,7 @@ export function gemiFromInput(localVat: string, query: string): string | undefin
   const candidates = [localVat, query];
   for (const candidate of candidates) {
     const value = digits(candidate);
-    if (/^\d{10}$/.test(value)) return value;
+    if (/^\d{10,12}$/.test(value)) return value;
   }
   return undefined;
 }
