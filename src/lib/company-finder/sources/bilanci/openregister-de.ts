@@ -89,7 +89,7 @@ async function searchCompany(
 ): Promise<OpenRegisterCompany | undefined> {
   const params = new URLSearchParams({ query });
   const payload = asObject(await getJson(`${API_BASE}/v1/autocomplete/company?${params.toString()}`, apiKey, signal));
-  const results = Array.isArray(payload?.results) ? payload.results : [];
+  const results = Array.isArray(payload?.["results"]) ? payload["results"] : [];
   const companies = results.map(asObject).filter(Boolean) as JsonObject[];
 
   let best: OpenRegisterCompany | undefined;
@@ -118,7 +118,7 @@ function indicatorNumber(indicator: Indicator, key: string): number | undefined 
 }
 
 function reportEndYear(report: JsonObject): number | undefined {
-  return indicatorYear(report.report_end_date ?? report.report_date ?? report.date);
+  return indicatorYear(report["report_end_date"] ?? report["report_date"] ?? report["date"]);
 }
 
 function csvCell(value: unknown): string {
@@ -157,8 +157,8 @@ function flattenRows(rows: unknown, path: string[], output: string[], section: s
 export function buildOpenRegisterFinancialCsv(report: JsonObject, companyName: string): string {
   const lines = [
     ["Società", csvCell(companyName)].join(";"),
-    ["Data inizio", csvCell(report.report_start_date)].join(";"),
-    ["Data fine", csvCell(report.report_end_date)].join(";"),
+    ["Data inizio", csvCell(report["report_start_date"])].join(";"),
+    ["Data fine", csvCell(report["report_end_date"])].join(";"),
     "",
     ["Sektion", "Position", "Aktueller Wert", "Vorjahreswert"].join(";"),
   ];
@@ -173,7 +173,7 @@ export function buildOpenRegisterFinancialCsv(report: JsonObject, companyName: s
     const table = asObject(report[key]);
     if (!table) continue;
     const before = lines.length;
-    flattenRows(table.rows, [], lines, label);
+    flattenRows(table["rows"], [], lines, label);
     if (lines.length > before) lines.splice(before, 0, [csvCell(label), "", "", ""].join(";"));
   }
 
@@ -185,7 +185,7 @@ function buildDownloadDocument(
   companyId: string,
   report: JsonObject,
 ): FinancialDocumentSummary | undefined {
-  const reportId = text(report.report_id);
+  const reportId = text(report["report_id"]);
   if (!reportId) return undefined;
   const year = reportEndYear(report);
   const params = new URLSearchParams({ companyId, reportId });
@@ -214,7 +214,7 @@ export function getOpenRegisterCompanyName(companyId: string): string {
 
 export function reportList(payload: unknown): JsonObject[] {
   const root = asObject(payload);
-  return (Array.isArray(root?.reports) ? root.reports : [])
+  return (Array.isArray(root?.["reports"]) ? root["reports"] : [])
     .map(asObject)
     .filter(Boolean) as JsonObject[];
 }
@@ -225,8 +225,8 @@ function mapFinancials(
   payload: unknown,
 ): Financials | undefined {
   const root = asObject(payload);
-  const indicators = Array.isArray(root?.indicators)
-    ? (root.indicators.map(asObject).filter(Boolean) as Indicator[])
+  const indicators = Array.isArray(root?.["indicators"])
+    ? (root["indicators"].map(asObject).filter(Boolean) as Indicator[])
     : [];
   const reports = reportList(payload);
 
