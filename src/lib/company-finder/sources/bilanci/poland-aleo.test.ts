@@ -3,13 +3,19 @@ import { describe, expect, it, vi } from "vitest";
 import { fetchAleoAnnualReport } from "./poland-aleo";
 
 describe("ALEO Polish annual-report fallback", () => {
-  it("uses the direct ALEO page before the reader proxy and accepts PDF download endpoints", async () => {
+  it("races the direct page and reader fallback, then downloads a PDF endpoint", async () => {
     const fetchMock = vi.fn<typeof fetch>()
       .mockResolvedValueOnce(
         new Response(
           '<html><a href="https://aleo.com/download?id=pdf-2024">Roczne sprawozdanie finansowe 2024 PDF</a></html>',
           { status: 200, headers: { "content-type": "text/html" } },
         ),
+      )
+      .mockResolvedValueOnce(
+        new Response("<html><body>reader fallback without documents</body></html>", {
+          status: 200,
+          headers: { "content-type": "text/html" },
+        }),
       )
       .mockResolvedValueOnce(
         new Response("%PDF-1.7\nALEO", { status: 200, headers: { "content-type": "application/pdf" } }),
@@ -20,8 +26,8 @@ describe("ALEO Polish annual-report fallback", () => {
 
     expect(result.ok).toBe(true);
     expect(result.contentType).toBe("application/pdf");
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
     expect(String(fetchMock.mock.calls[0]?.[0])).toContain("https://aleo.com/pl/firma/");
-    expect(String(fetchMock.mock.calls[0]?.[0])).not.toContain("r.jina.ai");
+    expect(String(fetchMock.mock.calls[1]?.[0])).toContain("r.jina.ai");
   });
 });
