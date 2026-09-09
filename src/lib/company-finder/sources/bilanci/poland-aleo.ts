@@ -48,7 +48,7 @@ function normalizeUrl(raw: string): string {
 function pushDocument(documents: AleoAnnualDocument[], seen: Set<string>, href: string, text: string, sourceText: string, requestedYear?: number, position = 0): void {
   let url: string;
   try { url = normalizeUrl(href); } catch { return; }
-  if (url.startsWith("https://aleo.com/") && !/\.pdf(?:[?#]|$)/i.test(url)) return;
+  if (url.startsWith("https://aleo.com/") && !/pdf/i.test(url)) return;
   const context = `${text} ${sourceText} ${url}`;
   if (!/pdf/i.test(context) || !/sprawozdanie|financial|bilans|annual/i.test(context)) return;
   const year = yearNear(sourceText, position);
@@ -62,9 +62,7 @@ export function extractAleoAnnualDocuments(html: string, requestedYear?: number)
   const documents: AleoAnnualDocument[] = [];
   const seen = new Set<string>();
   const anchorPattern = /<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
-  for (const match of html.matchAll(anchorPattern)) {
-    pushDocument(documents, seen, match[1] ?? "", (match[2] ?? "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim(), html, requestedYear, match.index ?? 0);
-  }
+  for (const match of html.matchAll(anchorPattern)) pushDocument(documents, seen, match[1] ?? "", (match[2] ?? "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim(), html, requestedYear, match.index ?? 0);
   const markdownPattern = /\[([^\]]*(?:pobierz|download|sprawozdanie)[^\]]*)\]\(([^)]+)\)/gi;
   for (const match of html.matchAll(markdownPattern)) pushDocument(documents, seen, match[2] ?? "", (match[1] ?? "").trim(), html, requestedYear, match.index ?? 0);
   for (const match of html.matchAll(/(?:https?:)?(?:\\\/\\\/|\/\/)[^\s"'<>]+\.pdf(?:\?[^\s"'<>]*)?/gi)) pushDocument(documents, seen, match[0] ?? "", "Roczne sprawozdanie finansowe", html, requestedYear, match.index ?? 0);
