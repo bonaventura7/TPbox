@@ -41,7 +41,7 @@ describe("looksLikeGreekFinancialDocument", () => {
 describe("parseGreekFinancialDocument", () => {
   it("parses European Greek number formats and negative values", () => {
     const result = parseGreekFinancialDocument({
-      text: "Κύκλος εργασιών 1.234.567,89\nΚαθαρά κέρδη (12.345,67)",
+      text: "ΟΙΚΟΝΟΜΙΚΕΣ ΚΑΤΑΣΤΑΣΕΙΣ 2024\nΚύκλος εργασιών 1.234.567,89\nΚαθαρά κέρδη (12.345,67)",
     });
 
     expect(result.matched).toBe(true);
