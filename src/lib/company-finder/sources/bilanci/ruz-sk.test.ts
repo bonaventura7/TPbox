@@ -27,7 +27,11 @@ describe("Slovacchia — RÚZ", () => {
     await expect(fetchRuzCompanyByDic("SK2020372596")).resolves.toMatchObject({ ok:true, data:{ company:{ ico:"00603481" } } });
   });
   it("resolves a Slovak name to IČO through GLEIF", async () => {
-    vi.stubGlobal("fetch", vi.fn(async (input:string|URL) => { const u=new URL(String(input)); if(u.hostname!=="api.gleif.org") throw new Error("RÚZ should not be called"); return new Response(JSON.stringify({ data:[{ attributes:{ entity:{ legalAddress:{ country:"SK" }, registeredAs:"00603481" } } }] }), { status:200 }); }));
+    vi.stubGlobal("fetch", vi.fn(async (input:string|URL) => {
+      const u=new URL(String(input));
+      if(u.hostname!=="api.gleif.org") throw new Error("RÚZ should not be called");
+      return new Response(JSON.stringify({ data:[{ attributes:{ lei:"549300EXAMPLE", entity:{ legalName:{ name:"Bratislava" }, legalAddress:{ country:"SK" }, registeredAs:"00603481" } } }] }), { status:200 });
+    }));
     await expect(resolveRuzIcoByName("Bratislava")).resolves.toBe("00603481");
   });
   it("fails closed on malformed IČO", async () => { const spy=vi.fn(); vi.stubGlobal("fetch", spy); const result=await fetchRuzCompanyByIco("1234567"); expect(result.ok).toBe(false); expect(spy).not.toHaveBeenCalled(); });
