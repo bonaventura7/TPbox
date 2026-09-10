@@ -410,6 +410,37 @@ const FINANCIALS_ROUTES: Record<
         });
       })(),
   },
+  // ---- Lussemburgo: LBR (consultazione gratuita; download previo account) ----
+  LU: {
+    id: "fin-lbr",
+    label: "LBR — Luxembourg Business Registers",
+    run: (ctx, job, s) =>
+      (async () => {
+        const { luAdapter } = await import("./registry/lu-lbr.server");
+        const ids = luAdapter.normalizeIdentifiers({ vat: ctx.localVat, query: ctx.query });
+        const outcome = await luAdapter.listFinancialDocuments(ids, {});
+        // Il portale LBR non espone un canale server-side gratuito: il download
+        // dei conti annuali richiede autenticazione. Si dichiara la restrizione
+        // e si rimanda alla consultazione ufficiale, senza aggirare nulla.
+        const restriction = outcome.ok ? "SOURCE_RESTRICTION" : outcome.restriction;
+        s.state = "skipped";
+        s.detail =
+          restriction === "AUTH_REQUIRED"
+            ? "il registro richiede un account per scaricare i conti annuali: consultazione nel browser"
+            : restriction === "SESSION_BOUND"
+              ? "i riferimenti del registro sono legati alla sessione dell'utente"
+              : "la fonte ufficiale non consente il recupero automatico";
+        job.fin = () => ({
+          available: false,
+          years: [],
+          source: luAdapter.registryLabel,
+          availability: "REGISTRY_ONLY",
+          restriction,
+          documents: [],
+          note: "Il registro lussemburghese LBR pubblica i conti annuali, ma il download richiede un account gratuito (LuxTrust/eIDAS) e non è automatizzabile lato server: la consultazione e lo scarico si completano sul portale ufficiale.",
+        });
+      })(),
+  },
   // ---- Paesi Bassi: KVK Open Dataset Jaarrekeningen (ufficiale, senza chiave) ----
 
   NL: {
@@ -747,8 +778,19 @@ export async function runSearch(req: SearchRequest, depth = 0): Promise<SearchRe
     countryIso === "HU" && /^\d{2}-?\d{2}-?\d{6}$/.test(localVat.replace(/\s/g, ""));
   // EE: 8 cifre pure = registrikood (NON un numero IVA: l'IVA estone ne ha 9).
   const eeRegistryCode = countryIso === "EE" && /^\d{8}$/.test(localVat);
+  // LU: un numero RCS (lettera di sezione + cifre, es. B60814) non è un numero
+  // IVA lussemburghese (LU + 8 cifre) → mai al VIES.
+  const luRegistryNumber = countryIso === "LU" && /^[A-Z]\d{2,}$/.test(localVat);
   // ---------- 2b. VIES (tutti i paesi con prefisso IVA) ----------
-  if (hasVat && !pl8 && !pl10krs && !nlKvkDirect && !huRegistryNumber && !eeRegistryCode) {
+  if (
+    hasVat &&
+    !pl8 &&
+    !pl10krs &&
+    !nlKvkDirect &&
+    !huRegistryNumber &&
+    !eeRegistryCode &&
+    !luRegistryNumber
+  ) {
     jobs.push(
       makeJob("vies", "VIES — Commissione Europea", async (job, s) => {
         const r = await checkVat(countryIso === "GR" ? "EL" : countryIso, localVat);

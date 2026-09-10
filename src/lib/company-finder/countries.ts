@@ -346,11 +346,11 @@ export const COUNTRIES: CountryInfo[] = [
     nameIt: "Lussemburgo",
     flag: "🇱🇺",
     vatPrefix: "LU",
-    registryName: "Registre de Commerce et des Sociétés (RCSL)",
-    registryAuthority: "Luxembourg Business Register",
+    registryName: "Registre de Commerce et des Sociétés (RCS)",
+    registryAuthority: "Luxembourg Business Registers (LBR)",
     financials: {
       free: true,
-      note: "I documenti depositati (comptes annuels) sono gratuiti su LBR/GDD (account gratuito); l'accesso strutturato è in espansione.",
+      note: "I conti annuali (comptes annuels) depositati presso l'LBR sono gratuiti, ma il download richiede un account gratuito (LuxTrust/eIDAS) e non è automatizzabile lato server: il tool rimanda alla consultazione ufficiale, dove la ricerca e lo scarico del PDF si completano nel browser dell'utente.",
     },
   },
   {

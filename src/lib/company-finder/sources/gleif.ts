@@ -57,29 +57,96 @@ function formatAddress(address: GleifAddress | undefined): string | undefined {
  * aggiungono parole sostanziali (es. "Siemens Healthineers AG" per "Siemens AG")
  * restano sotto soglia e non possono intestare la scheda alla società sbagliata.
  */
+/**
+ * Suffissi/forme giuridiche da neutralizzare nel confronto dei nomi: un utente
+ * cerca "Maspex Holding", il registro deposita "MASPEX HOLDING SPÓŁKA AKCYJNA".
+ * Trattare "spółka", "akcyjna", "sp", "z", "o.o." come parole sostanziali
+ * abbassa la precisione sotto soglia e fa perdere corrispondenze corrette.
+ * L'elenco copre le forme più diffuse nei paesi serviti; è puramente additivo e
+ * non può mai far combaciare due ragioni sociali con radici diverse.
+ */
+const LEGAL_FORM_TOKENS = new Set([
+  // Polonia
+  "spolka",
+  "akcyjna",
+  "sp",
+  "z",
+  "o",
+  "oo",
+  "zoo",
+  "sa",
+  "komandytowa",
+  "komandytowo",
+  // forme comuni in altri registri
+  "ag",
+  "gmbh",
+  "kg",
+  "kgaa",
+  "se",
+  "as",
+  "a",
+  "s",
+  "nv",
+  "bv",
+  "plc",
+  "ltd",
+  "limited",
+  "spa",
+  "srl",
+  "oy",
+  "oyj",
+  "ab",
+  "aps",
+  "kft",
+  "zrt",
+  "nyrt",
+  "doo",
+  "sarl",
+]);
+
+function contentTokens(normalized: string): string[] {
+  return normalized
+    .split(/\s+/)
+    .filter(Boolean)
+    .filter((token) => !LEGAL_FORM_TOKENS.has(token));
+}
+
 export function gleifNameRelevance(query: string, candidate: string): number {
   const q = normalizeLegalName(query);
   const c = normalizeLegalName(candidate);
   if (!q || !c) return 0;
   if (q === c) return 100;
 
-  const qTokens = q.split(/\s+/).filter(Boolean);
-  const cTokens = c.split(/\s+/).filter(Boolean);
-  const common = qTokens.filter((token) => cTokens.includes(token)).length;
-  const precision = common / Math.max(cTokens.length, 1);
-  const recall = common / Math.max(qTokens.length, 1);
+  // Confronto sui soli token sostanziali: le forme giuridiche non contano né a
+  // favore né contro. Se una parte non ha token sostanziali, si ripiega
+  // sull'intero nome per non dividere per zero.
+  const qTokens = contentTokens(q);
+  const cTokens = contentTokens(c);
+  const qUsed = qTokens.length ? qTokens : q.split(/\s+/).filter(Boolean);
+  const cUsed = cTokens.length ? cTokens : c.split(/\s+/).filter(Boolean);
+
+  const common = qUsed.filter((token) => cUsed.includes(token)).length;
+  const precision = common / Math.max(cUsed.length, 1);
+  const recall = common / Math.max(qUsed.length, 1);
   const tokenScore = Math.round(100 * precision * recall);
 
   return tokenScore;
 }
 
 function normalizeLegalName(value: string): string {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
+  return (
+    value
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      // Lettere con tratto/segno che NFD non scompone (polacco ł, croato đ,
+      // norreno ø…): mappate a mano, altrimenti "spółka" resterebbe "spo ka".
+      .replace(/ł/gi, "l")
+      .replace(/đ/gi, "d")
+      .replace(/ø/gi, "o")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, " ")
+      .trim()
+  );
 }
 
 export function rankRelevantGleifMatches(query: string, matches: GleifMatch[]): GleifMatch[] {
