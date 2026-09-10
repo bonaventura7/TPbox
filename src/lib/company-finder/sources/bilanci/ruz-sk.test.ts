@@ -13,10 +13,10 @@ describe("Slovacchia — RÚZ", () => {
   });
   it("traverses IČO to statements to reports to internal PDF", async () => {
     const payloads = new Map([
-      ["/api/uctovne-jednotky?zmenene-od=2000-01-01&ico=00603481&max-zaznamov=100", { id:[336953] }],
-      ["/api/uctovna-jednotka?id=336953", { id:336953, ico:"00603481", nazovUJ:"Bratislava", idUctovnychZavierok:[340867] }],
-      ["/api/uctovna-zavierka?id=340867", { id:340867, obdobieDo:"2025-12", idUctovnychVykazov:[686260] }],
-      ["/api/uctovny-vykaz?id=686260", { id:686260, prilohy:[{ id:7172581, meno:"Bilancia.pdf", mimeType:"application/pdf" }] }],
+      ["/cruz-public/api/uctovne-jednotky?zmenene-od=2000-01-01&ico=00603481&max-zaznamov=100", { id:[336953] }],
+      ["/cruz-public/api/uctovna-jednotka?id=336953", { id:336953, ico:"00603481", nazovUJ:"Bratislava", idUctovnychZavierok:[340867] }],
+      ["/cruz-public/api/uctovna-zavierka?id=340867", { id:340867, obdobieDo:"2025-12", idUctovnychVykazov:[686260] }],
+      ["/cruz-public/api/uctovny-vykaz?id=686260", { id:686260, prilohy:[{ id:7172581, meno:"Bilancia.pdf", mimeType:"application/pdf" }] }],
     ]);
     vi.stubGlobal("fetch", vi.fn(async (input:string|URL) => { const u=new URL(String(input)); const p=payloads.get(`${u.pathname}${u.search}`); return p ? new Response(JSON.stringify(p), { status:200 }) : new Response("missing", { status:404 }); }));
     const result=await fetchRuzCompanyByIco("00603481");

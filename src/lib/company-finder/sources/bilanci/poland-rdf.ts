@@ -203,7 +203,7 @@ export async function fetchPolishAnnualReport(krsNumber: string, year: number, t
     if (companyName && remaining() > 0) {
       const secondary = await fetchAleoAnnualReport(companyName, year, remaining());
       if (secondary.ok && secondary.bytes.byteLength > 0) {
-        return { ok: true, bytes: secondary.bytes, contentType: "application/pdf", filename: secondary.filename ?? `bilancio-${krs}-${year}.pdf`, document: secondary.document ? { id: secondary.document.id, year: secondary.document.year ?? year, title: secondary.document.title, format: "pdf" } : undefined };
+        return { ok: true, bytes: secondary.bytes, contentType: "application/pdf", filename: secondary.filename ?? `bilancio-${krs}-${year}.pdf`, ...(secondary.document ? { document: { id: secondary.document.id, year: secondary.document.year ?? year, title: secondary.document.title, format: "pdf" as const } } : {}) };
       }
       primaryError = secondary.error ?? primaryError;
     }

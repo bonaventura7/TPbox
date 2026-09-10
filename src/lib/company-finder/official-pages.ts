@@ -77,14 +77,25 @@ export function officialPageFor(
     };
   }
 
-  const luRcs = iso === "LU" ? normalizeLuxembourgRcs(rawId) : undefined;
-  if (luRcs) {
+  if (iso === "LU") {
+    const luRcs = normalizeLuxembourgRcs(rawId);
+    const url = luRcs
+      ? `https://www.lbr.lu/mjrcs-web-front/consult-company/${luRcs}?tab=deposit`
+      : "https://www.lbr.lu/mjrcs-web-front/";
     return {
-      url: `https://www.lbr.lu/mjrcs-web-front/consult-company/${luRcs}?tab=deposit`,
+      url,
       label: "LBR — Luxembourg Business Registers",
       actionLabel: "Apri il registro ufficiale",
       mode: "external",
-      note: "Apre direttamente la sezione depositi della società nel registro ufficiale. Se il deposito richiede autenticazione, la procedura prosegue sul portale LBR.",
+      note: "Il registro lussemburghese consente la ricerca gratuita, ma lo scarico dei conti annuali richiede un account gratuito (LuxTrust/eIDAS): la consultazione e il download si completano nella scheda della società sul portale ufficiale.",
+      instructions: [
+        luRcs
+          ? `Apri la scheda della società con numero RCS ${luRcs} (sezione “Dépôts / Comptes annuels”).`
+          : "Cerca la società per denominazione o numero RCS nel portale LBR.",
+        "Accedi o crea un account gratuito LuxTrust/eIDAS quando richiesto per il download.",
+        "Nella sezione “Comptes annuels” scegli l'esercizio desiderato.",
+        "Scarica il documento ufficiale in formato PDF.",
+      ],
     };
   }
 
@@ -101,21 +112,17 @@ export function officialPageFor(
 
   const plKrs = iso === "PL" ? normalizePolandKrs(rawId) : undefined;
   if (plKrs) {
-    const companySlug = slugify(name);
-    const url = companySlug
-      ? `https://aleo.com/pl/firma/${companySlug}`
-      : `https://aleo.com/pl/szukaj-firmy?krs=${plKrs}`;
     return {
-      url,
-      label: `ALEO — Sprawozdania finansowe KRS (${plKrs})`,
-      actionLabel: "Apri i bilanci della società",
+      url: "https://rdf-przegladarka.ms.gov.pl/wyszukaj-podmiot",
+      label: "RDF — Repozytorium Dokumentów Finansowych (Ministerstwo Sprawiedliwości)",
+      actionLabel: "Apri il registro ufficiale",
       mode: "external",
-      note: `Pagina specifica della società associata al KRS ${plKrs}. ALEO espone pubblicamente la sezione “Sprawozdania finansowe” con i comandi “Pobierz pdf” e “Pobierz xml” quando il deposito è disponibile. I dati della società e dei depositi sono indicati come provenienti dal KRS.`,
+      note: `Il Repozytorium Dokumentów Finansowych del Ministero della Giustizia pubblica gratuitamente i bilanci depositati. La ricerca è protetta e va completata nel browser: apri il visualizzatore, inserisci il KRS ${plKrs}, premi “Szukaj”, seleziona il documento “Roczne sprawozdanie finansowe” dell'esercizio desiderato e usa “Pobierz dokument” per scaricarlo.`,
       instructions: [
-        `Verifica che il KRS ${plKrs} e la denominazione coincidano con la società cercata.`,
-        "Nella sezione “Sprawozdania finansowe” seleziona l'esercizio desiderato.",
-        "Premi “Pobierz pdf” per scaricare il bilancio.",
-        "Per la fonte istituzionale primaria, verifica lo stesso deposito nel KRS/RDF del Ministero della Giustizia.",
+        `Inserisci il numero KRS ${plKrs} nel campo di ricerca del visualizzatore RDF.`,
+        "Premi “Szukaj” e completa l'eventuale verifica anti-bot mostrata dal portale.",
+        "Apri la sezione “Roczne sprawozdanie finansowe” e scegli l'esercizio desiderato.",
+        "Premi “Pobierz dokument” per scaricare il bilancio ufficiale.",
       ],
     };
   }
