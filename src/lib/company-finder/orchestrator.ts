@@ -30,6 +30,7 @@ import { numericRegistryId, searchGleif } from "./sources/gleif";
 import { searchRechercheEntreprises } from "./sources/recherche-entreprises-fr";
 import { lookupUkPublic } from "./sources/bilanci/companies-house-public";
 import { gemiApiKey, searchGemiProfile } from "./sources/gemi-opendata";
+import { inseeApiKey, searchInseeSirene } from "./sources/insee-sirene";
 import type { GleifMatch } from "./sources/gleif";
 import { searchByName as ocSearch } from "./sources/open-corporates";
 import { lookupCompany as chLookup } from "./sources/companies-house";
@@ -268,6 +269,40 @@ const REGISTRY_ROUTES: Record<string, DirectAdapter[]> = {
             s.state = "ok";
             s.detail = r.data.registry?.id || "Base SIRENE";
             job.profile = () => r.data;
+          } else if (r.skipped) {
+            s.state = "skipped";
+            s.detail = r.skipped;
+          } else {
+            s.state = "failed";
+            s.detail = r.error || "fonte non raggiungibile";
+          }
+        })(),
+    },
+    {
+      // Répertoire Sirene ufficiale dell'INSEE: anagrafica canonica (SIREN/
+      // SIRET, denominazione, forma giuridica, NAF, stato, sede). Chiave
+      // gratuita: la si legge alla chiamata, così la fonte degrada in modo
+      // pulito quando non è configurata.
+      id: "insee-sirene",
+      label: "INSEE — Répertoire Sirene (open data)",
+      input: "either",
+      run: (ctx, job, s) =>
+        (async () => {
+          const key = inseeApiKey();
+          if (!key) {
+            s.state = "skipped";
+            s.detail =
+              "répertoire Sirene non consultato: configura INSEE_API_KEY (gratuita, portail-api.insee.fr)";
+            return;
+          }
+          const r = await searchInseeSirene(ctx.query, ctx.localVat, key);
+          if (r.ok && r.data) {
+            s.state = "ok";
+            s.detail = r.data.registry?.id ?? "scheda Sirene";
+            job.profile = () => r.data;
+          } else if (r.notFound) {
+            s.state = "ok";
+            s.detail = "nessuna corrispondenza per la query fornita";
           } else if (r.skipped) {
             s.state = "skipped";
             s.detail = r.skipped;
