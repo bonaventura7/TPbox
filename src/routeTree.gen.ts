@@ -38,6 +38,7 @@ import { Route as ApiCompanyFinderDocumentRouteImport } from './routes/api.compa
 import { Route as ApiCompanyFinderFinancialDocumentRouteImport } from './routes/api.company-finder.financial-document'
 import { Route as ApiCompanyFinderGermanyPublicBalanceRouteImport } from './routes/api.company-finder.germany-public-balance'
 import { Route as ApiCompanyFinderOpenregisterFinancialsRouteImport } from './routes/api.company-finder.openregister-financials'
+import { Route as ApiCompanyFinderRuzDocumentRouteImport } from './routes/api.company-finder.ruz-document'
 import { Route as ApiCompanyFinderUploadDocumentRouteImport } from './routes/api.company-finder.upload-document'
 import { Route as AttualitaArticoloSlugRouteImport } from './routes/attualita.articolo.$slug'
 import { Route as NormativaPortaleInterpelliIndexRouteImport } from './routes/normativa.portale-interpelli.index'
@@ -208,6 +209,12 @@ const ApiCompanyFinderOpenregisterFinancialsRoute =
     path: '/api/company-finder/openregister-financials',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiCompanyFinderRuzDocumentRoute =
+  ApiCompanyFinderRuzDocumentRouteImport.update({
+    id: '/api/company-finder/ruz-document',
+    path: '/api/company-finder/ruz-document',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiCompanyFinderUploadDocumentRoute =
   ApiCompanyFinderUploadDocumentRouteImport.update({
     id: '/api/company-finder/upload-document',
@@ -324,6 +331,7 @@ export interface FileRoutesByFullPath {
   '/api/company-finder/financial-document': typeof ApiCompanyFinderFinancialDocumentRoute
   '/api/company-finder/germany-public-balance': typeof ApiCompanyFinderGermanyPublicBalanceRoute
   '/api/company-finder/openregister-financials': typeof ApiCompanyFinderOpenregisterFinancialsRoute
+  '/api/company-finder/ruz-document': typeof ApiCompanyFinderRuzDocumentRoute
   '/api/company-finder/upload-document': typeof ApiCompanyFinderUploadDocumentRoute
   '/attualita/articolo/$slug': typeof AttualitaArticoloSlugRoute
   '/normativa/portale-interpelli/$id': typeof NormativaPortaleInterpelliIdRoute
@@ -369,6 +377,7 @@ export interface FileRoutesByTo {
   '/api/company-finder/financial-document': typeof ApiCompanyFinderFinancialDocumentRoute
   '/api/company-finder/germany-public-balance': typeof ApiCompanyFinderGermanyPublicBalanceRoute
   '/api/company-finder/openregister-financials': typeof ApiCompanyFinderOpenregisterFinancialsRoute
+  '/api/company-finder/ruz-document': typeof ApiCompanyFinderRuzDocumentRoute
   '/api/company-finder/upload-document': typeof ApiCompanyFinderUploadDocumentRoute
   '/attualita/articolo/$slug': typeof AttualitaArticoloSlugRoute
   '/normativa/portale-interpelli/$id': typeof NormativaPortaleInterpelliIdRoute
@@ -417,6 +426,7 @@ export interface FileRoutesById {
   '/api/company-finder/financial-document': typeof ApiCompanyFinderFinancialDocumentRoute
   '/api/company-finder/germany-public-balance': typeof ApiCompanyFinderGermanyPublicBalanceRoute
   '/api/company-finder/openregister-financials': typeof ApiCompanyFinderOpenregisterFinancialsRoute
+  '/api/company-finder/ruz-document': typeof ApiCompanyFinderRuzDocumentRoute
   '/api/company-finder/upload-document': typeof ApiCompanyFinderUploadDocumentRoute
   '/attualita/articolo/$slug': typeof AttualitaArticoloSlugRoute
   '/normativa/portale-interpelli/$id': typeof NormativaPortaleInterpelliIdRoute
@@ -466,6 +476,7 @@ export interface FileRouteTypes {
     | '/api/company-finder/financial-document'
     | '/api/company-finder/germany-public-balance'
     | '/api/company-finder/openregister-financials'
+    | '/api/company-finder/ruz-document'
     | '/api/company-finder/upload-document'
     | '/attualita/articolo/$slug'
     | '/normativa/portale-interpelli/$id'
@@ -511,6 +522,7 @@ export interface FileRouteTypes {
     | '/api/company-finder/financial-document'
     | '/api/company-finder/germany-public-balance'
     | '/api/company-finder/openregister-financials'
+    | '/api/company-finder/ruz-document'
     | '/api/company-finder/upload-document'
     | '/attualita/articolo/$slug'
     | '/normativa/portale-interpelli/$id'
@@ -558,6 +570,7 @@ export interface FileRouteTypes {
     | '/api/company-finder/financial-document'
     | '/api/company-finder/germany-public-balance'
     | '/api/company-finder/openregister-financials'
+    | '/api/company-finder/ruz-document'
     | '/api/company-finder/upload-document'
     | '/attualita/articolo/$slug'
     | '/normativa/portale-interpelli/$id'
@@ -598,6 +611,7 @@ export interface RootRouteChildren {
   ApiCompanyFinderFinancialDocumentRoute: typeof ApiCompanyFinderFinancialDocumentRoute
   ApiCompanyFinderGermanyPublicBalanceRoute: typeof ApiCompanyFinderGermanyPublicBalanceRoute
   ApiCompanyFinderOpenregisterFinancialsRoute: typeof ApiCompanyFinderOpenregisterFinancialsRoute
+  ApiCompanyFinderRuzDocumentRoute: typeof ApiCompanyFinderRuzDocumentRoute
   ApiCompanyFinderUploadDocumentRoute: typeof ApiCompanyFinderUploadDocumentRoute
   ToolAmountBNuovoRoute: typeof ToolAmountBNuovoRoute
   ToolBepsMliRicercaRoute: typeof ToolBepsMliRicercaRoute
@@ -818,6 +832,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiCompanyFinderOpenregisterFinancialsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/company-finder/ruz-document': {
+      id: '/api/company-finder/ruz-document'
+      path: '/api/company-finder/ruz-document'
+      fullPath: '/api/company-finder/ruz-document'
+      preLoaderRoute: typeof ApiCompanyFinderRuzDocumentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/company-finder/upload-document': {
       id: '/api/company-finder/upload-document'
       path: '/api/company-finder/upload-document'
@@ -1001,6 +1022,7 @@ const rootRouteChildren: RootRouteChildren = {
     ApiCompanyFinderGermanyPublicBalanceRoute,
   ApiCompanyFinderOpenregisterFinancialsRoute:
     ApiCompanyFinderOpenregisterFinancialsRoute,
+  ApiCompanyFinderRuzDocumentRoute: ApiCompanyFinderRuzDocumentRoute,
   ApiCompanyFinderUploadDocumentRoute: ApiCompanyFinderUploadDocumentRoute,
   ToolAmountBNuovoRoute: ToolAmountBNuovoRoute,
   ToolBepsMliRicercaRoute: ToolBepsMliRicercaRoute,

@@ -29,6 +29,7 @@ import { officialPageFor } from "./official-pages";
 import { numericRegistryId, searchGleif } from "./sources/gleif";
 import { searchRechercheEntreprises } from "./sources/recherche-entreprises-fr";
 import { lookupUkPublic } from "./sources/bilanci/companies-house-public";
+import { gemiApiKey, searchGemiProfile } from "./sources/gemi-opendata";
 import type { GleifMatch } from "./sources/gleif";
 import { searchByName as ocSearch } from "./sources/open-corporates";
 import { lookupCompany as chLookup } from "./sources/companies-house";
@@ -340,6 +341,42 @@ const REGISTRY_ROUTES: Record<string, DirectAdapter[]> = {
           } else if (r.note) {
             s.state = "ok";
             s.detail = r.note;
+          } else {
+            s.state = "failed";
+            s.detail = r.error || "fonte non raggiungibile";
+          }
+        })(),
+    },
+  ],
+
+  // ---- Grecia: Γ.Ε.ΜΗ. OpenData API (anagrafica, chiave gratuita) ----
+  GR: [
+    {
+      id: "gemi-opendata",
+      label: "Γ.Ε.ΜΗ. — OpenData API",
+      input: "either",
+      run: (ctx, job, s) =>
+        (async () => {
+          // La chiave si legge alla chiamata (non all'avvio) così la fonte
+          // degrada in modo pulito quando non è configurata.
+          const key = gemiApiKey();
+          if (!key) {
+            s.state = "skipped";
+            s.detail =
+              "anagrafica GEMI non consultata: configura GEMI_API_KEY (gratuita, opendata.businessportal.gr)";
+            return;
+          }
+          const r = await searchGemiProfile(ctx.query, ctx.localVat, key);
+          if (r.ok && r.data) {
+            s.state = "ok";
+            s.detail = r.data.registry?.id ?? "scheda GEMI";
+            job.profile = () => r.data;
+          } else if (r.notFound) {
+            s.state = "ok";
+            s.detail = "nessuna corrispondenza per la query fornita";
+          } else if (r.skipped) {
+            s.state = "skipped";
+            s.detail = r.skipped;
           } else {
             s.state = "failed";
             s.detail = r.error || "fonte non raggiungibile";
@@ -747,8 +784,18 @@ export async function runSearch(req: SearchRequest, depth = 0): Promise<SearchRe
     countryIso === "HU" && /^\d{2}-?\d{2}-?\d{6}$/.test(localVat.replace(/\s/g, ""));
   // EE: 8 cifre pure = registrikood (NON un numero IVA: l'IVA estone ne ha 9).
   const eeRegistryCode = countryIso === "EE" && /^\d{8}$/.test(localVat);
+  // GR: 10 cifre pure = Αρ. ΓΕΜΗ (NON un numero IVA: l'IVA greca ne ha 9).
+  const grGemiNumber = countryIso === "GR" && /^\d{10}$/.test(localVat);
   // ---------- 2b. VIES (tutti i paesi con prefisso IVA) ----------
-  if (hasVat && !pl8 && !pl10krs && !nlKvkDirect && !huRegistryNumber && !eeRegistryCode) {
+  if (
+    hasVat &&
+    !pl8 &&
+    !pl10krs &&
+    !nlKvkDirect &&
+    !huRegistryNumber &&
+    !eeRegistryCode &&
+    !grGemiNumber
+  ) {
     jobs.push(
       makeJob("vies", "VIES — Commissione Europea", async (job, s) => {
         const r = await checkVat(countryIso === "GR" ? "EL" : countryIso, localVat);

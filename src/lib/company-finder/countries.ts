@@ -242,7 +242,7 @@ export const COUNTRIES: CountryInfo[] = [
     registryAuthority: "Ministero dello Sviluppo",
     financials: {
       free: false,
-      note: "Le pubblicazioni con i bilanci (Οικονομικές Καταστάσεις) sono scaricabili GRATIS dal portale GEMI (publicity.businessportal.gr), ma il portale è protetto da reCAPTCHA: l'estrazione automatica è in studio. In questa vista: identità e stato dal VIES.",
+      note: "I bilanci (Οικονομικές Καταστάσεις) sono scaricabili gratuitamente dal portale GEMI (publicity.businessportal.gr), protetto da reCAPTCHA: la consultazione avviene nel browser dell'utente. L'anagrafica (denominazione, ΑΦΜ, stato, forma giuridica, sede, capitale) arriva invece dall'API OpenData ufficiale di ΓΕΜΗ, con chiave gratuita (GEMI_API_KEY).",
     },
   },
   {
