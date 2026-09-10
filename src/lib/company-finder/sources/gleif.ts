@@ -3,6 +3,7 @@
 import type { Iso2 } from "../types";
 
 const BASE = "https://api.gleif.org/api/v1/lei-records";
+const FUZZY_COMPLETIONS_URL = "https://api.gleif.org/api/v1/fuzzycompletions";
 
 export interface GleifMatch {
   lei: string;
@@ -42,6 +43,54 @@ interface GleifEntity {
 
 interface GleifRecord {
   attributes?: { lei?: string | undefined; entity?: GleifEntity | undefined } | undefined;
+}
+
+interface GleifFuzzyItem {
+  attributes?: { value?: string | undefined } | undefined;
+  relationships?:
+    { "lei-records"?: { data?: { id?: string | undefined } | undefined } | undefined } | undefined;
+}
+
+function mapRecordToMatch(record: GleifRecord | undefined): GleifMatch | undefined {
+  const entity = record?.attributes?.entity;
+  const lei = record?.attributes?.lei;
+  const legalName = entity?.legalName?.name;
+  const iso = entity?.legalAddress?.country;
+  if (!lei || !legalName || !iso) return undefined;
+  return {
+    lei,
+    name: legalName,
+    country: iso.toUpperCase() as Iso2,
+    registeredAs: entity?.registeredAs,
+    registeredAt: entity?.registeredAt?.id,
+    address: formatAddress(entity?.legalAddress),
+    status: entity?.status ? entity.status.toLowerCase() : undefined,
+  };
+}
+
+async function fetchGleifJson(
+  url: string,
+  timeoutMs: number,
+): Promise<{ ok: boolean; json?: unknown | undefined; error?: string | undefined }> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, {
+      headers: { Accept: "application/vnd.api+json" },
+      signal: ctrl.signal,
+    });
+    if (!res.ok) return { ok: false, error: `GLEIF HTTP ${res.status}` };
+    return { ok: true, json: await res.json() };
+  } catch (e) {
+    const err = e as { name?: string | undefined; message?: string | undefined };
+    return {
+      ok: false,
+      error:
+        err?.name === "AbortError" ? "GLEIF: timeout" : (err?.message ?? "GLEIF: errore di rete"),
+    };
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 function formatAddress(address: GleifAddress | undefined): string | undefined {
@@ -157,6 +206,82 @@ export function rankRelevantGleifMatches(query: string, matches: GleifMatch[]): 
     .map(({ match }) => match);
 }
 
+/**
+ * Rilevanza per il solo ripiego fuzzy: a differenza di `gleifNameRelevance`
+ * (token esatti + soglia alta), accetta anche i prefissi — "AVIO POL" deve
+ * poter agganciare "AVIO POLSKA SPÓŁKA Z O.O.". Non sostituisce il percorso
+ * esatto, che resta conservativo; è usata esclusivamente per ordinare i
+ * candidati restituiti dall'autocompletamento fuzzy di GLEIF.
+ */
+export function gleifPrefixRelevance(query: string, candidate: string): number {
+  const q = normalizeLegalName(query);
+  const c = normalizeLegalName(candidate);
+  if (!q || !c) return 0;
+  if (q === c) return 100;
+  const qTokens = contentTokens(q);
+  const cTokens = contentTokens(c);
+  const qUsed = qTokens.length ? qTokens : q.split(/\s+/).filter(Boolean);
+  const cUsed = cTokens.length ? cTokens : c.split(/\s+/).filter(Boolean);
+  let common = 0;
+  for (const qt of qUsed) {
+    const hit = cUsed.some((ct) => qt === ct || ct.startsWith(qt) || qt.startsWith(ct));
+    if (hit) common += 1;
+  }
+  const precision = common / Math.max(cUsed.length, 1);
+  const recall = common / Math.max(qUsed.length, 1);
+  return Math.round(100 * precision * recall);
+}
+
+/**
+ * Ripiego fuzzy: l'endpoint `fuzzycompletions` di GLEIF copre i nomi incompleti
+ * (es. "AVIO POL", "MASPEX HOLD") che il filtro esatto `filter[entity.legalName]`
+ * non intercetta. Ogni completion espone il nome legale più vicino e il LEI; il
+ * record LEI viene poi risolto per ottenere `registeredAs`/`registeredAt` e
+ * confermare l'autorità di registrazione. Best-effort: ogni errore degrada a
+ * "nessuna corrispondenza" senza mai restituire una società sbagliata.
+ */
+async function searchGleifFuzzy(
+  term: string,
+  country: string,
+  timeoutMs: number,
+): Promise<GleifResult> {
+  const params = new URLSearchParams({ field: "entity.legalName", q: term });
+  const completions = await fetchGleifJson(
+    `${FUZZY_COMPLETIONS_URL}?${params.toString()}`,
+    timeoutMs,
+  );
+  if (!completions.ok) return { ok: true, matches: [] };
+
+  const items = ((completions.json as { data?: GleifFuzzyItem[] | undefined })?.data ?? []).filter(
+    (item): item is GleifFuzzyItem => Boolean(item),
+  );
+  const candidates = items
+    .map((item) => ({
+      lei: item.relationships?.["lei-records"]?.data?.id,
+      value: item.attributes?.value,
+    }))
+    .filter((c): c is { lei: string; value: string } => Boolean(c.lei && c.value))
+    .slice(0, 5);
+
+  const matches: GleifMatch[] = [];
+  for (const candidate of candidates) {
+    const record = await fetchGleifJson(`${BASE}/${candidate.lei}`, timeoutMs);
+    if (!record.ok) continue;
+    const match = mapRecordToMatch((record.json as { data?: GleifRecord } | undefined)?.data);
+    if (match) matches.push(match);
+  }
+
+  const wanted = country ? country.toUpperCase() : undefined;
+  const filtered = wanted ? matches.filter((match) => match.country === wanted) : matches;
+  const ranked = filtered
+    .map((match) => ({ match, score: gleifPrefixRelevance(term, match.name) }))
+    .filter(({ score }) => score > 0)
+    .sort((a, b) => b.score - a.score)
+    .map(({ match }) => match);
+
+  return { ok: true, matches: ranked };
+}
+
 export async function searchGleif(
   name: string,
   country: string,
@@ -170,47 +295,17 @@ export async function searchGleif(
   params.set("page[size]", "5");
   if (country) params.set("filter[entity.legalAddress.country]", country.toUpperCase());
 
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
-  try {
-    const res = await fetch(`${BASE}?${params.toString()}`, {
-      headers: { Accept: "application/vnd.api+json" },
-      signal: ctrl.signal,
-    });
-    if (!res.ok) return { ok: false, matches: [], error: `GLEIF HTTP ${res.status}` };
+  const exact = await fetchGleifJson(`${BASE}?${params.toString()}`, timeoutMs);
+  if (!exact.ok) return { ok: false, matches: [], error: exact.error };
 
-    const json = (await res.json()) as { data?: GleifRecord[] | undefined };
-    const matches: GleifMatch[] = (json.data ?? [])
-      .map((record): GleifMatch | undefined => {
-        const entity = record.attributes?.entity;
-        const lei = record.attributes?.lei;
-        const legalName = entity?.legalName?.name;
-        const iso = entity?.legalAddress?.country;
-        if (!lei || !legalName || !iso) return undefined;
-        return {
-          lei,
-          name: legalName,
-          country: iso.toUpperCase(),
-          registeredAs: entity?.registeredAs,
-          registeredAt: entity?.registeredAt?.id,
-          address: formatAddress(entity?.legalAddress),
-          status: entity?.status ? entity.status.toLowerCase() : undefined,
-        };
-      })
-      .filter((match): match is GleifMatch => Boolean(match));
+  const records = (exact.json as { data?: GleifRecord[] | undefined })?.data ?? [];
+  const exactMatches = records
+    .map((record) => mapRecordToMatch(record))
+    .filter((match): match is GleifMatch => Boolean(match));
+  const ranked = rankRelevantGleifMatches(term, exactMatches);
+  if (ranked.length > 0) return { ok: true, matches: ranked };
 
-    return { ok: true, matches: rankRelevantGleifMatches(term, matches) };
-  } catch (e) {
-    const err = e as { name?: string | undefined; message?: string | undefined };
-    return {
-      ok: false,
-      matches: [],
-      error:
-        err?.name === "AbortError" ? "GLEIF: timeout" : (err?.message ?? "GLEIF: errore di rete"),
-    };
-  } finally {
-    clearTimeout(timer);
-  }
+  return searchGleifFuzzy(term, country, timeoutMs);
 }
 
 export function numericRegistryId(registeredAs: string | undefined): string | undefined {
