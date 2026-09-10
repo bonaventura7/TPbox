@@ -144,16 +144,16 @@ describe("contratto delle edge function", () => {
   });
 
   it("news-generate scrive sempre righe DRAFT con upsert idempotente su slug", () => {
-    expect(generate).not.toContain("'PUBLISHED'");
+    expect(generate).not.toMatch(/status:\s*["']PUBLISHED["']/);
     expect(generate).toContain("toReviewableNewsItemRow");
-    expect(generate.match(/onConflict: 'slug'/g)?.length).toBeGreaterThanOrEqual(2);
+    expect(generate.match(/onConflict:\s*["']slug["']/g)?.length).toBeGreaterThanOrEqual(2);
   });
 
   it("news-publish pubblica solo da DRAFT con gate_result.ok === true", () => {
-    expect(publish).toContain(".ok===true");
-    expect(publish).toContain("it.status!=='DRAFT'");
+    expect(publish).toMatch(/\.ok\s*===\s*true/);
+    expect(publish).toMatch(/it\.status\s*!==\s*["']DRAFT["']/);
     expect(publish).toContain("MIN_PUBLISHABLE_CONTENT_CHARS");
-    const publishAt = publish.indexOf("status:'PUBLISHED'");
+    const publishAt = publish.search(/status:\s*["']PUBLISHED["']/);
     expect(publishAt).toBeGreaterThan(publish.indexOf("gateOk"));
   });
 });
