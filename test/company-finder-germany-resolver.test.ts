@@ -1,99 +1,109 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { searchUrAccounting } from "../src/lib/company-finder/sources/bilanci/ur-de";
+import { searchGermanyAdapter } from "../src/lib/company-finder/sources/germany-adapter";
+import { resolveGermanyCompanyName, searchUrAccounting } from "../src/lib/company-finder/sources/bilanci/ur-de";
 
-afterEach(() => vi.unstubAllGlobals());
+const AUTOCOMPLETE = "https://api.firmendata.com/v1/companies/autocomplete?";
 
-describe("German company resolver", () => {
-  it("resolves a short query such as TOZ to the legal German name before balance lookup", async () => {
-    const seen: string[] = [];
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (input: string | URL, init?: RequestInit) => {
-        const url = String(input);
-        seen.push(url);
-        if (url.startsWith("https://api.firmendata.com/v1/companies/autocomplete?")) {
-          const headers = new Headers(init?.headers);
-          expect(headers.get("authorization")).toBeNull();
-          const parsed = new URL(url);
-          expect(parsed.searchParams.get("q")).toBe("TOZ");
-          return new Response(
-            JSON.stringify({
-              data: [
-                { eu_id: "DEMO.TOZ", display_name: "TOZ Physiotherapie GmbH", legal_name: "TOZ Physiotherapie GmbH" },
-                { eu_id: "DEMO.TOZ2", display_name: "TOZ Holding GmbH", legal_name: "TOZ Holding GmbH" },
-              ],
-            }),
-            { status: 200, headers: { "content-type": "application/json" } },
-          );
-        }
-        if (url.startsWith("https://html.duckduckgo.com/html/?q=")) {
-          expect(decodeURIComponent(url)).toContain('"TOZ Physiotherapie GmbH"');
-          return new Response(
-            '<a href="https://www.unternehmen24.info/Firmeninformationen/Deutschland/Firma/1234567">TOZ Physiotherapie GmbH</a>',
-            { status: 200 },
-          );
-        }
-        if (url === "https://www.unternehmen24.info/Firmeninformationen/Deutschland/Firma/1234567") {
-          return new Response(
-            '<html><body><h1>TOZ Physiotherapie GmbH</h1><div>Jahresabschluss 2024</div><div>Summe Aktiva 125.000 €</div><div>Eigenkapital 75.000 €</div><div>Jahresüberschuss 12.000 €</div><div>Summe Passiva 125.000 €</div></body></html>',
-            { status: 200 },
-          );
-        }
-        throw new Error(`unexpected URL ${url}`);
-      }),
-    );
+/** Host della catena di ripiego ritirata: nessuno di questi va piu' interrogato. */
+const RETIRED_HOSTS = ["duckduckgo.com", "unternehmen24.info", "google.com", "bing.com"];
 
-    const result = await searchUrAccounting("TOZ", 10000);
+function firmendataResponse(rows: Array<{ eu_id: string; legal_name: string }>): Response {
+  return new Response(
+    JSON.stringify({ data: rows.map((row) => ({ ...row, display_name: row.legal_name })) }),
+    { status: 200, headers: { "content-type": "application/json" } },
+  );
+}
 
-    expect(result.ok).toBe(true);
-    expect(result.data?.years[0]).toMatchObject({
-      year: 2024,
-      totalAssets: 125000,
-      equity: 75000,
-      liabilitiesAndEquity: 125000,
-      netIncome: 12000,
-    });
-    expect(seen.some((url) => url.includes("api.firmendata.com"))).toBe(true);
-    expect(seen.some((url) => url.includes("TOZ%20Physiotherapie%20GmbH"))).toBe(true);
-  });
+afterEach(() => {
+  vi.unstubAllGlobals();
+  delete process.env["OPENREGISTER_API_KEY"];
+});
 
-  it("prefers an exact legal-name match for Siemens AG", async () => {
+describe("resolver societario tedesco", () => {
+  it("risolve una sigla breve nella ragione sociale tedesca completa", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (input: string | URL) => {
         const url = String(input);
-        if (url.startsWith("https://api.firmendata.com/v1/companies/autocomplete?")) {
-          return new Response(
-            JSON.stringify({
-              data: [
-                { eu_id: "DEMO.SIEMENS1", display_name: "Siemens Industry Software GmbH", legal_name: "Siemens Industry Software GmbH" },
-                { eu_id: "DEMO.SIEMENS2", display_name: "Siemens Aktiengesellschaft", legal_name: "Siemens Aktiengesellschaft" },
-              ],
-            }),
-            { status: 200, headers: { "content-type": "application/json" } },
-          );
-        }
-        if (url.startsWith("https://html.duckduckgo.com/html/?q=")) {
-          expect(decodeURIComponent(url)).toContain('"Siemens Aktiengesellschaft"');
-          return new Response(
-            '<a href="https://www.unternehmen24.info/Firmeninformationen/Deutschland/Firma/7654321">Siemens Aktiengesellschaft</a>',
-            { status: 200 },
-          );
-        }
-        if (url.endsWith("/Firma/7654321")) {
-          return new Response(
-            '<html><body>Siemens Aktiengesellschaft Jahresabschluss 2024 Summe Aktiva 10.000.000 € Eigenkapital 4.000.000 € Jahresüberschuss 500.000 € Summe Passiva 10.000.000 €</body></html>',
-            { status: 200 },
-          );
+        if (url.startsWith(AUTOCOMPLETE)) {
+          expect(new URL(url).searchParams.get("q")).toBe("TOZ Physiotherapie");
+          return firmendataResponse([
+            { eu_id: "DEMO.TOZ", legal_name: "TOZ Physiotherapie GmbH" },
+            { eu_id: "DEMO.TOZ2", legal_name: "TOZ Holding GmbH" },
+          ]);
         }
         throw new Error(`unexpected URL ${url}`);
       }),
     );
 
-    const result = await searchUrAccounting("Siemens AG", 10000);
-    expect(result.ok).toBe(true);
-    expect(result.data?.years[0]?.year).toBe(2024);
-    expect(result.data?.years[0]?.totalAssets).toBe(10000000);
+    const resolved = await resolveGermanyCompanyName("TOZ Physiotherapie", 10000);
+
+    expect(resolved?.name).toBe("TOZ Physiotherapie GmbH");
+    expect(resolved?.euId).toBe("DEMO.TOZ");
+  });
+
+  it("preferisce la corrispondenza esatta sulla ragione sociale", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: string | URL) => {
+        const url = String(input);
+        if (url.startsWith(AUTOCOMPLETE)) {
+          return firmendataResponse([
+            { eu_id: "DEMO.SIEMENS1", legal_name: "Siemens Industry Software GmbH" },
+            { eu_id: "DEMO.SIEMENS2", legal_name: "Siemens Aktiengesellschaft" },
+          ]);
+        }
+        throw new Error(`unexpected URL ${url}`);
+      }),
+    );
+
+    const resolved = await resolveGermanyCompanyName("Siemens Aktiengesellschaft", 10000);
+
+    expect(resolved?.name).toBe("Siemens Aktiengesellschaft");
+    expect(resolved?.euId).toBe("DEMO.SIEMENS2");
+  });
+});
+
+describe("adapter tedesco dopo il ritiro della catena sui motori di ricerca", () => {
+  it("dichiara il bilancio indisponibile invece di ricostruirlo da pagine terze", async () => {
+    const seen: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: string | URL) => {
+        const url = String(input);
+        seen.push(url);
+        if (url.startsWith(AUTOCOMPLETE)) {
+          return firmendataResponse([{ eu_id: "DEMO.TOZ", legal_name: "TOZ Physiotherapie GmbH" }]);
+        }
+        throw new Error(`unexpected URL ${url}`);
+      }),
+    );
+
+    const result = await searchGermanyAdapter({ query: "TOZ Physiotherapie" }, 10000);
+
+    expect(result.ok).toBe(false);
+    expect(result.financials).toBeUndefined();
+    for (const host of RETIRED_HOSTS) {
+      expect(seen.some((url) => url.includes(host))).toBe(false);
+    }
+  });
+
+  it("non interroga alcuna fonte di ripiego quando il resolver non trova la societa'", async () => {
+    const seen: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: string | URL) => {
+        const url = String(input);
+        seen.push(url);
+        if (url.startsWith(AUTOCOMPLETE)) return firmendataResponse([]);
+        throw new Error(`unexpected URL ${url}`);
+      }),
+    );
+
+    const result = await searchUrAccounting("Societa Inesistente GmbH", 10000);
+
+    expect(result.ok).toBe(false);
+    expect(seen.every((url) => url.startsWith(AUTOCOMPLETE))).toBe(true);
   });
 });

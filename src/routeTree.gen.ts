@@ -36,7 +36,6 @@ import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as ApiCompanyFinderDocumentRouteImport } from './routes/api.company-finder.document'
 import { Route as ApiCompanyFinderFinancialDocumentRouteImport } from './routes/api.company-finder.financial-document'
-import { Route as ApiCompanyFinderGermanyPublicBalanceRouteImport } from './routes/api.company-finder.germany-public-balance'
 import { Route as ApiCompanyFinderOpenregisterFinancialsRouteImport } from './routes/api.company-finder.openregister-financials'
 import { Route as ApiCompanyFinderRuzDocumentRouteImport } from './routes/api.company-finder.ruz-document'
 import { Route as ApiCompanyFinderUploadDocumentRouteImport } from './routes/api.company-finder.upload-document'
@@ -197,12 +196,6 @@ const ApiCompanyFinderFinancialDocumentRoute =
     path: '/api/company-finder/financial-document',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiCompanyFinderGermanyPublicBalanceRoute =
-  ApiCompanyFinderGermanyPublicBalanceRouteImport.update({
-    id: '/api/company-finder/germany-public-balance',
-    path: '/api/company-finder/germany-public-balance',
-    getParentRoute: () => rootRouteImport,
-  } as any)
 const ApiCompanyFinderOpenregisterFinancialsRoute =
   ApiCompanyFinderOpenregisterFinancialsRouteImport.update({
     id: '/api/company-finder/openregister-financials',
@@ -329,7 +322,6 @@ export interface FileRoutesByFullPath {
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/company-finder/document': typeof ApiCompanyFinderDocumentRoute
   '/api/company-finder/financial-document': typeof ApiCompanyFinderFinancialDocumentRoute
-  '/api/company-finder/germany-public-balance': typeof ApiCompanyFinderGermanyPublicBalanceRoute
   '/api/company-finder/openregister-financials': typeof ApiCompanyFinderOpenregisterFinancialsRoute
   '/api/company-finder/ruz-document': typeof ApiCompanyFinderRuzDocumentRoute
   '/api/company-finder/upload-document': typeof ApiCompanyFinderUploadDocumentRoute
@@ -375,7 +367,6 @@ export interface FileRoutesByTo {
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/company-finder/document': typeof ApiCompanyFinderDocumentRoute
   '/api/company-finder/financial-document': typeof ApiCompanyFinderFinancialDocumentRoute
-  '/api/company-finder/germany-public-balance': typeof ApiCompanyFinderGermanyPublicBalanceRoute
   '/api/company-finder/openregister-financials': typeof ApiCompanyFinderOpenregisterFinancialsRoute
   '/api/company-finder/ruz-document': typeof ApiCompanyFinderRuzDocumentRoute
   '/api/company-finder/upload-document': typeof ApiCompanyFinderUploadDocumentRoute
@@ -424,7 +415,6 @@ export interface FileRoutesById {
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/company-finder/document': typeof ApiCompanyFinderDocumentRoute
   '/api/company-finder/financial-document': typeof ApiCompanyFinderFinancialDocumentRoute
-  '/api/company-finder/germany-public-balance': typeof ApiCompanyFinderGermanyPublicBalanceRoute
   '/api/company-finder/openregister-financials': typeof ApiCompanyFinderOpenregisterFinancialsRoute
   '/api/company-finder/ruz-document': typeof ApiCompanyFinderRuzDocumentRoute
   '/api/company-finder/upload-document': typeof ApiCompanyFinderUploadDocumentRoute
@@ -474,7 +464,6 @@ export interface FileRouteTypes {
     | '/.mcp/invoke-tool/$tool'
     | '/api/company-finder/document'
     | '/api/company-finder/financial-document'
-    | '/api/company-finder/germany-public-balance'
     | '/api/company-finder/openregister-financials'
     | '/api/company-finder/ruz-document'
     | '/api/company-finder/upload-document'
@@ -520,7 +509,6 @@ export interface FileRouteTypes {
     | '/.mcp/invoke-tool/$tool'
     | '/api/company-finder/document'
     | '/api/company-finder/financial-document'
-    | '/api/company-finder/germany-public-balance'
     | '/api/company-finder/openregister-financials'
     | '/api/company-finder/ruz-document'
     | '/api/company-finder/upload-document'
@@ -568,7 +556,6 @@ export interface FileRouteTypes {
     | '/.mcp/invoke-tool/$tool'
     | '/api/company-finder/document'
     | '/api/company-finder/financial-document'
-    | '/api/company-finder/germany-public-balance'
     | '/api/company-finder/openregister-financials'
     | '/api/company-finder/ruz-document'
     | '/api/company-finder/upload-document'
@@ -609,7 +596,6 @@ export interface RootRouteChildren {
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   ApiCompanyFinderDocumentRoute: typeof ApiCompanyFinderDocumentRoute
   ApiCompanyFinderFinancialDocumentRoute: typeof ApiCompanyFinderFinancialDocumentRoute
-  ApiCompanyFinderGermanyPublicBalanceRoute: typeof ApiCompanyFinderGermanyPublicBalanceRoute
   ApiCompanyFinderOpenregisterFinancialsRoute: typeof ApiCompanyFinderOpenregisterFinancialsRoute
   ApiCompanyFinderRuzDocumentRoute: typeof ApiCompanyFinderRuzDocumentRoute
   ApiCompanyFinderUploadDocumentRoute: typeof ApiCompanyFinderUploadDocumentRoute
@@ -818,13 +804,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiCompanyFinderFinancialDocumentRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/company-finder/germany-public-balance': {
-      id: '/api/company-finder/germany-public-balance'
-      path: '/api/company-finder/germany-public-balance'
-      fullPath: '/api/company-finder/germany-public-balance'
-      preLoaderRoute: typeof ApiCompanyFinderGermanyPublicBalanceRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/company-finder/openregister-financials': {
       id: '/api/company-finder/openregister-financials'
       path: '/api/company-finder/openregister-financials'
@@ -1018,8 +997,6 @@ const rootRouteChildren: RootRouteChildren = {
   ApiCompanyFinderDocumentRoute: ApiCompanyFinderDocumentRoute,
   ApiCompanyFinderFinancialDocumentRoute:
     ApiCompanyFinderFinancialDocumentRoute,
-  ApiCompanyFinderGermanyPublicBalanceRoute:
-    ApiCompanyFinderGermanyPublicBalanceRoute,
   ApiCompanyFinderOpenregisterFinancialsRoute:
     ApiCompanyFinderOpenregisterFinancialsRoute,
   ApiCompanyFinderRuzDocumentRoute: ApiCompanyFinderRuzDocumentRoute,

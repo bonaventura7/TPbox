@@ -29,32 +29,18 @@ export const Route = createFileRoute("/api/company-finder/document")({
           const krs = company.replace(/\D/g, "").padStart(10, "0");
           if (!/^\d{10}$/.test(krs)) return errorResponse("KRS non valido", 400);
 
-          const { fetchPolishAnnualReport } = await import("@/lib/company-finder/sources/bilanci/poland-rdf");
-          // Keep the interactive endpoint bounded on Vercel Hobby. The provider adapter
-          // uses the same deadline for RDF -> KRS-name -> ALEO fallback.
-          const result = await fetchPolishAnnualReport(krs, year, 7500);
-          if (!result.ok) {
-            const { polishOfficialBrowserUrl } = await import("@/lib/company-finder/pl-official-fallback");
-            return new Response(null, {
-              status: 302,
-              headers: {
-                Location: polishOfficialBrowserUrl(krs),
-                "Cache-Control": "no-store",
-                "X-Company-Finder-Fallback": "official-polish-rdf-browser",
-              },
-            });
-          }
-
-          const { isPdfBytes } = await import("@/lib/company-finder/pl-pdf-gate");
-          if (!isPdfBytes(result.bytes)) return errorResponse("il registro polacco non ha restituito un PDF valido", 502, { fallback: "official-browser" });
-
-          return new Response(new Uint8Array(result.bytes) as unknown as BodyInit, {
-            status: 200,
+          // Ritirata la catena RDF/ALEO: reimplementava la cifratura di un parametro
+          // per aggirare il WAF del registro polacco. Fuori perimetro per decisione.
+          // Finche' il deposito non e' raggiungibile per via lecita, il documento
+          // polacco si dichiara indisponibile e si rimanda al registro ufficiale.
+          const { polishOfficialBrowserUrl } = await import("@/lib/company-finder/pl-official-fallback");
+          void download;
+          return new Response(null, {
+            status: 302,
             headers: {
-              "Content-Type": "application/pdf",
-              "Content-Disposition": `${download ? "attachment" : "inline"}; filename="bilancio-${krs}-${year}.pdf"`,
+              Location: polishOfficialBrowserUrl(krs),
               "Cache-Control": "no-store",
-              "X-Content-Type-Options": "nosniff",
+              "X-Company-Finder-Fallback": "official-polish-rdf-browser",
             },
           });
         }
