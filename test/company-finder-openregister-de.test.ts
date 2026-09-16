@@ -71,14 +71,16 @@ describe("OpenRegister German financials", () => {
     expect(result.data?.available).toBe(true);
     expect(result.data?.source).toBe("OpenRegister / Bundesanzeiger (DE)");
     expect(result.data?.years).toHaveLength(1);
+    // Gli importi del fixture sono in centesimi, come li dichiara OpenRegister.
+    // Le attese sono in euro: la conversione /100 e' il comportamento corretto.
     expect(result.data?.years[0]).toMatchObject({
       year: 2024,
-      revenue: 23456789,
-      operatingProfit: 987654,
-      netIncome: 654321,
-      totalAssets: 12345678,
-      equity: 3456789,
-      liabilitiesAndEquity: 12345678,
+      revenue: 234567.89,
+      operatingProfit: 9876.54,
+      netIncome: 6543.21,
+      totalAssets: 123456.78,
+      equity: 34567.89,
+      liabilitiesAndEquity: 123456.78,
       currency: "EUR",
     });
     expect(requests.every((request) => request.authorization === "Bearer test-key")).toBe(true);

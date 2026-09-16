@@ -117,6 +117,25 @@ function indicatorNumber(indicator: Indicator, key: string): number | undefined 
   return numberValue(indicator[key]);
 }
 
+/**
+ * Importi monetari di OpenRegister: sono in CENTESIMI, non in euro.
+ *
+ * Dichiarato due volte nella loro documentazione (endpoint `company` e
+ * `company-financials`): «Values of the indicator are given in the smallest
+ * currency unit (cents). Example: 2099 represents €20.99 for monetary values.»
+ *
+ * Senza questa divisione ogni valore tedesco è cento volte il suo: un
+ * comparabile da 4,5 milioni di euro di ricavi appare da 450 milioni e viene
+ * scartato da qualunque filtro dimensionale — o, peggio, usato.
+ *
+ * Vale solo per le grandezze monetarie: il numero di dipendenti è un conteggio
+ * e non va convertito.
+ */
+function indicatorAmount(indicator: Indicator, key: string): number | undefined {
+  const raw = numberValue(indicator[key]);
+  return raw === undefined ? undefined : raw / 100;
+}
+
 function reportEndYear(report: JsonObject): number | undefined {
   return indicatorYear(report["report_end_date"] ?? report["report_date"] ?? report["date"]);
 }
@@ -236,13 +255,13 @@ function mapFinancials(
     .map((indicator) => {
       const date = text(indicator.date);
       const year = indicatorYear(date);
-      const balanceSheetTotal = indicatorNumber(indicator, "balance_sheet_total");
-      const revenue = indicatorNumber(indicator, "revenue");
-      const operatingProfit = indicatorNumber(indicator, "ebit");
-      const ebitda = indicatorNumber(indicator, "ebitda");
-      const netIncome = indicatorNumber(indicator, "net_income");
-      const equity = indicatorNumber(indicator, "equity");
-      const liabilities = indicatorNumber(indicator, "liabilities");
+      const balanceSheetTotal = indicatorAmount(indicator, "balance_sheet_total");
+      const revenue = indicatorAmount(indicator, "revenue");
+      const operatingProfit = indicatorAmount(indicator, "ebit");
+      const ebitda = indicatorAmount(indicator, "ebitda");
+      const netIncome = indicatorAmount(indicator, "net_income");
+      const equity = indicatorAmount(indicator, "equity");
+      const liabilities = indicatorAmount(indicator, "liabilities");
       return {
         periodLabel: year ? `Esercizio chiuso al ${date ?? year}` : `Esercizio ${date ?? "non indicato"}`,
         year,
