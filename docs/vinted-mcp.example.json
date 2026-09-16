@@ -1,0 +1,45 @@
+{
+  "_comment": "Copiare il blocco 'mcpServers' nel client usato: Claude Desktop (claude_desktop_config.json), Claude Code (.mcp.json), Cursor (cursor/mcp.json). Versioni pinnate di proposito: mai @latest contro un'API non ufficiale.",
+  "mcpServers": {
+    "vinted": {
+      "_comment": "Tier A - raccomandato. Lettura diretta, resilienza nativa del client, costo marginale zero. Nota: 'npx -y <pkg>/mcp' (forma del README) NON funziona, il pacchetto ha due bin: serve -p <pkg> vinted-mcp.",
+      "command": "npx",
+      "args": [
+        "-y",
+        "-p",
+        "@googlarz/vinted-client@1.1.4",
+        "vinted-mcp"
+      ],
+      "env": {
+        "VINTED_CACHE_TTL_MS": "600000",
+        "VINTED_RATE_LIMIT_PER_SEC": "0.5",
+        "VINTED_RATE_LIMIT_BURST": "2",
+        "VINTED_PROXY_URL": ""
+      }
+    },
+    "vinted-gateway": {
+      "_comment": "Tier A + shim HA (cache persistente, breaker per paese, pacing, budget anti-loop, stale-while-error, audit NDJSON, pass-through 'raw'). Scegliere QUESTO quando l'agente fa piu' chiamate a turno.",
+      "command": "python3",
+      "args": [
+        "tools/vinted/vinted_gateway.py",
+        "mcp"
+      ],
+      "env": {
+        "VINTED_GATEWAY_CMD": "npx -y -p @googlarz/vinted-client@1.1.4 vinted",
+        "VINTED_GATEWAY_RATE_PER_SEC": "0.5",
+        "VINTED_GATEWAY_MAX_CALLS_PER_MIN": "60",
+        "VINTED_GATEWAY_PACING_MAX_WAIT_S": "6",
+        "VINTED_GATEWAY_MAX_ITEMS": "60"
+      }
+    },
+    "vinted-managed": {
+      "_comment": "Tier B - produzione senza manutenzione: proxy, fingerprint e rotazione sono del vendor. Nessun browser locale, nessun secret Vinted.",
+      "type": "http",
+      "url": "https://mcp.apify.com/?tools=fetch-actor-details,lowlanddata/vinted-scraper",
+      "headers": {
+        "Authorization": "Bearer ${env:APIFY_TOKEN}"
+      }
+    }
+  },
+  "_note": "File di esempio, non di build: copiare le voci in claude_desktop_config.json (Claude Desktop), .mcp.json (Claude Code) o cursor/mcp.json (Cursor). Nessuna di queste chiavi inizia con '$': i client MCP ignorano i campi sconosciuti, quindi i commenti '_comment' sono sicuri."
+}
