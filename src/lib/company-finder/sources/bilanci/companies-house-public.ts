@@ -68,10 +68,34 @@ function firstSearchHit(html: string): { number: string; name: string } | undefi
   return { number, name };
 }
 
-function findAccountsRows(
-  html: string,
-): { documentPath: string; description: string; interim: boolean }[] {
-  const rows: { documentPath: string; description: string; interim: boolean }[] = [];
+const MONTHS: Record<string, number> = {
+  jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
+  jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11,
+};
+
+/**
+ * Data di chiusura dell'esercizio, dalla dicitura "made up to 31 December 2025".
+ * Serve a ORDINARE i depositi: l'ordine di pagina non e' affidabile, e fidarsene
+ * e' il motivo per cui il tool mostrava un bilancio 2017 su una societa' che ha
+ * i conti fino al 2025.
+ */
+function madeUpToTime(text: string): number | undefined {
+  const m = text.match(/made up to\s+(\d{1,2})\s+([A-Za-z]{3})[a-z]*\s+(\d{4})/i);
+  if (!m) return undefined;
+  const month = MONTHS[m[2]!.toLowerCase()];
+  if (month === undefined) return undefined;
+  return Date.UTC(Number(m[3]), month, Number(m[1]));
+}
+
+interface AccountsRow {
+  documentPath: string;
+  description: string;
+  interim: boolean;
+  madeUpTo?: number | undefined;
+}
+
+function findAccountsRows(html: string): AccountsRow[] {
+  const rows: AccountsRow[] = [];
   const linkRe =
     /href="(\/company\/[A-Z0-9]{6,10}\/filing-history\/[^"]+?\/document\?format=pdf[^"]*)"/gi;
   let match: RegExpExecArray | null;
@@ -81,7 +105,14 @@ function findAccountsRows(
     const window = html.slice(Math.max(0, match.index - 1500), match.index);
     const rowStart = window.lastIndexOf("<tr");
     const text = decode(rowStart === -1 ? window : window.slice(rowStart));
-    const described = text.match(/([^.;<]*accounts made up to[^.;<]{0,60})/i);
+    // Misurato 2026-09-17 su Companies House: la dicitura corrente e'
+    // "AA Accounts for a small company made up to 31 December 2025".
+    // La vecchia regex pretendeva "accounts made up to" adiacenti, quindi
+    // agganciava solo le diciture storiche ("Total exemption full accounts
+    // made up to ...") e faceva vincere un deposito del 2017.
+    const described = text.match(
+      /([^.;<]*\baccounts\b[^.;<]{0,80}?made up to\s+\d{1,2}\s+\w+\s+\d{4})/i,
+    );
     if (!described) continue;
     const description = described[1]!
       .replace(/^\d{1,2}\s+\w+\s+\d{4}\s*/, "")
@@ -91,6 +122,7 @@ function findAccountsRows(
       documentPath: path.replace(/&amp;/g, "&"),
       description,
       interim: /interim/i.test(description),
+      madeUpTo: madeUpToTime(description),
     });
   }
   return rows;
@@ -100,12 +132,25 @@ async function firstAccountsDocument(
   number: string,
   signal: AbortSignal,
 ): Promise<{ documentPath: string; description: string } | undefined> {
+  // `category=accounts` e' quello che l'intestazione di questo file dichiara da
+  // sempre; il codice non lo passava, quindi le pagine erano piene di depositi
+  // di altro tipo e i conti veri finivano oltre la quarta pagina.
   const pages = await Promise.all(
-    [1, 2, 3, 4].map((page) =>
-      get(`${HOST}/company/${number}/filing-history?page=${page}`, signal).catch(() => ""),
+    [1, 2, 3].map((page) =>
+      get(
+        `${HOST}/company/${number}/filing-history?category=accounts&page=${page}`,
+        signal,
+      ).catch(() => ""),
     ),
   );
-  const rows = pages.flatMap((html) => (html ? findAccountsRows(html) : []));
+
+  const seen = new Set<string>();
+  const rows = pages
+    .flatMap((html) => (html ? findAccountsRows(html) : []))
+    .filter((row) => (seen.has(row.documentPath) ? false : (seen.add(row.documentPath), true)))
+    // Il piu' recente per data di chiusura dell'esercizio, non per posizione.
+    .sort((a, b) => (b.madeUpTo ?? 0) - (a.madeUpTo ?? 0));
+
   return rows.find((row) => !row.interim) ?? rows[0];
 }
 
