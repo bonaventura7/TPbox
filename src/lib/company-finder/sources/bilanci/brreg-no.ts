@@ -181,7 +181,12 @@ export async function fetchBrregAnnualReportDocument(
     return { ok: false, error: "org.nr o anno non valido" };
   }
   try {
-    const response = await fetchWithTimeout(brregAnnualReportUrl(code, year), timeoutMs, "application/pdf");
+    // Il Regnskapsregisteret rifiuta con HTTP 406 un Accept ristretto ad
+    // "application/pdf" (verificato in produzione su org.nr 923609016,
+    // esercizio 2023: 406 con "application/pdf", 200 con "*/*"). Va quindi
+    // usato "*/*": non "tidiare" restringendolo di nuovo o il download torna
+    // a fallire per ogni org.nr norvegese.
+    const response = await fetchWithTimeout(brregAnnualReportUrl(code, year), timeoutMs, "*/*");
     if (!response.ok) return { ok: false, error: `Regnskapsregisteret HTTP ${response.status}` };
     const bytes = await response.arrayBuffer();
     if (!isBrregPdf(bytes)) return { ok: false, error: "Regnskapsregisteret non ha restituito un PDF valido" };

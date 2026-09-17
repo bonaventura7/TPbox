@@ -108,4 +108,24 @@ describe("Norway — financial provider", () => {
     expect(result.ok).toBe(false);
     expect(result.error).toContain("PDF");
   });
+
+  it("does not send a narrow application/pdf Accept header (Regnskapsregisteret returns 406 for it)", async () => {
+    // Verificato in produzione (org.nr 923609016, esercizio 2023):
+    // Accept: application/pdf -> HTTP 406; Accept: */* -> HTTP 200.
+    // Il test controlla l'header effettivamente inviato, non solo l'esito,
+    // per evitare che una futura "pulizia" reintroduca il valore ristretto
+    // senza far fallire nulla in locale (il fetch qui è mockato).
+    const pdf = new Uint8Array([...new TextEncoder().encode("%PDF-1.7\n"), 1, 2, 3]).buffer;
+    const fetchSpy = vi.fn(async () => new Response(pdf, { status: 200 }));
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const result = await fetchBrregAnnualReportDocument("123456789", 2024);
+
+    expect(result.ok).toBe(true);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    const [, init] = fetchSpy.mock.calls[0]!;
+    const headers = new Headers((init as RequestInit).headers);
+    expect(headers.get("Accept")).not.toBe("application/pdf");
+    expect(headers.get("Accept")).toBe("*/*");
+  });
 });
