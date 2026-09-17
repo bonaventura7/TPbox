@@ -101,9 +101,8 @@ describe("helper della regola d'oro", () => {
 
 describe("prioritizeBalanceDocument — officialPage condizionale", () => {
   it("rimuove officialPage quando il bilancio è disponibile", async () => {
-    const { prioritizeBalanceDocumentForTest } = await import(
-      "../src/lib/company-finder.functions"
-    );
+    const { prioritizeBalanceDocumentForTest } =
+      await import("../src/lib/company-finder.functions");
     const withData: SearchResponse = {
       found: true,
       sources: [],
@@ -134,9 +133,8 @@ describe("prioritizeBalanceDocument — officialPage condizionale", () => {
   });
 
   it("conserva officialPage quando il bilancio NON è disponibile", async () => {
-    const { prioritizeBalanceDocumentForTest } = await import(
-      "../src/lib/company-finder.functions"
-    );
+    const { prioritizeBalanceDocumentForTest } =
+      await import("../src/lib/company-finder.functions");
     const withoutData: SearchResponse = {
       found: true,
       sources: [],
