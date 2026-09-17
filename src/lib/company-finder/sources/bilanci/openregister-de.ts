@@ -80,22 +80,62 @@ function numberValue(value: unknown): number | undefined {
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
-function normalizeName(value: string): string {
+// Token di forma giuridica tedesca: si tolgono prima di confrontare i nomi, cosi'
+// "Siemens AG" e "Siemens Aktiengesellschaft" hanno lo stesso nucleo ("siemens").
+const DE_LEGAL_TOKENS = new Set([
+  "ag", "aktiengesellschaft", "se", "gmbh", "mbh", "kg", "kgaa", "ohg", "ug",
+  "gbr", "eg", "ev", "co", "kgaakg", "partg",
+]);
+
+function deCoreName(value: string): string {
   return value
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]/gi, "")
-    .toLowerCase();
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter((token) => token && !DE_LEGAL_TOKENS.has(token))
+    .join("");
 }
 
-function similarity(a: string, b: string): number {
-  const x = normalizeName(a);
-  const y = normalizeName(b);
-  if (!x || !y) return 0;
-  if (x === y) return 1;
-  if (x.startsWith(y) || y.startsWith(x)) return 0.9;
-  if (x.includes(y) || y.includes(x)) return 0.75;
+/**
+ * Somiglianza sul NUCLEO del nome (senza forma giuridica). Un match esatto del
+ * nucleo vale piu' di un prefisso: cosi' "Siemens AG" -> "Siemens
+ * Aktiengesellschaft" (nucleo "siemens" = "siemens", 1.0) batte "Siemens
+ * Healthineers AG" (nucleo "siemenshealthineers", solo prefisso).
+ */
+function coreSimilarity(candidateName: string, query: string): number {
+  const c = deCoreName(candidateName);
+  const q = deCoreName(query);
+  if (!c || !q) return 0;
+  if (c === q) return 1;
+  if (c.startsWith(q) || q.startsWith(c)) return 0.6;
+  if (c.includes(q) || q.includes(c)) return 0.4;
   return 0;
+}
+
+// VR = Vereinsregister, ev = eingetragener Verein: sono ASSOCIAZIONI, non
+// imprese. "Siemens AG" restituiva "Verein von Belegschaftsaktionaeren in der
+// Siemens AG" perche' aveva "siemens" nel nome. Vanno squalificate.
+function isAssociation(candidate: OpenRegisterCompany): boolean {
+  return (
+    (candidate.register_type ?? "").toUpperCase() === "VR" ||
+    (candidate.legal_form ?? "").toLowerCase() === "ev"
+  );
+}
+
+// "AG" nella query non viene espanso dall'autocomplete di OpenRegister, che
+// cerca il nome REGISTRATO ("...Aktiengesellschaft"). Misurato 2026-09-17:
+// "Siemens AG" non restituisce la Siemens AG madre, "Siemens Aktiengesellschaft"
+// si'. Si prova quindi anche la forma estesa.
+function expandQueries(query: string): string[] {
+  const q = query.trim();
+  const out = [q];
+  const agSuffix = /\bAG\b\.?\s*$/i;
+  if (agSuffix.test(q)) {
+    const expanded = q.replace(agSuffix, "Aktiengesellschaft").trim();
+    if (expanded && expanded.toLowerCase() !== q.toLowerCase()) out.push(expanded);
+  }
+  return out;
 }
 
 async function getJson(url: string, apiKey: string, signal: AbortSignal): Promise<unknown> {
@@ -112,28 +152,68 @@ async function getJson(url: string, apiKey: string, signal: AbortSignal): Promis
   return response.json();
 }
 
+async function autocomplete(
+  query: string,
+  apiKey: string,
+  signal: AbortSignal,
+): Promise<OpenRegisterCompany[]> {
+  const params = new URLSearchParams({ query });
+  const payload = asObject(
+    await getJson(`${API_BASE}/v1/autocomplete/company?${params.toString()}`, apiKey, signal),
+  );
+  const results = Array.isArray(payload?.["results"]) ? payload["results"] : [];
+  return (results.map(asObject).filter(Boolean) as JsonObject[]).map(
+    (row) => row as OpenRegisterCompany,
+  );
+}
+
+/**
+ * Punteggio composito. Il nucleo del nome domina; a parita' di nucleo vincono
+ * impresa attiva, registro commerciale (HRB) e nomi non-filiale. Le
+ * associazioni sono gia' state escluse a monte.
+ */
+function candidateScore(candidate: OpenRegisterCompany, query: string): number {
+  let score = coreSimilarity(candidate.name ?? "", query) * 100;
+  if (candidate.active === false) score -= 8;
+  if ((candidate.register_type ?? "").toUpperCase() === "HRB") score += 3;
+  if (/zweigniederlassung|niederlassung/i.test(candidate.name ?? "")) score -= 6;
+  return score;
+}
+
+// Sotto questa soglia nessun candidato "somiglia" davvero al nome cercato: meglio
+// dichiarare l'indisponibilita' che restituire una controllata plausibile ma
+// sbagliata (principio: mai una falsa conferma).
+const MIN_CORE_SCORE = 55;
+
 async function searchCompany(
   query: string,
   apiKey: string,
   signal: AbortSignal,
 ): Promise<OpenRegisterCompany | undefined> {
-  const params = new URLSearchParams({ query });
-  const payload = asObject(await getJson(`${API_BASE}/v1/autocomplete/company?${params.toString()}`, apiKey, signal));
-  const results = Array.isArray(payload?.["results"]) ? payload["results"] : [];
-  const companies = results.map(asObject).filter(Boolean) as JsonObject[];
+  const seen = new Set<string>();
+  const candidates: OpenRegisterCompany[] = [];
+  for (const q of expandQueries(query)) {
+    for (const candidate of await autocomplete(q, apiKey, signal)) {
+      if (candidate.country && candidate.country.toUpperCase() !== "DE") continue;
+      if (isAssociation(candidate)) continue;
+      const id = candidate.company_id ?? candidate.name ?? "";
+      if (id && seen.has(id)) continue;
+      if (id) seen.add(id);
+      candidates.push(candidate);
+    }
+  }
 
   let best: OpenRegisterCompany | undefined;
-  let bestScore = -1;
-  for (const row of companies) {
-    const candidate = row as OpenRegisterCompany;
-    if (candidate.country && candidate.country.toUpperCase() !== "DE") continue;
-    const score = similarity(candidate.name ?? "", query);
+  let bestScore = -Infinity;
+  for (const candidate of candidates) {
+    const score = candidateScore(candidate, query);
     if (score > bestScore) {
       best = candidate;
       bestScore = score;
     }
   }
-  return best;
+
+  return bestScore >= MIN_CORE_SCORE ? best : undefined;
 }
 
 function indicatorYear(dateValue: unknown): number | undefined {
