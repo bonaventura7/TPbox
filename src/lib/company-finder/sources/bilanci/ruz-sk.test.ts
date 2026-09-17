@@ -60,4 +60,18 @@ describe("RÚZ — filtro per esercizio", () => {
     const withBroken = [...statements, { id: 4, reportIds: [40] }];
     expect(filterStatementsByYears(withBroken, [2024]).map((s) => s.id)).toEqual([3]);
   });
+
+  it("ordina dal più recente anche se l'input arriva in ordine sparso", () => {
+    const scrambled = [
+      { id: 1, periodEnd: "2022-12", reportIds: [10] },
+      { id: 4, periodEnd: "2025-12", reportIds: [40] },
+      { id: 2, periodEnd: "2023-12", reportIds: [20] },
+      { id: 3, periodEnd: "2024-12", reportIds: [30] },
+    ];
+    expect(filterStatementsByYears(scrambled, undefined).map((s) => s.id)).toEqual([4, 3, 2, 1]);
+  });
+
+  it("un array di anni vuoto equivale a nessun filtro", () => {
+    expect(filterStatementsByYears(statements, []).map((s) => s.id)).toEqual([3, 2, 1]);
+  });
 });
