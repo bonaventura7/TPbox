@@ -1,6 +1,31 @@
 // ---------- Brønnøysundregistrene — Norvegia: Regnskapsregisteret ----------
-// API ufficiale per copie dei bilanci annuali. Le copie sono PDF e sono
-// disponibili per gli ultimi 15 anni secondo la documentazione del servizio.
+// API ufficiale dei registri norvegesi per le copie dei bilanci annuali.
+// Senza chiave, senza registrazione, senza sessione:
+//
+//   1. GET .../aarsregnskap/kopi/<orgnr>/aar
+//      -> JSON con gli esercizi disponibili per quell'impresa
+//   2. GET .../aarsregnskap/kopi/<orgnr>/<anno>
+//      -> il PDF della copia ufficiale del bilancio depositato
+//
+// Le copie sono PDF e coprono gli ultimi 15 anni secondo la documentazione del
+// servizio.
+//
+// L'`organisasjonsnummer` e' di 9 cifre e NON e' la partita IVA norvegese, che
+// e' lo stesso numero seguito da "MVA": si normalizza in `brregOrgFromInput`.
+//
+// Nessun controllo viene aggirato: e' l'API pubblica del registro, interrogata
+// come previsto. L'unico accorgimento e' sull'header Accept, per la ragione
+// misurata qui sotto.
+//
+// LIMITI MISURATI (2026-09-17), da tenere presenti prima di fidarsi:
+//   - `Accept: application/pdf` viene RIFIUTATO con HTTP 406. Serve `*/*`, che
+//     risponde 200 con `content-type: application/pdf`. Il test blocca questa
+//     regressione asserendo sull'header effettivamente inviato.
+//   - Sui depositi grandi il time-to-first-byte misurato e' 31-33 secondi su
+//     tre ripetizioni (22,7 MB su org.nr 923609016 / 2023), oltre il tetto di
+//     30 s delle funzioni Vercel: la copia non arriva e l'utente vede un 504 di
+//     piattaforma invece di una indisponibilita' dichiarata. I depositi piccoli
+//     rispondono in 0,7-1,2 s. Problema aperto, non risolto da questo adapter.
 
 import type { FinancialDocumentSummary, Financials } from "../../types";
 

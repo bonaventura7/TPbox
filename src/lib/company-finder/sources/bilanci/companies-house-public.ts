@@ -9,6 +9,14 @@
 //
 // L'adapter espone l'URL ufficiale; l'incapsulamento nel proxy avviene una sola
 // volta a valle, prima di restituire la risposta al client.
+//
+// Il company number e' di 8 caratteri (cifre, o due lettere piu' sei cifre per
+// Scozia e Irlanda del Nord) e NON e' la partita IVA britannica: si normalizza
+// in `ukNumberFromInput`.
+//
+// Nessun controllo viene aggirato: le pagine sono servite lato server, senza
+// login e senza sfida anti-bot. Si sceglie il sito pubblico invece dell'API
+// proprio per non dipendere da una chiave, non per eludere un limite.
 
 import { getCountry } from "../../countries";
 import type { CompanyProfile, Financials } from "../../types";

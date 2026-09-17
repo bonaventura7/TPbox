@@ -12,6 +12,16 @@
 //
 // La versione precedente passava da api.cvr.dev, che richiede una chiave: senza
 // chiave la Danimarca restava scoperta. Questa fonte è ufficiale e non ne vuole.
+//
+// Il CVR-nummer e' di 8 cifre e coincide con la parte numerica della partita
+// IVA danese (DK + le stesse 8 cifre): si normalizza in `cvrFromVat`.
+//
+// Nessun controllo viene aggirato: l'indice e' dichiaratamente aperto e la
+// query e' quella prevista dal servizio.
+//
+// LIMITE MISURATO (2026-09-17): l'ESEF di Novo Nordisk pesa 37 MB contro un
+// tetto di 30 MB nei moduli documentali, quindi le societa' danesi grandi
+// falliscono. Problema aperto, non risolto da questo adapter.
 
 import type { Financials } from "../../types";
 
