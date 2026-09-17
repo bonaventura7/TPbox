@@ -75,3 +75,106 @@ describe("RÚZ — filtro per esercizio", () => {
     expect(filterStatementsByYears(statements, []).map((s) => s.id)).toEqual([3, 2, 1]);
   });
 });
+
+describe("RÚZ — years propagato al fetch", () => {
+  // Ico fittizio a 8 cifre (non un'azienda reale), 3 esercizi disponibili
+  // (2022, 2023, 2024), lo statement 2023 porta DUE report — la forma reale
+  // "uno statement può avere 1-3 report" che rende il filtro a livello di
+  // statement (non di report) l'unico modo di evitare download superflui.
+  const ICO = "10203040";
+  const payloads = new Map<string, unknown>([
+    [
+      `/cruz-public/api/uctovne-jednotky?zmenene-od=2000-01-01&ico=${ICO}&max-zaznamov=100`,
+      { id: [500] },
+    ],
+    [
+      "/cruz-public/api/uctovna-jednotka?id=500",
+      { id: 500, ico: ICO, nazovUJ: "Test SK", idUctovnychZavierok: [10, 11, 12] },
+    ],
+    [
+      "/cruz-public/api/uctovna-zavierka?id=10",
+      { id: 10, obdobieDo: "2022-12", idUctovnychVykazov: [100] },
+    ],
+    [
+      "/cruz-public/api/uctovna-zavierka?id=11",
+      { id: 11, obdobieDo: "2023-12", idUctovnychVykazov: [110, 111] },
+    ],
+    [
+      "/cruz-public/api/uctovna-zavierka?id=12",
+      { id: 12, obdobieDo: "2024-12", idUctovnychVykazov: [120] },
+    ],
+    [
+      "/cruz-public/api/uctovny-vykaz?id=100",
+      { id: 100, prilohy: [{ id: 1000, meno: "a.pdf", mimeType: "application/pdf" }] },
+    ],
+    [
+      "/cruz-public/api/uctovny-vykaz?id=110",
+      { id: 110, prilohy: [{ id: 1100, meno: "b1.pdf", mimeType: "application/pdf" }] },
+    ],
+    [
+      "/cruz-public/api/uctovny-vykaz?id=111",
+      { id: 111, prilohy: [{ id: 1101, meno: "b2.pdf", mimeType: "application/pdf" }] },
+    ],
+    [
+      "/cruz-public/api/uctovny-vykaz?id=120",
+      { id: 120, prilohy: [{ id: 1200, meno: "c.pdf", mimeType: "application/pdf" }] },
+    ],
+  ]);
+
+  function stubFetchAndRecordPaths(): string[] {
+    const requested: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: string | URL) => {
+        const u = new URL(String(input));
+        const key = `${u.pathname}${u.search}`;
+        requested.push(key);
+        const payload = payloads.get(key);
+        return payload
+          ? new Response(JSON.stringify(payload), { status: 200 })
+          : new Response("missing", { status: 404 });
+      }),
+    );
+    return requested;
+  }
+
+  it("con years=[2023] scarica solo i report dell'esercizio richiesto", async () => {
+    const requested = stubFetchAndRecordPaths();
+
+    const result = await fetchRuzCompanyByIco(ICO, undefined, [2023]);
+
+    expect(result.ok).toBe(true);
+    // Solo i report/attachment del 2023 devono comparire nel risultato.
+    const years = (result.data?.financials.documents ?? []).map((d) => d.year);
+    expect(years.every((y) => y === 2023)).toBe(true);
+    expect(years.length).toBe(2); // i due report dello statement 2023
+
+    // Il costo dei metadati per-statement (uctovna-zavierka) è inevitabile:
+    // serve a sapere a quale esercizio appartiene ciascuno statement.
+    expect(requested).toContain("/cruz-public/api/uctovna-zavierka?id=10");
+    expect(requested).toContain("/cruz-public/api/uctovna-zavierka?id=11");
+    expect(requested).toContain("/cruz-public/api/uctovna-zavierka?id=12");
+
+    // Ma NESSUN report del 2022 o del 2024 deve essere stato scaricato:
+    // è esattamente il download superfluo che il filtro deve evitare.
+    expect(requested).not.toContain("/cruz-public/api/uctovny-vykaz?id=100");
+    expect(requested).not.toContain("/cruz-public/api/uctovny-vykaz?id=120");
+    // Entrambi i report dello statement 2023 vanno invece scaricati.
+    expect(requested).toContain("/cruz-public/api/uctovny-vykaz?id=110");
+    expect(requested).toContain("/cruz-public/api/uctovny-vykaz?id=111");
+  });
+
+  it("senza years scarica i report di tutti gli esercizi (comportamento invariato)", async () => {
+    const requested = stubFetchAndRecordPaths();
+
+    const result = await fetchRuzCompanyByIco(ICO);
+
+    expect(result.ok).toBe(true);
+    const years = (result.data?.financials.documents ?? []).map((d) => d.year).sort();
+    expect(years).toEqual([2022, 2023, 2023, 2024]);
+    expect(requested).toContain("/cruz-public/api/uctovny-vykaz?id=100");
+    expect(requested).toContain("/cruz-public/api/uctovny-vykaz?id=110");
+    expect(requested).toContain("/cruz-public/api/uctovny-vykaz?id=111");
+    expect(requested).toContain("/cruz-public/api/uctovny-vykaz?id=120");
+  });
+});
