@@ -39,10 +39,6 @@ export const CONSULT_PAGES: Record<string, { url: string; label: string }> = {
   },
   SI: { url: "https://www.ajpes.si/jolp/", label: "AJPES JOLP — Bilanci annuali" },
   LV: { url: "https://www.ur.gov.lv/lv/", label: "Uzņēmumu reģistrs — sezione pubblica" },
-  LT: {
-    url: "https://www.registrucentras.lt/jar/p/",
-    label: "Registrų centras — Registro imprese",
-  },
   BG: {
     url: "https://portal.registryagency.bg/CR/en/Reports/VerificationPersonOrg",
     label: "Търговски регистър — Registry Agency",
@@ -62,6 +58,7 @@ export const CONSULT_PAGES: Record<string, { url: string; label: string }> = {
  * quanto costa e dove, così l'utente sa dove andare invece di girare a vuoto.
  */
 export const NO_FREE_SOURCE: Record<string, string> = {
+  LT: "Registrų centras non offre un endpoint pubblico e gratuito per i bilanci: i report finanziari ufficiali sono erogati a pagamento per singolo documento.",
   NL: "La Kamer van Koophandel dà i dati anagrafici di base gratuitamente, ma l'API per i bilanci completi e strutturati è a pagamento.",
   PT: "Fuori dal perimetro di estrazione automatica: costi di estrazione non sostenibili e barriere d'accesso.",
   IT: "I bilanci sono depositati presso le CCIAA: copia integrale 4,50–6 € su registroimprese.it. Gratis solo la propria impresa, via Impresa Italia con SPID.",
