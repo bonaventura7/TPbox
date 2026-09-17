@@ -12,7 +12,7 @@
 //     dichiararne l'assenza.
 
 /** Livello A: bilancio recuperato dal server e mostrato in pagina. */
-export const AUTO_ISOS = ["DE", "NL", "DK", "UK", "FR", "EE", "NO"] as const;
+export const AUTO_ISOS = ["DE", "DK", "UK", "FR", "EE", "NO"] as const;
 
 /**
  * Livello B: bilancio gratuito, consultazione ufficiale incorporata.
@@ -47,10 +47,6 @@ export const CONSULT_PAGES: Record<string, { url: string; label: string }> = {
     url: "https://portal.registryagency.bg/CR/en/Reports/VerificationPersonOrg",
     label: "Търговски регистър — Registry Agency",
   },
-  PT: {
-    url: "https://publicacoes.mj.pt/Pesquisa.aspx",
-    label: "Publicações — Ministério da Justiça",
-  },
   RO: {
     url: "https://www.mfinante.gov.ro/domenii/informatii-contribuabili/persoane-juridice/info-pj-selectie-dupa-cui",
     label: "Ministerul Finanțelor — Situații financiare",
@@ -66,6 +62,8 @@ export const CONSULT_PAGES: Record<string, { url: string; label: string }> = {
  * quanto costa e dove, così l'utente sa dove andare invece di girare a vuoto.
  */
 export const NO_FREE_SOURCE: Record<string, string> = {
+  NL: "La Kamer van Koophandel dà i dati anagrafici di base gratuitamente, ma l'API per i bilanci completi e strutturati è a pagamento.",
+  PT: "Fuori dal perimetro di estrazione automatica: costi di estrazione non sostenibili e barriere d'accesso.",
   IT: "I bilanci sono depositati presso le CCIAA: copia integrale 4,50–6 € su registroimprese.it. Gratis solo la propria impresa, via Impresa Italia con SPID.",
   ES: "Le cuentas anuales del Registro Mercantil sono a pagamento. Gratuiti solo i conti auditati delle società quotate, sul portale CNMV.",
   SE: "Bolagsverket rilascia l'årsredovisning a tariffa, circa 100 SEK a documento.",
