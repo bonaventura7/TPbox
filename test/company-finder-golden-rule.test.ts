@@ -98,3 +98,58 @@ describe("helper della regola d'oro", () => {
     expect(() => expectDegradation(degraded)).not.toThrow();
   });
 });
+
+describe("prioritizeBalanceDocument — officialPage condizionale", () => {
+  it("rimuove officialPage quando il bilancio è disponibile", async () => {
+    const { prioritizeBalanceDocumentForTest } = await import(
+      "../src/lib/company-finder.functions"
+    );
+    const withData: SearchResponse = {
+      found: true,
+      sources: [],
+      warnings: [],
+      searchedAt: "2026-09-17T00:00:00.000Z",
+      financials: {
+        available: true,
+        years: [{ periodLabel: "Esercizio 2024", year: 2024, currency: "EUR" }],
+        documents: [
+          {
+            id: "SK-1",
+            year: 2024,
+            kind: "ANNUAL_REPORT",
+            format: "pdf",
+            availability: "DOCUMENT_DOWNLOADABLE",
+            downloadUrl: "/api/company-finder/ruz-document?attachment=1",
+          },
+        ],
+      },
+      officialPage: {
+        url: "https://www.registeruz.sk/cruz-public/",
+        label: "RÚZ",
+        note: "consultazione",
+      },
+    };
+    const result = await prioritizeBalanceDocumentForTest(withData, "12345678");
+    expectGoldenRule(result);
+  });
+
+  it("conserva officialPage quando il bilancio NON è disponibile", async () => {
+    const { prioritizeBalanceDocumentForTest } = await import(
+      "../src/lib/company-finder.functions"
+    );
+    const withoutData: SearchResponse = {
+      found: true,
+      sources: [],
+      warnings: [],
+      searchedAt: "2026-09-17T00:00:00.000Z",
+      financials: { available: false, years: [] },
+      officialPage: {
+        url: "https://www.registeruz.sk/cruz-public/",
+        label: "RÚZ",
+        note: "consultazione",
+      },
+    };
+    const result = await prioritizeBalanceDocumentForTest(withoutData, "12345678");
+    expectDegradation(result);
+  });
+});
