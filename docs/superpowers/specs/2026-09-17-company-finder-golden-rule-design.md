@@ -4,6 +4,28 @@
 **Stato:** design approvato, da implementare
 **Ambito:** `src/lib/company-finder/`, `src/lib/company-finder.functions.ts`
 
+> ## ⚠️ CORREZIONE — verifica dal vivo del 2026-09-17
+>
+> Questa spec afferma più sotto che **quattro paesi sono sbloccabili (BE, PL, SK, GR)**.
+> **È falso: ne è sbloccabile uno.** L'errore di fondo era dedurre "ha un adapter" =
+> "funziona". Misurando le fonti reali:
+>
+> | Paese | Verdetto misurato | Prova |
+> |---|---|---|
+> | **SK** | ✅ sbloccabile | PDF reale 585.380 byte, anche dal preview deployato |
+> | **GR** | ✅ sbloccabile **ma via API GEMI**, non via lo scraping SPA attuale — richiede un adapter nuovo, non previsto qui | PDF reale 94.080 byte |
+> | PL | ❌ no | KRS: `REGISTRY_ONLY`/`SESSION_BOUND`, nessun `downloadUrl` |
+> | BE | ❌ no | manca `NBB_CBSO_API_KEY` |
+>
+> Inoltre è emerso un paese non considerato in questa spec: la **Lettonia**, che fornisce
+> cifre strutturate in CC0 — ma solo via bulk da 620 MB, quindi richiede una pipeline ETL,
+> non un adapter.
+>
+> **La fonte di verità sulla copertura è `docs/company-finder-matrice-fonti-verificata.md`**,
+> dove ogni riga porta la misura che la giustifica. Questa spec resta valida per la parte
+> architetturale (invariante della regola d'oro, contratto estone, degrado garantito), che
+> la verifica ha confermato corretta.
+
 ## Nota sulla revisione
 
 Una prima stesura di questo documento conteneva quattro affermazioni errate,
