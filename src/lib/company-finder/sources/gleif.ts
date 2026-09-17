@@ -55,7 +55,29 @@ async function fetchGleifJson(url: string, timeoutMs: number): Promise<{ ok: boo
   } finally { clearTimeout(timer); }
 }
 
-const LEGAL_FORM_TOKENS = new Set(["spolka","akcyjna","sp","z","o","oo","zoo","sa","komandytowa","komandytowo","ag","gmbh","kg","kgaa","se","as","a","s","nv","bv","plc","ltd","limited","spa","srl","oy","oyj","ab","aps","kft","zrt","nyrt","doo","sarl"]);
+// Token di forma giuridica da ignorare nel confronto dei nomi. Se una forma
+// manca, il nome del registro porta token "di contenuto" che la ricerca non ha,
+// il punteggio crolla e `rankRelevantGleifMatches` scarta la societa' GIUSTA.
+//
+// Misurato 2026-09-17: cercando "ESET" con paese SK, GLEIF restituisce
+// esattamente "ESET, spol. s r.o.", ma mancando `spol` e `r` il punteggio era
+// 100 x (1/3) x (1/1) = 33, sotto la soglia di 80, e la Slovacchia rispondeva
+// "nessuna societa' verificabile" pur avendo trovato l'azienda.
+// Confronto: "Siemens"->"Siemens AG", "ORLEN"->"ORLEN S.A." e
+// "PETTINAROLI UK"->"PETTINAROLI UK LIMITED" davano 100, perche' ag, sa e
+// limited erano gia' presenti.
+const LEGAL_FORM_TOKENS = new Set([
+  // PL
+  "spolka","akcyjna","sp","z","o","oo","zoo","sa","komandytowa","komandytowo",
+  // DE / AT
+  "ag","gmbh","kg","kgaa","se","ohg","ug","mbh",
+  // SK / CZ
+  "spol","sro","r","ks","druzstvo",
+  // generici e altri paesi del catalogo
+  "as","a","s","nv","bv","plc","ltd","limited","llp","spa","srl","oy","oyj",
+  "ab","aps","kft","zrt","nyrt","doo","dd","sarl","sas","sasu","eurl","sci",
+  "ou","asa","ans",
+]);
 
 function contentTokens(normalized: string): string[] { return normalized.split(/\s+/).filter(Boolean).filter((token) => !LEGAL_FORM_TOKENS.has(token)); }
 
