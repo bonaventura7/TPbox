@@ -151,3 +151,29 @@ describe("prioritizeBalanceDocument — officialPage condizionale", () => {
     expectDegradation(result);
   });
 });
+
+describe("Slovacchia — stato della regola d'oro", () => {
+  it("una risposta SK con allegati scaricabili non espone la fonte", () => {
+    const skResponse: SearchResponse = {
+      found: true,
+      sources: [{ id: "ruz-sk", label: "RÚZ", state: "ok" }],
+      warnings: [],
+      searchedAt: "2026-09-17T00:00:00.000Z",
+      financials: {
+        available: true,
+        years: [{ periodLabel: "Esercizio 2024", year: 2024, currency: "EUR" }],
+        documents: [
+          {
+            id: "SK-2024",
+            year: 2024,
+            kind: "ANNUAL_REPORT",
+            format: "pdf",
+            availability: "DOCUMENT_DOWNLOADABLE",
+            downloadUrl: "/api/company-finder/ruz-document?attachment=99",
+          },
+        ],
+      },
+    };
+    expectGoldenRule(skResponse);
+  });
+});

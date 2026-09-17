@@ -26,3 +26,31 @@ async function ruzFetch<T>(path:string,signal:AbortSignal):Promise<T>{ const res
 async function fetchRuzCompanyByIdentifier(parameter:"ico"|"dic",identifier:string,timeoutMs=DEFAULT_TIMEOUT_MS):Promise<RuzProviderResult>{ const normalized=parameter==="ico"?normalizeRuzIco(identifier):normalizeRuzDic(identifier); if(!normalized)return{ok:false,error:parameter==="ico"?"IČO slovacco non valido: servono otto cifre":"DIČ slovacco non valido: servono dieci cifre"}; const controller=new AbortController(); const timer=setTimeout(()=>controller.abort(),timeoutMs); try { const index=await ruzFetch<{id?:unknown[]}>(`/api/uctovne-jednotky?zmenene-od=2000-01-01&${parameter}=${encodeURIComponent(normalized)}&max-zaznamov=100`,controller.signal); const candidateId=Array.isArray(index.id)?index.id.find(isNumericId):undefined; if(candidateId===undefined)return{ok:true,data:{company:{id:0,ico:parameter==="ico"?normalized:"",name:"",statementIds:[]},financials:{available:false,years:[],source:SOURCE,documents:[]}}}; const company=parseRuzAccountingEntity(await ruzFetch(`/api/uctovna-jednotka?id=${candidateId}`,controller.signal)); const statements=await Promise.all(company.statementIds.slice(0,30).map(async id=>parseRuzFinancialStatement(await ruzFetch(`/api/uctovna-zavierka?id=${id}`,controller.signal)))); const reportIds=[...new Set(statements.flatMap(s=>s.reportIds))].slice(0,60); const reports=await Promise.all(reportIds.map(async id=>parseRuzReport(await ruzFetch(`/api/uctovny-vykaz?id=${id}`,controller.signal)))); const statementByReport=new Map<number,RuzStatement>(); for(const statement of statements)for(const reportId of statement.reportIds)statementByReport.set(reportId,statement); const documents=reports.flatMap(report=>{const statement=statementByReport.get(report.id);const year=yearOf(statement?.periodEnd);return report.attachments.map(attachment=>({id:`SK-${company.ico}-${year??"unknown"}-${attachment.id}`,year,kind:"ANNUAL_REPORT" as const,format:"pdf" as const,availability:"DOCUMENT_DOWNLOADABLE" as const,title:attachment.name,downloadUrl:internalAttachmentUrl(attachment.id)}));}); const years=[...new Set(documents.map(d=>d.year).filter((y):y is number=>y!==undefined))].sort((a,b)=>b-a); return{ok:true,data:{company,financials:{available:documents.length>0,years:years.map(year=>({periodLabel:String(year),year,currency:"EUR"})),source:SOURCE,note:"Documenti pubblici RÚZ recuperati server-side.",documents}}}; }catch(error){const err=error as{name?:string;message?:string};return{ok:false,error:err?.name==="AbortError"?"RÚZ timeout":err?.message??"RÚZ non disponibile"};}finally{clearTimeout(timer);} }
 export function fetchRuzCompanyByIco(input:string,timeoutMs=DEFAULT_TIMEOUT_MS):Promise<RuzProviderResult>{return fetchRuzCompanyByIdentifier("ico",input,timeoutMs);}
 export function fetchRuzCompanyByDic(input:string,timeoutMs=DEFAULT_TIMEOUT_MS):Promise<RuzProviderResult>{return fetchRuzCompanyByIdentifier("dic",input,timeoutMs);}
+
+/** Esercizio di un bilancio RÚZ, dedotto da `obdobieDo` (periodEnd). */
+export function ruzStatementYear(statement: {
+  periodEnd?: string | undefined;
+}): number | undefined {
+  const match = statement.periodEnd?.match(/^(\d{4})/);
+  if (!match) return undefined;
+  const year = Number(match[1]);
+  return Number.isInteger(year) ? year : undefined;
+}
+
+/**
+ * Limita i bilanci agli esercizi richiesti, dal più recente.
+ * `years` assente = nessun filtro. Gli anni non depositati sono ignorati in
+ * silenzio: è l'utente a chiederli, non un errore della fonte.
+ */
+export function filterStatementsByYears<T extends { periodEnd?: string | undefined }>(
+  statements: T[],
+  years: number[] | undefined,
+): T[] {
+  const withYear = statements.filter((s) => ruzStatementYear(s) !== undefined);
+  const sorted = [...withYear].sort(
+    (a, b) => (ruzStatementYear(b) ?? 0) - (ruzStatementYear(a) ?? 0),
+  );
+  if (!years || years.length === 0) return sorted;
+  const wanted = new Set(years);
+  return sorted.filter((s) => wanted.has(ruzStatementYear(s)!));
+}

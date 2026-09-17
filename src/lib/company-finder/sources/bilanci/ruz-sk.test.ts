@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { buildRuzAttachmentUrl, fetchRuzCompanyByDic, fetchRuzCompanyByIco, normalizeRuzDic, normalizeRuzIco, parseRuzAccountingEntity, parseRuzFinancialStatement, parseRuzReport, resolveRuzIcoByName } from "./ruz-sk";
+import { buildRuzAttachmentUrl, fetchRuzCompanyByDic, fetchRuzCompanyByIco, filterStatementsByYears, normalizeRuzDic, normalizeRuzIco, parseRuzAccountingEntity, parseRuzFinancialStatement, parseRuzReport, resolveRuzIcoByName } from "./ruz-sk";
 
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
@@ -35,4 +35,29 @@ describe("Slovacchia — RÚZ", () => {
     await expect(resolveRuzIcoByName("Bratislava")).resolves.toBe("00603481");
   });
   it("fails closed on malformed IČO", async () => { const spy=vi.fn(); vi.stubGlobal("fetch", spy); const result=await fetchRuzCompanyByIco("1234567"); expect(result.ok).toBe(false); expect(spy).not.toHaveBeenCalled(); });
+});
+
+describe("RÚZ — filtro per esercizio", () => {
+  const statements = [
+    { id: 3, periodEnd: "2024-12", reportIds: [30] },
+    { id: 2, periodEnd: "2023-12", reportIds: [20] },
+    { id: 1, periodEnd: "2022-12", reportIds: [10] },
+  ];
+
+  it("senza anni richiesti restituisce tutto, dal più recente", () => {
+    expect(filterStatementsByYears(statements, undefined).map((s) => s.id)).toEqual([3, 2, 1]);
+  });
+
+  it("con anni richiesti restituisce solo quelli", () => {
+    expect(filterStatementsByYears(statements, [2023]).map((s) => s.id)).toEqual([2]);
+  });
+
+  it("ignora gli anni non depositati senza fallire", () => {
+    expect(filterStatementsByYears(statements, [2023, 1999]).map((s) => s.id)).toEqual([2]);
+  });
+
+  it("scarta i bilanci senza periodEnd leggibile", () => {
+    const withBroken = [...statements, { id: 4, reportIds: [40] }];
+    expect(filterStatementsByYears(withBroken, [2024]).map((s) => s.id)).toEqual([3]);
+  });
 });
