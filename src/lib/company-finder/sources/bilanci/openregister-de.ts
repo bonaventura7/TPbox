@@ -1,3 +1,33 @@
+// ---------- Germania: OpenRegister — anagrafiche e bilanci strutturati ----------
+// OpenRegister rivende in forma strutturata i depositi del Bundesanzeiger /
+// Unternehmensregister. A differenza di Estonia, Regno Unito e Danimarca
+// QUESTA FONTE RICHIEDE UNA CHIAVE: `OPENREGISTER_API_KEY`, inviata come
+// `Authorization: Bearer`. Va detto perche' cambia il profilo del paese: se la
+// chiave manca, la Germania non ha un canale alternativo gratuito qui dentro.
+//
+//   1. GET https://api.openregister.de/v1/autocomplete/company?query=<nome>
+//      -> { results: [{ company_id, name, country, legal_form, register_* }] }
+//   2. GET https://api.openregister.de/v1/company/<company_id>/financials
+//      -> { indicators: [...], merged: {...}, reports: [...] }
+//
+// `company_id` ha forma "DE-HRB-T3104-6000" (tipo di registro + tribunale +
+// numero) e NON coincide con la partita IVA tedesca: si arriva al codice solo
+// passando dall'autocomplete sul nome.
+//
+// Nessun controllo tecnico viene aggirato: si usa l'API del fornitore con la
+// propria chiave, alle sue condizioni. Non si tocca ne' il Bundesanzeiger ne'
+// l'Unternehmensregister direttamente.
+//
+// LIMITI MISURATI (2026-09-17), da tenere presenti prima di fidarsi:
+//   - Gli importi sono in CENTESIMI e il payload non dichiara l'unita'.
+//     Vedi `indicatorMoney` piu' sotto, che porta la misura su BASF SE.
+//   - L'autocomplete sceglie l'entita' sbagliata su nomi ovvi: "Siemens AG"
+//     restituisce un'associazione di azionisti (404 sui bilanci), "Volkswagen
+//     AG" la controllata assicurativa. La selezione della societa' giusta e'
+//     un problema aperto, non risolto da questo adapter.
+//   - La chiave risponde 403 dopo circa 8 richieste ravvicinate: i test usano
+//     payload registrati, mai chiamate live.
+
 import type { FinancialDocumentSummary, Financials } from "../../types";
 
 const API_BASE = "https://api.openregister.de";
@@ -113,8 +143,28 @@ function indicatorYear(dateValue: unknown): number | undefined {
   return match ? Number(match[1]) : undefined;
 }
 
-function indicatorNumber(indicator: Indicator, key: string): number | undefined {
-  return numberValue(indicator[key]);
+/**
+ * OpenRegister espone gli importi in CENTESIMI di euro e non dichiara l'unita':
+ * il payload di /v1/company/{id}/financials non contiene `unit`, `currency` ne'
+ * `EUR`, quindi la scala va dedotta dalla misura.
+ *
+ * Misurato su BASF SE (DE-HRB-T3104-6000), esercizio chiuso al 2025-12-31:
+ *   revenue             5.965.700.000.000 -> 59,657 mld EUR
+ *   balance_sheet_total 7.617.400.000.000 -> 76,174 mld EUR
+ *   equity              3.433.800.000.000 -> 34,338 mld EUR
+ *   net_income            172.600.000.000 ->  1,726 mld EUR
+ * I valori grezzi darebbero a BASF un fatturato di 5,97 mila miliardi di euro,
+ * superiore al PIL tedesco: impossibile. A /100 ogni riga combacia col bilancio
+ * pubblicato.
+ *
+ * Vale SOLO per i campi monetari. `employees` (105.588 nello stesso payload) e'
+ * un conteggio e non va scalato: non passa di qui.
+ */
+const CENTS_PER_EUR = 100;
+
+function indicatorMoney(indicator: Indicator, key: string): number | undefined {
+  const cents = numberValue(indicator[key]);
+  return cents === undefined ? undefined : cents / CENTS_PER_EUR;
 }
 
 function reportEndYear(report: JsonObject): number | undefined {
@@ -236,13 +286,13 @@ function mapFinancials(
     .map((indicator) => {
       const date = text(indicator.date);
       const year = indicatorYear(date);
-      const balanceSheetTotal = indicatorNumber(indicator, "balance_sheet_total");
-      const revenue = indicatorNumber(indicator, "revenue");
-      const operatingProfit = indicatorNumber(indicator, "ebit");
-      const ebitda = indicatorNumber(indicator, "ebitda");
-      const netIncome = indicatorNumber(indicator, "net_income");
-      const equity = indicatorNumber(indicator, "equity");
-      const liabilities = indicatorNumber(indicator, "liabilities");
+      const balanceSheetTotal = indicatorMoney(indicator, "balance_sheet_total");
+      const revenue = indicatorMoney(indicator, "revenue");
+      const operatingProfit = indicatorMoney(indicator, "ebit");
+      const ebitda = indicatorMoney(indicator, "ebitda");
+      const netIncome = indicatorMoney(indicator, "net_income");
+      const equity = indicatorMoney(indicator, "equity");
+      const liabilities = indicatorMoney(indicator, "liabilities");
       return {
         periodLabel: year ? `Esercizio chiuso al ${date ?? year}` : `Esercizio ${date ?? "non indicato"}`,
         year,
