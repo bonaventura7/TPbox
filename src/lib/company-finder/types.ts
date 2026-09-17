@@ -163,4 +163,9 @@ export interface SearchRequest {
   query: string;
   vat: string;
   country: Iso2 | "";
+  /**
+   * Esercizi richiesti. Se presente, l'adapter limita il lavoro a questi anni;
+   * se assente, elenca ciò che trova e scarica solo il più recente.
+   */
+  years?: number[] | undefined;
 }
